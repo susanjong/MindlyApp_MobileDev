@@ -3,14 +3,14 @@ class PigeonUserDetails {
   String? name;
 }
 
-// Untuk single object
-@HostApi()
-abstract class UserApi {
-  PigeonUserDetails? getUserDetails();
-}
+// // Untuk single object
+// @HostApi()
+// abstract class UserApi {
+//   PigeonUserDetails? getUserDetails();
+// }
 
-// Jika return List
-@HostApi()
-abstract class UserApi {
-  List<PigeonUserDetails?> getUserList();
-}
+// // Jika return List
+// @HostApi()
+// abstract class UserApi {
+//   List<PigeonUserDetails?> getUserList();
+// }
