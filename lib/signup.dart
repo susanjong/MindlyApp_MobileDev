@@ -1,8 +1,8 @@
 import 'dart:async'; // Add this import for TimeoutException
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class CreateAccountScreen extends StatefulWidget {
   @override
@@ -23,7 +23,6 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  
   // Tambahkan instance GoogleSignIn
   final GoogleSignIn _googleSignIn = GoogleSignIn();
 
@@ -154,6 +153,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
           );
         },
       );
+      // final userCredential = await FirebaseAuth.instance.currentUser?.sendEmailVerification();
       
       final User? user = userCredential.user;
       if (user == null) {
@@ -254,7 +254,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
         errorMsg = 'Connection timeout - try again';
       }
       
-      _showErrorSnackBar('$errorMsg\n\nError: ${e.toString()}');
+      // _showErrorSnackBar('$errorMsg\n\nError: ${e.toString()}');
       
     } finally {
       print('Google Sign-In process finished');
@@ -1009,396 +1009,329 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
 }
 
 // Login Screen
-class LoginScreen extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Sign In'),
-        backgroundColor: Colors.purple,
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
-      body: Center(
-        child: Padding(
-          padding: EdgeInsets.all(20),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.account_circle_outlined,
-                size: 80,
-                color: Colors.purple,
-              ),
-              SizedBox(height: 20),
-              Text(
-                'Sign In Screen',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-              SizedBox(height: 10),
-              Text(
-                'Login functionality coming soon',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey[600],
-                ),
-              ),
-              SizedBox(height: 30),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text(
-                    'Back to Sign Up',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.purple,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(25),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 // Home Screen
-class HomeScreen extends StatelessWidget {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+// class HomeScreen extends StatelessWidget {
+//   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  @override
-  Widget build(BuildContext context) {
-    final User? user = _auth.currentUser;
+//   @override
+//   Widget build(BuildContext context) {
+//     final User? user = _auth.currentUser;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Welcome'),
-        backgroundColor: Colors.purple,
-        foregroundColor: Colors.white,
-        automaticallyImplyLeading: false,
-        elevation: 0,
-        actions: [
-          PopupMenuButton<String>(
-            icon: Icon(Icons.more_vert),
-            onSelected: (value) async {
-              if (value == 'logout') {
-                await _showLogoutDialog(context);
-              } else if (value == 'profile') {
-                _showUserProfile(context, user);
-              }
-            },
-            itemBuilder: (BuildContext context) => [
-              PopupMenuItem<String>(
-                value: 'profile',
-                child: Row(
-                  children: [
-                    Icon(Icons.person, color: Colors.purple),
-                    SizedBox(width: 8),
-                    Text('Profile'),
-                  ],
-                ),
-              ),
-              PopupMenuItem<String>(
-                value: 'logout',
-                child: Row(
-                  children: [
-                    Icon(Icons.logout, color: Colors.red),
-                    SizedBox(width: 8),
-                    Text('Logout'),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-      body: Center(
-        child: Padding(
-          padding: EdgeInsets.all(20),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // User Avatar
-              Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.purple, width: 3),
-                ),
-                child: user?.photoURL != null
-                    ? ClipOval(
-                        child: Image.network(
-                          user!.photoURL!,
-                          width: 94,
-                          height: 94,
-                          fit: BoxFit.cover,
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
-                            return CircularProgressIndicator(
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.purple),
-                            );
-                          },
-                          errorBuilder: (context, error, stackTrace) {
-                            return Icon(
-                              Icons.person,
-                              size: 60,
-                              color: Colors.purple,
-                            );
-                          },
-                        ),
-                      )
-                    : Icon(
-                        Icons.person,
-                        size: 60,
-                        color: Colors.purple,
-                      ),
-              ),
+//     return Scaffold(
+//       appBar: AppBar(
+//         title: Text('Welcome'),
+//         backgroundColor: Colors.purple,
+//         foregroundColor: Colors.white,
+//         automaticallyImplyLeading: false,
+//         elevation: 0,
+//         actions: [
+//           PopupMenuButton<String>(
+//             icon: Icon(Icons.more_vert),
+//             onSelected: (value) async {
+//               if (value == 'logout') {
+//                 await _showLogoutDialog(context);
+//               } else if (value == 'profile') {
+//                 _showUserProfile(context, user);
+//               }
+//             },
+//             itemBuilder: (BuildContext context) => [
+//               PopupMenuItem<String>(
+//                 value: 'profile',
+//                 child: Row(
+//                   children: [
+//                     Icon(Icons.person, color: Colors.purple),
+//                     SizedBox(width: 8),
+//                     Text('Profile'),
+//                   ],
+//                 ),
+//               ),
+//               PopupMenuItem<String>(
+//                 value: 'logout',
+//                 child: Row(
+//                   children: [
+//                     Icon(Icons.logout, color: Colors.red),
+//                     SizedBox(width: 8),
+//                     Text('Logout'),
+//                   ],
+//                 ),
+//               ),
+//             ],
+//           ),
+//         ],
+//       ),
+//       body: Center(
+//         child: Padding(
+//           padding: EdgeInsets.all(20),
+//           child: Column(
+//             mainAxisAlignment: MainAxisAlignment.center,
+//             children: [
+//               // User Avatar
+//               Container(
+//                 width: 100,
+//                 height: 100,
+//                 decoration: BoxDecoration(
+//                   shape: BoxShape.circle,
+//                   border: Border.all(color: Colors.purple, width: 3),
+//                 ),
+//                 child: user?.photoURL != null
+//                     ? ClipOval(
+//                         child: Image.network(
+//                           user!.photoURL!,
+//                           width: 94,
+//                           height: 94,
+//                           fit: BoxFit.cover,
+//                           loadingBuilder: (context, child, loadingProgress) {
+//                             if (loadingProgress == null) return child;
+//                             return CircularProgressIndicator(
+//                               valueColor: AlwaysStoppedAnimation<Color>(Colors.purple),
+//                             );
+//                           },
+//                           errorBuilder: (context, error, stackTrace) {
+//                             return Icon(
+//                               Icons.person,
+//                               size: 60,
+//                               color: Colors.purple,
+//                             );
+//                           },
+//                         ),
+//                       )
+//                     : Icon(
+//                         Icons.person,
+//                         size: 60,
+//                         color: Colors.purple,
+//                       ),
+//               ),
               
-              SizedBox(height: 20),
+//               SizedBox(height: 20),
               
-              Text(
-                'Welcome!',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
+//               Text(
+//                 'Welcome!',
+//                 style: TextStyle(
+//                   fontSize: 28,
+//                   fontWeight: FontWeight.bold,
+//                   color: Colors.black87,
+//                 ),
+//               ),
               
-              SizedBox(height: 10),
+//               SizedBox(height: 10),
               
-              Text(
-                user?.displayName ?? 'User',
-                style: TextStyle(
-                  fontSize: 22,
-                  color: Colors.grey[700],
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
+//               Text(
+//                 user?.displayName ?? 'User',
+//                 style: TextStyle(
+//                   fontSize: 22,
+//                   color: Colors.grey[700],
+//                   fontWeight: FontWeight.w500,
+//                 ),
+//               ),
               
-              SizedBox(height: 8),
+//               SizedBox(height: 8),
               
-              Text(
-                user?.email ?? 'No email',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey[600],
-                ),
-              ),
+//               Text(
+//                 user?.email ?? 'No email',
+//                 style: TextStyle(
+//                   fontSize: 16,
+//                   color: Colors.grey[600],
+//                 ),
+//               ),
               
-              SizedBox(height: 30),
+//               SizedBox(height: 30),
               
-              // Account Information Card
-              Card(
-                elevation: 4,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                child: Padding(
-                  padding: EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Account Information',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      SizedBox(height: 15),
-                      _buildInfoRow('UID', user?.uid ?? 'N/A'),
-                      _buildInfoRow('Provider', user?.providerData.isNotEmpty == true 
-                          ? user!.providerData.first.providerId 
-                          : 'N/A'),
-                      _buildInfoRow('Email Verified', user?.emailVerified == true ? 'Yes' : 'No'),
-                      _buildInfoRow('Created', user?.metadata.creationTime?.toString().split(' ')[0] ?? 'N/A'),
-                    ],
-                  ),
-                ),
-              ),
+//               // Account Information Card
+//               Card(
+//                 elevation: 4,
+//                 shape: RoundedRectangleBorder(
+//                   borderRadius: BorderRadius.circular(15),
+//                 ),
+//                 child: Padding(
+//                   padding: EdgeInsets.all(20),
+//                   child: Column(
+//                     crossAxisAlignment: CrossAxisAlignment.start,
+//                     children: [
+//                       Text(
+//                         'Account Information',
+//                         style: TextStyle(
+//                           fontSize: 18,
+//                           fontWeight: FontWeight.bold,
+//                           color: Colors.black87,
+//                         ),
+//                       ),
+//                       SizedBox(height: 15),
+//                       _buildInfoRow('UID', user?.uid ?? 'N/A'),
+//                       _buildInfoRow('Provider', user?.providerData.isNotEmpty == true 
+//                           ? user!.providerData.first.providerId 
+//                           : 'N/A'),
+//                       _buildInfoRow('Email Verified', user?.emailVerified == true ? 'Yes' : 'No'),
+//                       _buildInfoRow('Created', user?.metadata.creationTime?.toString().split(' ')[0] ?? 'N/A'),
+//                     ],
+//                   ),
+//                 ),
+//               ),
               
-              SizedBox(height: 30),
+//               SizedBox(height: 30),
               
-              // Action Button
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Welcome to your productivity app!'),
-                        backgroundColor: Colors.green,
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
-                  },
-                  icon: Icon(Icons.rocket_launch, color: Colors.white),
-                  label: Text(
-                    'Start Your Journey',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.purple,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(25),
-                    ),
-                    elevation: 2,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+//               // Action Button
+//               SizedBox(
+//                 width: double.infinity,
+//                 height: 50,
+//                 child: ElevatedButton.icon(
+//                   onPressed: () {
+//                     ScaffoldMessenger.of(context).showSnackBar(
+//                       SnackBar(
+//                         content: Text('Welcome to your productivity app!'),
+//                         backgroundColor: Colors.green,
+//                         behavior: SnackBarBehavior.floating,
+//                       ),
+//                     );
+//                   },
+//                   icon: Icon(Icons.rocket_launch, color: Colors.white),
+//                   label: Text(
+//                     'Start Your Journey',
+//                     style: TextStyle(
+//                       fontSize: 16,
+//                       fontWeight: FontWeight.w600,
+//                       color: Colors.white,
+//                     ),
+//                   ),
+//                   style: ElevatedButton.styleFrom(
+//                     backgroundColor: Colors.purple,
+//                     shape: RoundedRectangleBorder(
+//                       borderRadius: BorderRadius.circular(25),
+//                     ),
+//                     elevation: 2,
+//                   ),
+//                 ),
+//               ),
+//             ],
+//           ),
+//         ),
+//       ),
+//     );
+//   }
 
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 100,
-            child: Text(
-              '$label:',
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[700],
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: TextStyle(
-                color: Colors.black87,
-              ),
-              overflow: TextOverflow.ellipsis,
-              maxLines: 2,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+//   Widget _buildInfoRow(String label, String value) {
+//     return Padding(
+//       padding: EdgeInsets.symmetric(vertical: 4),
+//       child: Row(
+//         crossAxisAlignment: CrossAxisAlignment.start,
+//         children: [
+//           SizedBox(
+//             width: 100,
+//             child: Text(
+//               '$label:',
+//               style: TextStyle(
+//                 fontWeight: FontWeight.w600,
+//                 color: Colors.grey[700],
+//               ),
+//             ),
+//           ),
+//           Expanded(
+//             child: Text(
+//               value,
+//               style: TextStyle(
+//                 color: Colors.black87,
+//               ),
+//               overflow: TextOverflow.ellipsis,
+//               maxLines: 2,
+//             ),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
 
-  Future<void> _showLogoutDialog(BuildContext context) async {
-    return showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Logout'),
-          content: Text('Are you sure you want to logout?'),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: Text('Cancel'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            ElevatedButton(
-              child: Text('Logout'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () async {
-                Navigator.of(context).pop();
-                await _performLogout(context);
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
+//   Future<void> _showLogoutDialog(BuildContext context) async {
+//     return showDialog<void>(
+//       context: context,
+//       barrierDismissible: false,
+//       builder: (BuildContext context) {
+//         return AlertDialog(
+//           title: Text('Logout'),
+//           content: Text('Are you sure you want to logout?'),
+//           shape: RoundedRectangleBorder(
+//             borderRadius: BorderRadius.circular(15),
+//           ),
+//           actions: <Widget>[
+//             TextButton(
+//               child: Text('Cancel'),
+//               onPressed: () {
+//                 Navigator.of(context).pop();
+//               },
+//             ),
+//             ElevatedButton(
+//               child: Text('Logout'),
+//               style: ElevatedButton.styleFrom(
+//                 backgroundColor: Colors.red,
+//                 foregroundColor: Colors.white,
+//               ),
+//               onPressed: () async {
+//                 Navigator.of(context).pop();
+//                 await _performLogout(context);
+//               },
+//             ),
+//           ],
+//         );
+//       },
+//     );
+//   }
 
-  Future<void> _performLogout(BuildContext context) async {
-    try {
-      await _auth.signOut();
-      await GoogleSignIn().signOut();
+//   Future<void> _performLogout(BuildContext context) async {
+//     try {
+//       await _auth.signOut();
+//       await GoogleSignIn().signOut();
       
-      if (context.mounted) {
-        Navigator.pushReplacementNamed(context, '/');
-      }
-    } catch (e) {
-      print('Error during logout: $e');
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error during logout. Please try again.'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
+//       if (context.mounted) {
+//         Navigator.pushReplacementNamed(context, '/');
+//       }
+//     } catch (e) {
+//       print('Error during logout: $e');
+//       if (context.mounted) {
+//         ScaffoldMessenger.of(context).showSnackBar(
+//           SnackBar(
+//             content: Text('Error during logout. Please try again.'),
+//             backgroundColor: Colors.red,
+//           ),
+//         );
+//       }
+//     }
+//   }
 
-  void _showUserProfile(BuildContext context, User? user) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('User Profile'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (user?.photoURL != null)
-                Center(
-                  child: CircleAvatar(
-                    radius: 40,
-                    backgroundImage: NetworkImage(user!.photoURL!),
-                  ),
-                ),
-              SizedBox(height: 16),
-              Text('Name: ${user?.displayName ?? 'Not provided'}'),
-              SizedBox(height: 8),
-              Text('Email: ${user?.email ?? 'Not provided'}'),
-              SizedBox(height: 8),
-              Text('Verified: ${user?.emailVerified == true ? 'Yes' : 'No'}'),
-            ],
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text('Close'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-}
+//   void _showUserProfile(BuildContext context, User? user) {
+//     showDialog(
+//       context: context,
+//       builder: (BuildContext context) {
+//         return AlertDialog(
+//           title: Text('User Profile'),
+//           content: Column(
+//             mainAxisSize: MainAxisSize.min,
+//             crossAxisAlignment: CrossAxisAlignment.start,
+//             children: [
+//               if (user?.photoURL != null)
+//                 Center(
+//                   child: CircleAvatar(
+//                     radius: 40,
+//                     backgroundImage: NetworkImage(user!.photoURL!),
+//                   ),
+//                 ),
+//               SizedBox(height: 16),
+//               Text('Name: ${user?.displayName ?? 'Not provided'}'),
+//               SizedBox(height: 8),
+//               Text('Email: ${user?.email ?? 'Not provided'}'),
+//               SizedBox(height: 8),
+//               Text('Verified: ${user?.emailVerified == true ? 'Yes' : 'No'}'),
+//             ],
+//           ),
+//           shape: RoundedRectangleBorder(
+//             borderRadius: BorderRadius.circular(15),
+//           ),
+//           actions: [
+//             TextButton(
+//               onPressed: () => Navigator.of(context).pop(),
+//               child: Text('Close'),
+//             ),
+//           ],
+//         );
+//       },
+//     );
+//   }
+// }
