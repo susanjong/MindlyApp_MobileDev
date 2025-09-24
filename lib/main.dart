@@ -4,6 +4,7 @@ import 'package:notesapp/auth_wrapper.dart';
 import 'package:notesapp/firebase_options.dart';
 import 'package:notesapp/home.dart';
 import 'package:notesapp/login.dart';
+import 'package:notesapp/resetpass.dart';
 import 'signup.dart'; // Import your signup screen
 
 void main() async {
@@ -38,8 +39,11 @@ class MyApp extends StatelessWidget {
       routes: {
         '/': (context) => AuthWrapper(),
         '/signup': (context) => CreateAccountScreen(),
-        '/login': (context) => LoginScreen(),
+        '/login': (context) => LoginAccountScreen(),
         '/home': (context) => HomeScreen(),
+        '/reset': (context) => ResetPasswordScreen(),
+        '/forgotpass': (context) => ResetPasswordScreen(),
+
       },
       initialRoute: '/',
     );
