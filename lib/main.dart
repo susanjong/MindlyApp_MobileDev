@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:notesapp/auth_wrapper.dart';
-import 'package:notesapp/firebase_options.dart';
-import 'package:notesapp/home.dart';
-import 'package:notesapp/login.dart';
-import 'package:notesapp/resetpass.dart';
-import 'signup.dart'; // Import your signup screen
+import 'package:notesapp/data/auth_wrapper.dart';
+import 'package:notesapp/config/firebase_options.dart';
+import 'package:notesapp/presentation/screens/home/home.dart';
+import 'package:notesapp/presentation/screens/sign/login.dart';
+import 'package:notesapp/presentation/screens/sign/resetpass.dart';
+import 'presentation/screens/sign/signup.dart'; // Import your signup screen
 
 void main() async {
   // Ensure that plugin services are initialized
