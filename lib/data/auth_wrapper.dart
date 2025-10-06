@@ -1,8 +1,8 @@
 // Auth wrapper to check if user is already logged in
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:notesapp/home.dart';
-import 'package:notesapp/signup.dart' hide HomeScreen;
+import 'package:notesapp/presentation/screens/home/home.dart';
+import 'package:notesapp/presentation/screens/sign/signup.dart' hide HomeScreen;
 
 class AuthWrapper extends StatelessWidget {
   @override

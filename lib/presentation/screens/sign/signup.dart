@@ -257,7 +257,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                         ),
                         SizedBox(height: 16),
                         Text(
-                          'Creating account...',
+                          'Please Wait...',
                           style: TextStyle(
                             color: Colors.purple,
                             fontSize: 16,
