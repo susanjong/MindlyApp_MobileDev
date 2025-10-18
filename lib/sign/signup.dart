@@ -3,13 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:notesapp/presentation/widget/snackbar.dart';
 
-class CreateAccountScreen extends StatefulWidget {
+class SignUpScreen extends StatefulWidget {
   @override
-  _CreateAccountScreenState createState() => _CreateAccountScreenState();
+  _SignUpScreenState createState() => _SignUpScreenState();
 }
 
-class _CreateAccountScreenState extends State<CreateAccountScreen> {
+class _SignUpScreenState extends State<SignUpScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -19,12 +20,9 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
   bool _isConfirmPasswordVisible = false;
   bool _isLoading = false;
 
-  // Firebase instances
-  final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
 
-  // IMPROVED Google Sign In with account selection
   Future<void> _signInWithGoogle() async {
     if (_isLoading) return;
     
@@ -33,43 +31,31 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
     });
 
     try {
-      // Sign out to force account selection
       await _googleSignIn.signOut();
-      
-      // Show account picker
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       
       if (googleUser == null) {
-        // User cancelled the sign-in
-        _showErrorSnackBar('Sign-in cancelled. Please select an account to continue.');
+        Snackbar.error(context, 'Sign-in cancelled. Please select an account to continue.');
         return;
       }
-
-      // Simulate getting authentication (since we're bypassing Firebase)
-      await Future.delayed(Duration(milliseconds: 800));
       
-      // Show success with user info
-      _showSuccessSnackBar('Successfully signed in as ${googleUser.displayName ?? googleUser.email}');
-
-      // Navigate to home
+      Snackbar.success(context, 'Successfully signed in as ${googleUser.displayName ?? googleUser.email}');
       if (mounted) {
         await Future.delayed(Duration(milliseconds: 1000));
-        Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+        Navigator.pushReplacementNamed(context, '/home');
       }
-      
     } catch (e) {
       print('Google Sign-In error: $e');
       
       if (e.toString().contains('sign_in_canceled')) {
-        _showErrorSnackBar('Sign-in was cancelled. Please try again.');
+        Snackbar.error(context, 'Sign-in was cancelled. Please try again.');
       } else if (e.toString().contains('network_error')) {
-        _showErrorSnackBar('Network error. Please check your connection and try again.');
+        Snackbar.error(context, 'Network error. Please check your connection and try again.');
       } else if (e.toString().contains('sign_in_failed')) {
-        _showErrorSnackBar('Sign-in failed. Please make sure you have Google Play Services installed.');
+        Snackbar.error(context, 'Sign-in failed. Please make sure you have Google Play Services installed.');
       } else {
-        _showErrorSnackBar('Unable to sign in with Google. Please try again or use email registration.');
+        Snackbar.error(context, 'Unable to sign in with Google. Please try again or use email registration.');
       }
-      
     } finally {
       if (mounted) {
         setState(() {
@@ -79,7 +65,6 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
     }
   }
 
-  // BYPASS Firebase - Direct navigation
   Future<void> _createAccountWithEmail() async {
     if (_isLoading) return;
     
@@ -88,23 +73,16 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
     }
     
     if (!_agreeToTerms) {
-      _showErrorSnackBar('Please agree to the Terms of Service and Privacy Policy');
+      Snackbar.error(context, 'Please agree to the Terms of Service and Privacy Policy');
       return;
     }
 
     setState(() {
       _isLoading = true;
     });
-
-    // Simulate loading for UX
-    await Future.delayed(Duration(seconds: 1));
-
-    _showSuccessSnackBar('Account created successfully!');
-
-    // Direct navigation to home
+    Snackbar.success(context, 'Account created successfully!');
     if (mounted) {
-      await Future.delayed(Duration(milliseconds: 500));
-      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+      Navigator.pushReplacementNamed(context, '/home');
     }
 
     setState(() {
@@ -112,7 +90,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
     });
   }
 
-  // Get user-friendly error messages
+  // Ini belum ada di pake, bisa dihapus kalau memang nggak dipake
   String _getFirebaseErrorMessage(FirebaseAuthException e) {
     switch (e.code) {
       case 'weak-password':
@@ -138,7 +116,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
     }
   }
 
-  // SIMPLIFIED save to Firestore
+  // Ini belum ada di pake, bisa dihapus kalau memang nggak dipake
   Future<void> _saveUserToFirestore(User user) async {
     try {
       print('Saving user to Firestore: ${user.uid}');
@@ -164,44 +142,6 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
     }
   }
 
-  void _showSuccessSnackBar(String message) {
-    if (!mounted) return;
-    
-    ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(Icons.check_circle, color: Colors.white),
-            SizedBox(width: 12),
-            Expanded(child: Text(message)),
-          ],
-        ),
-        backgroundColor: Colors.green,
-        duration: Duration(seconds: 2),
-      ),
-    );
-  }
-
-  void _showErrorSnackBar(String message) {
-    if (!mounted) return;
-    
-    ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(Icons.error, color: Colors.white),
-            SizedBox(width: 12),
-            Expanded(child: Text(message)),
-          ],
-        ),
-        backgroundColor: Colors.red,
-        duration: Duration(seconds: 3),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final double statusBarHeight = MediaQuery.of(context).viewPadding.top;
@@ -212,39 +152,39 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
         children: [
           SizedBox(height: statusBarHeight),
           
-          // Back button
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: GestureDetector(
-                onTap: () {
-                  Navigator.pop(context);
-                },
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.withOpacity(0.2),
-                        spreadRadius: 1,
-                        blurRadius: 3,
-                        offset: Offset(0, 1),
-                      ),
-                    ],
-                  ),
-                  child: Icon(
-                    Icons.arrow_back,
-                    color: Colors.black54,
-                    size: 20,
-                  ),
-                ),
-              ),
-            ),
-          ),
+          // // Back button
+          // Padding(
+          //   padding: const EdgeInsets.all(16.0),
+          //   child: Align(
+          //     alignment: Alignment.centerLeft,
+          //     child: GestureDetector(
+          //       onTap: () {
+          //         Navigator.pop(context);
+          //       },
+          //       child: Container(
+          //         width: 40,
+          //         height: 40,
+          //         decoration: BoxDecoration(
+          //           color: Colors.white,
+          //           shape: BoxShape.circle,
+          //           boxShadow: [
+          //             BoxShadow(
+          //               color: Colors.grey.withValues(alpha: 0.2),
+          //               spreadRadius: 1,
+          //               blurRadius: 3,
+          //               offset: Offset(0, 1),
+          //             ),
+          //           ],
+          //         ),
+          //         child: Icon(
+          //           Icons.arrow_back,
+          //           color: Colors.black54,
+          //           size: 20,
+          //         ),
+          //       ),
+          //     ),
+          //   ),
+          // ),
           
           Expanded(
             child: _isLoading 
@@ -287,11 +227,9 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
 
                         const SizedBox(height: 20),
 
-                        // Main content stack
                         Stack(
                           alignment: Alignment.topCenter,
                           children: [
-                            // Background gray container
                             Container(
                               width: double.infinity, 
                               height: 100,
@@ -317,7 +255,6 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                               ),
                             ),
                             
-                            // White container overlapping
                             Container(
                               width: double.infinity,
                               margin: const EdgeInsets.only(top: 60),
@@ -339,13 +276,11 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                                   ),
                                   const SizedBox(height: 40),
 
-                                  // Form Section
                                   Form(
                                     key: _formKey,
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        // Google Sign In Button
                                         SizedBox(
                                           width: double.infinity,
                                           height: 55,
@@ -598,29 +533,28 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                                           height: 55,
                                           child: ElevatedButton(
                                             onPressed: _agreeToTerms ? _createAccountWithEmail : null,
-                                            child: Text(
-                                              'Create Account',
-                                              style: TextStyle(
-                                                fontSize: 18,
-                                                fontWeight: FontWeight.w600,
-                                                color: Colors.white,
-                                              ),
-                                            ),
                                             style: ElevatedButton.styleFrom(
                                               backgroundColor: Colors.purple,
                                               shape: RoundedRectangleBorder(
                                                 borderRadius: BorderRadius.circular(30),
                                               ),
                                             ),
+                                            child: Text(
+                                              'Create Account',
+                                                style: TextStyle(
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.white,
+                                              ),
+                                            ),
                                           ),
                                         ),
 
                                         const SizedBox(height: 25),
-
-                                        // Sign In Link
+                                        
                                         Center(
                                           child: GestureDetector(
-                                            onTap: () => Navigator.pushNamed(context, '/login'),
+                                            onTap: () => Navigator.pushNamed(context, '/sign_in'),
                                             child: Text.rich(
                                               TextSpan(
                                                 text: 'Already have an account? ',
