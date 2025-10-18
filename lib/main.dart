@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:notesapp/data/auth_wrapper.dart';
-import 'package:notesapp/config/firebase_options.dart';
-import 'package:notesapp/presentation/screens/home/home.dart';
-import 'package:notesapp/presentation/screens/sign/login.dart';
-import 'package:notesapp/presentation/screens/sign/resetpass.dart';
-import 'presentation/screens/sign/signup.dart'; // Import your signup screen
-
+import 'package:notesapp/presentation/screen/splash_screen.dart';
+import 'package:notesapp/firebase_options.dart';
+import 'package:notesapp/presentation/screen/home.dart';
+import 'package:notesapp/sign/login.dart';
+import 'package:notesapp/sign/resetpass.dart';
+import 'package:notesapp/sign/signup.dart';
+import 'package:notesapp/sign/forgotpass.dart';
 void main() async {
   // Ensure that plugin services are initialized
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,10 +20,12 @@ void main() async {
     print('Firebase initialization error: $e');
   }
   
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({Key? key}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -31,22 +33,23 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.purple,
         visualDensity: VisualDensity.adaptivePlatformDensity,
-        fontFamily: 'Roboto',
+        fontFamily: 'Poppins',
       ),
-      // Remove the debug banner
       debugShowCheckedModeBanner: false,
+      
+      // Set initial route
+      initialRoute: '/',
+      
       // Define routes
       routes: {
-        '/': (context) => AuthWrapper(),
-        '/signup': (context) => CreateAccountScreen(),
-        '/login': (context) => LoginAccountScreen(),
+        '/': (context) => const LogoSplash(),
+        '/splash': (context) => const LogoSplash(),
+        '/sign_up': (context) => SignUpScreen(),
+        '/sign_in': (context) => LoginAccountScreen(),
         '/home': (context) => HomeScreen(),
-        '/reset': (context) => ResetPasswordScreen(),
-        '/forgotpass': (context) => ResetPasswordScreen(),
-
+        '/reset_password': (context) => ResetPasswordScreen(),
+        '/forgot_password': (context) => ForgotPasswordScreen(), 
       },
-      initialRoute: '/',
     );
   }
 }
-

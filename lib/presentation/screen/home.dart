@@ -16,7 +16,10 @@ class HomeScreen extends StatelessWidget {
           onPressed: () async {
             await FirebaseAuth.instance.signOut();
             await GoogleSignIn().signOut();
-            Navigator.pushReplacementNamed(context, '/signup');
+
+            if(context.mounted) {
+              Navigator.pushReplacementNamed(context, '/signup');
+            }
           }, 
           child: Text('Logout'),
         )
