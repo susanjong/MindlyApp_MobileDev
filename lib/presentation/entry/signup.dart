@@ -218,7 +218,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             height: 211,
                             decoration: const BoxDecoration(
                               image: DecorationImage(
-                                image: AssetImage("assets/images/elemen_signup.png"),
+                                image: AssetImage("assets/images/signup_elemen.png"),
                                 fit: BoxFit.contain,
                               ),
                             ),

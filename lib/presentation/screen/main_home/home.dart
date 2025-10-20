@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:notesapp/presentation/widget/navbar.dart'; // pastikan path import benar
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
