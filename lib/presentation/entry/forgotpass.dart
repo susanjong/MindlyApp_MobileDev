@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'emailverification.dart'; 
+import '../../sign/emailverification.dart'; 
 
 class ForgotPasswordScreen extends StatefulWidget {
   @override
@@ -163,7 +163,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   width: 200,
                   height: 200,
                   child: Image.asset(
-                    'assets/images/elemen_forgotpass.png',
+                    'assets/images/resetpassword_elemen.png',
                     fit: BoxFit.contain,
                   ),
                 ),

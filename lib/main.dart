@@ -2,11 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:notesapp/presentation/screen/splash_screen.dart';
 import 'package:notesapp/firebase_options.dart';
-import 'package:notesapp/presentation/screen/home.dart';
-import 'package:notesapp/sign/login.dart';
-import 'package:notesapp/sign/resetpass.dart';
-import 'package:notesapp/sign/signup.dart';
-import 'package:notesapp/sign/forgotpass.dart';
+import 'package:notesapp/presentation/entry/login.dart';
+import 'package:notesapp/presentation/entry/resetpass.dart';
+import 'package:notesapp/presentation/entry/signup.dart';
+import 'package:notesapp/presentation/entry/forgotpass.dart';
+//ini untuk isi utama dan ada navbar
+import 'package:notesapp/presentation/widget/navbar.dart';
+import 'package:notesapp/presentation/screen/main_home/home.dart';
+import 'package:notesapp/presentation/screen/notes/awalnotes.dart';
+import 'package:notesapp/presentation/screen/todolist/awaltodo.dart';
+import 'package:notesapp/presentation/screen/calendar/awalcalendar.dart';
+
 void main() async {
   // Ensure that plugin services are initialized
   WidgetsFlutterBinding.ensureInitialized();
@@ -46,10 +52,12 @@ class MyApp extends StatelessWidget {
         '/splash': (context) => const LogoSplash(),
         '/sign_up': (context) => SignUpScreen(),
         '/sign_in': (context) => LoginAccountScreen(),
-        '/home': (context) => HomeScreen(),
+        '/home': (context) => NotesPage(),
         '/reset_password': (context) => ResetPasswordScreen(),
         '/forgot_password': (context) => ForgotPasswordScreen(), 
       },
+      //ini pada saat di menu home itu kan ada button logout, tapi pas diklik dia malah error
+      //asalasannya karena gak ada route '/signup' jadi harus ditambahin disini
     );
   }
 }
