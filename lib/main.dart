@@ -52,7 +52,7 @@ class MyApp extends StatelessWidget {
         '/splash': (context) => const LogoSplash(),
         '/sign_up': (context) => SignUpScreen(),
         '/sign_in': (context) => LoginAccountScreen(),
-        '/home': (context) => NotesPage(),
+        '/home': (context) => HomePage(),
         '/reset_password': (context) => ResetPasswordScreen(),
         '/forgot_password': (context) => ForgotPasswordScreen(), 
       },
@@ -61,5 +61,3 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
-//test
