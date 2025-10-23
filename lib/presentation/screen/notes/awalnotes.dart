@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:notesapp/presentation/widget/navbar.dart';
+import 'package:notesapp/widgets/navbar.dart';
 
 class NotesPage extends StatelessWidget {
   const NotesPage({super.key});
