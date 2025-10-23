@@ -41,7 +41,7 @@ class CustomNavBar extends StatelessWidget {
                 Widget page;
                 switch (index) {
                   case 0:
-                    page = const HomeScreen();
+                    page = const HomePage();
                     break;
                   case 1:
                     page = const NotesPage();
@@ -53,7 +53,7 @@ class CustomNavBar extends StatelessWidget {
                     page = const CalendarPage();
                     break;
                   default:
-                    page = const HomeScreen();
+                    page = const HomePage();
                 }
 
                 Navigator.pushReplacement(
@@ -99,7 +99,7 @@ class CustomNavBar extends StatelessWidget {
   }
 }
 
-// ================== NAVBAR ITEMS ==================
+// navbar items
 
 class NavBarItem {
   final IconData icon;
