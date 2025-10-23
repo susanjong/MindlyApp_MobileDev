@@ -87,9 +87,14 @@ class CustomTopAppBar extends StatelessWidget {
   }
 }
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
 
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -118,7 +123,7 @@ class HomePage extends StatelessWidget {
             selectedIndex: 0,
             onItemTapped: (index) {
               // TODO: ganti dengan navigasi / state management yang kamu pakai.
-              // if (index == 0) Navigator.pushReplacementNamed(context, '/home');
+              if (index == 0) Navigator.pushReplacementNamed(context, '/home');
             },
           ),
         ),
@@ -127,7 +132,7 @@ class HomePage extends StatelessWidget {
   }
 }
 
-// Simple wrapper widget supaya kita bisa memberikan non-const params / logic
+// Simple wrapper widgets supaya kita bisa memberikan non-const params / logic
 class _HomeAppBar extends StatelessWidget {
   const _HomeAppBar({Key? key}) : super(key: key);
 
