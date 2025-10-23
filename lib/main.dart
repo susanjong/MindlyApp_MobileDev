@@ -7,7 +7,7 @@ import 'package:notesapp/presentation/entry/resetpass.dart';
 import 'package:notesapp/presentation/entry/signup.dart';
 import 'package:notesapp/presentation/entry/forgotpass.dart';
 //ini untuk isi utama dan ada navbar
-import 'package:notesapp/presentation/widget/navbar.dart';
+import 'package:notesapp/widgets/navbar.dart';
 import 'package:notesapp/presentation/screen/main_home/home.dart';
 import 'package:notesapp/presentation/screen/notes/awalnotes.dart';
 import 'package:notesapp/presentation/screen/todolist/awaltodo.dart';
@@ -52,7 +52,7 @@ class MyApp extends StatelessWidget {
         '/splash': (context) => const LogoSplash(),
         '/sign_up': (context) => SignUpScreen(),
         '/sign_in': (context) => LoginAccountScreen(),
-        '/home': (context) => NotesPage(),
+        '/home': (context) => HomePage(),
         '/reset_password': (context) => ResetPasswordScreen(),
         '/forgot_password': (context) => ForgotPasswordScreen(), 
       },
@@ -61,5 +61,3 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
-//test
