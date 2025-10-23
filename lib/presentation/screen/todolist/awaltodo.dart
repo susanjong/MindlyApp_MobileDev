@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:notesapp/presentation/widget/navbar.dart'; // pastikan path import benar
+import 'package:notesapp/widgets/navbar.dart'; // pastikan path import benar
 
 class TodoListPage extends StatelessWidget {
   const TodoListPage({super.key});

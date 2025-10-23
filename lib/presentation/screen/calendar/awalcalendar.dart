@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:notesapp/presentation/widget/navbar.dart'; // pastikan path import benar
+import 'package:notesapp/widgets/navbar.dart'; // pastikan path import benar
 
 class CalendarPage extends StatelessWidget {
   const CalendarPage({super.key});
