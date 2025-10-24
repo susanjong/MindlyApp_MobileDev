@@ -531,9 +531,9 @@ class _HomePageState extends State<HomePage> {
                   // TODO: Implement navigation logic
                   print('Navbar item tapped: $index');
                   // Contoh navigasi:
-                   if (index == 1) {
-                     Navigator.push(context, MaterialPageRoute(builder: (context) => NotesPage()));
-                   }
+                  if (index == 1) {
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => NotesPage()));
+                  }
                 },
               ),
             ),
