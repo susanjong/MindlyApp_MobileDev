@@ -1,144 +1,152 @@
 import 'package:flutter/material.dart';
 import 'package:notesapp/presentation/screen/main_home/home.dart';
 import 'package:notesapp/presentation/screen/notes/awalnotes.dart';
+import 'package:notesapp/presentation/screen/todolist/awaltodo.dart';
+import 'package:notesapp/presentation/screen/calendar/awalcalendar.dart';
 
-class NavbarRoot extends StatefulWidget {
-  const NavbarRoot({super.key});
-
-  @override
-  State<NavbarRoot> createState() => _NavbarRootState();
-}
-
-class _NavbarRootState extends State<NavbarRoot> {
-  int _selectedIndex = 0;
-
-  final List<Widget> _pages = [
-    const HomePage(),
-    const NotesPage(),
-    const Center(child: Text('Todo Page', style: TextStyle(fontSize: 24))),
-    const Center(child: Text('Calendar Page', style: TextStyle(fontSize: 24))),
-  ];
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: _pages[_selectedIndex],
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 8,
-              offset: const Offset(0, -2),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          child: CustomNavBar(
-            selectedIndex: _selectedIndex,
-            onItemTapped: _onItemTapped, // sekarang wajib ada
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ================= CustomNavBar =================
+// ================== CUSTOM NAVBAR ==================
 class CustomNavBar extends StatelessWidget {
   final int selectedIndex;
-  final Function(int) onItemTapped; // diubah jadi non-nullable
+  final Function(int)? onItemTapped;
   final bool autoNavigate;
 
   const CustomNavBar({
     super.key,
     required this.selectedIndex,
-    required this.onItemTapped, // wajib diisi
+    this.onItemTapped,
     this.autoNavigate = true,
   });
+
+  // Fungsi untuk navigasi ke halaman berdasarkan index
+  void _navigateToPage(BuildContext context, int index) {
+    if (selectedIndex == index || !autoNavigate) {
+      onItemTapped?.call(index);
+      return;
+    }
+
+    Widget page;
+    switch (index) {
+      case 0:
+        page = const HomePage();
+        break;
+      case 1:
+        page = const NotesPage();
+        break;
+      case 2:
+        page = const TodoListPage();
+        break;
+      case 3:
+        page = const CalendarPage();
+        break;
+      default:
+        page = const HomePage();
+    }
+
+    Navigator.pushReplacement(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => page,
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(
+            opacity: animation,
+            child: child,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 300),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Container(
+      height: 70,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
+            blurRadius: 10,
             offset: const Offset(0, -2),
           ),
         ],
       ),
-      child: SafeArea(
-        child: Container(
-          height: 64,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Row(
-            children: List.generate(_navItems.length, (index) {
-              final item = _navItems[index];
-              final isSelected = selectedIndex == index;
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: List.generate(
+          _navItems.length,
+              (index) {
+            final isSelected = selectedIndex == index;
 
-              return Expanded(
-                child: Center(
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(14),
-                    onTap: () => onItemTapped(index), // aman karena non-nullable
+            return Expanded(
+              child: GestureDetector(
+                onTap: () => _navigateToPage(context, index),
+                child: Container(
+                  color: Colors.transparent,
+                  child: Center(
                     child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 180),
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeInOut,
+                      // FIXED: Semua container punya ukuran yang SAMA
+                      constraints: BoxConstraints(
+                        minWidth: isSelected ? 100 : 46,
+                        maxWidth: isSelected ? 120 : 46,
+                        minHeight: 46,
+                        maxHeight: 46,
+                      ),
                       padding: EdgeInsets.symmetric(
-                        horizontal: isSelected ? 12 : 8,
-                        vertical: isSelected ? 8 : 6,
+                        horizontal: isSelected ? 14 : 0,
+                        vertical: 11,
                       ),
                       decoration: BoxDecoration(
-                        color: isSelected ? const Color(0xFFD4F1A8) : Colors.transparent,
-                        borderRadius: BorderRadius.circular(14),
+                        color: isSelected
+                            ? const Color(0xFFD4F1A8)
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(23),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
-                            item.icon,
+                            _navItems[index].icon,
+                            color: Colors.black,
                             size: 22,
-                            color: isSelected ? Colors.black : Colors.grey[700],
                           ),
-                          if (isSelected) ...[
-                            const SizedBox(width: 6),
+                          // Animasi smooth untuk text
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            width: isSelected ? 8 : 0,
+                          ),
+                          if (isSelected)
                             Flexible(
                               child: Text(
-                                item.label,
+                                _navItems[index].label,
                                 style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
                                   color: Colors.black,
-                                  letterSpacing: 0.3,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
                                 ),
                                 overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
                               ),
                             ),
-                          ],
                         ],
                       ),
                     ),
                   ),
                 ),
-              );
-            }),
-          ),
+              ),
+            );
+          },
         ),
       ),
     );
   }
 }
 
-// ================= Models Navbar Item =================
+// ================== NAVBAR ITEMS ==================
 class NavBarItem {
   final IconData icon;
   final String label;
