@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:notesapp/widgets/colors.dart';
 
 class Snackbar {
   static void error(BuildContext context, String message) {
@@ -12,7 +13,7 @@ class Snackbar {
             Expanded(child: Text(message)),
           ],
         ),
-        backgroundColor: Colors.red,
+        backgroundColor: elementWarning,
         duration: Duration(seconds: 3),
       ),
     );
