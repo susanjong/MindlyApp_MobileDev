@@ -51,18 +51,21 @@ class _NavbarRootState extends State<NavbarRoot> {
   }
 }
 
-// ==================== NAVBAR ASLI (TIDAK DIUBAH UKURAN DAN BENTUK) ====================
 
+// Isi utama dari navbar
 class CustomNavBar extends StatelessWidget {
   final int selectedIndex;
-  final ValueChanged<int> onItemTapped;
+  final Function(int)? onItemTapped;
+  final bool autoNavigate;
 
   const CustomNavBar({
     super.key,
     required this.selectedIndex,
-    required this.onItemTapped,
+    this.onItemTapped,
+    this.autoNavigate = true,
   });
 
+   // Logic untuk perpindahan isi navbar berdasarkan indexnya dibuat permisalan
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -137,6 +140,7 @@ class CustomNavBar extends StatelessWidget {
   }
 }
 
+// Models navbar item dibuat isinya disini
 class NavBarItem {
   final IconData icon;
   final String label;
