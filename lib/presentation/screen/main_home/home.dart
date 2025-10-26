@@ -51,7 +51,7 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // just sample data
+  // just sample data (dummy data)
   List<EventModel> _getEvents() {
     return [
       EventModel(
