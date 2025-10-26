@@ -8,6 +8,20 @@ import 'package:notesapp/widgets/colors.dart';
 import 'package:notesapp/widgets/font_style.dart';
 import 'package:notesapp/presentation/screen/notes/awalnotes.dart';
 
+class TaskItem {
+  String title;
+  String time;
+  String priority;
+  bool isCompleted;
+
+  TaskItem({
+    required this.title,
+    required this.time,
+    required this.priority,
+    this.isCompleted = false,
+  });
+}
+
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
 
@@ -16,9 +30,24 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  bool _isTaskCompleted = false;
   bool _isNavBarVisible = true;
   final ScrollController _scrollController = ScrollController();
+
+  // List untuk menyimpan tasks
+  List<TaskItem> _tasks = [
+    TaskItem(
+      title: 'Meeting with marketing team',
+      time: 'Today',
+      priority: 'urgent',
+      isCompleted: false,
+    ),
+    TaskItem(
+      title: 'Update website content',
+      time: 'Today',
+      priority: 'normal',
+      isCompleted: false,
+    ),
+  ];
 
   @override
   void initState() {
@@ -35,14 +64,12 @@ class _HomePageState extends State<HomePage> {
 
   void _onScroll() {
     if (_scrollController.position.userScrollDirection == ScrollDirection.reverse) {
-      // Scroll ke bawah - sembunyikan navbar
       if (_isNavBarVisible) {
         setState(() {
           _isNavBarVisible = false;
         });
       }
     } else if (_scrollController.position.userScrollDirection == ScrollDirection.forward) {
-      // Scroll ke atas - tampilkan navbar
       if (!_isNavBarVisible) {
         setState(() {
           _isNavBarVisible = true;
@@ -51,7 +78,26 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // just sample data (dummy data)
+  // Fungsi untuk toggle task completion
+  void _toggleTaskCompletion(int index) {
+    setState(() {
+      _tasks[index].isCompleted = !_tasks[index].isCompleted;
+    });
+  }
+
+  // Fungsi untuk clear all completed tasks
+  void _clearAllCompletedTasks() {
+    setState(() {
+      _tasks.removeWhere((task) => task.isCompleted);
+    });
+  }
+
+  // Fungsi untuk mendapatkan tasks yang belum selesai
+  List<TaskItem> get _pendingTasks => _tasks.where((task) => !task.isCompleted).toList();
+
+  // Fungsi untuk mendapatkan tasks yang sudah selesai
+  List<TaskItem> get _completedTasks => _tasks.where((task) => task.isCompleted).toList();
+
   List<EventModel> _getEvents() {
     return [
       EventModel(
@@ -75,7 +121,6 @@ class _HomePageState extends State<HomePage> {
     ];
   }
 
-  // Sample Notes Data
   List<NoteModel> _getNotes() {
     return [
       NoteModel(
@@ -95,21 +140,17 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final events = _getEvents();
     final notes = _getNotes();
-    const completedTasks = 2;
-    const totalTasks = 4;
-    final progress = completedTasks / totalTasks;
+    final completedTasksCount = _completedTasks.length;
+    final totalTasks = _tasks.length;
+    final progress = totalTasks > 0 ? completedTasksCount / totalTasks : 0.0;
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
         children: [
           CustomTopAppBar(
-            onProfileTap: () {
-              // TODO: Navigate to profile screen
-            },
-            onNotificationTap: () {
-              // TODO: Navigate to notifications screen
-            },
+            onProfileTap: () {},
+            onNotificationTap: () {},
           ),
           Expanded(
             child: SingleChildScrollView(
@@ -192,7 +233,7 @@ class _HomePageState extends State<HomePage> {
                           ),
                           const SizedBox(height: 12),
                           Text(
-                            '$completedTasks of $totalTasks tasks completed',
+                            '$completedTasksCount of $totalTasks tasks completed',
                             style: const TextStyle(
                               fontSize: 13,
                               color: Color(0xFF6B6B6B),
@@ -204,116 +245,215 @@ class _HomePageState extends State<HomePage> {
                     const SizedBox(height: 24),
 
                     // ========== NEEDS ATTENTION SECTION ==========
-                    Row(
-                      children: const [
-                        Icon(Icons.error_outline, color: Color(0xFFFF6B6B), size: 20),
-                        SizedBox(width: 8),
-                        Text(
-                          'Needs Attention',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF1A1A1A),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFE0E0E0)),
-                      ),
-                      child: Row(
-                        children: [
-                          GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _isTaskCompleted = !_isTaskCompleted;
-                              });
-                            },
-                            child: Container(
-                              width: 33,
-                              height: 33,
-                              decoration: ShapeDecoration(
-                                color: _isTaskCompleted
-                                    ? const Color(0xFF5784EB)
-                                    : Colors.transparent,
-                                shape: OvalBorder(
-                                  side: BorderSide(
-                                    width: 1.50,
-                                    color: const Color(0xFF5784EB),
-                                  ),
-                                ),
-                              ),
-                              child: _isTaskCompleted
-                                  ? const Icon(
-                                Icons.check,
-                                color: Colors.white,
-                                size: 20,
-                              )
-                                  : null,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.access_time,
-                                      size: 14,
-                                      color: Color(0xFF6B6B6B),
-                                    ),
-                                    const SizedBox(width: 4),
-                                    const Text(
-                                      'Today',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Color(0xFF6B6B6B),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFFFF3E0),
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: const Text(
-                                        'urgent',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: Color(0xFFFF9800),
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                const Text(
-                                  'Meeting with marketing team',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                    color: Color(0xFF1A1A1A),
-                                  ),
-                                ),
-                              ],
+                    if (_pendingTasks.isNotEmpty) ...[
+                      Row(
+                        children: const [
+                          Icon(Icons.error_outline, color: Color(0xFFFF6B6B), size: 20),
+                          SizedBox(width: 8),
+                          Text(
+                            'Needs Attention',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF1A1A1A),
                             ),
                           ),
                         ],
                       ),
-                    ),
-                    const SizedBox(height: 24),
+                      const SizedBox(height: 12),
+                      ..._pendingTasks.asMap().entries.map((entry) {
+                        final index = _tasks.indexOf(entry.value);
+                        final task = entry.value;
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFE0E0E0)),
+                          ),
+                          child: Row(
+                            children: [
+                              GestureDetector(
+                                onTap: () => _toggleTaskCompletion(index),
+                                child: Container(
+                                  width: 33,
+                                  height: 33,
+                                  decoration: ShapeDecoration(
+                                    color: Colors.transparent,
+                                    shape: OvalBorder(
+                                      side: BorderSide(
+                                        width: 1.50,
+                                        color: const Color(0xFF5784EB),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.access_time,
+                                          size: 14,
+                                          color: Color(0xFF6B6B6B),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          task.time,
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: Color(0xFF6B6B6B),
+                                          ),
+                                        ),
+                                        if (task.priority == 'urgent') ...[
+                                          const SizedBox(width: 8),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 2,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFFFF3E0),
+                                              borderRadius: BorderRadius.circular(4),
+                                            ),
+                                            child: const Text(
+                                              'urgent',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                color: Color(0xFFFF9800),
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      task.title,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                        color: Color(0xFF1A1A1A),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                      const SizedBox(height: 24),
+                    ],
+
+                    // ========== COMPLETED SECTION ==========
+                    if (_completedTasks.isNotEmpty) ...[
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: const [
+                              Icon(Icons.check_circle, color: Color(0xFF4CAF50), size: 20),
+                              SizedBox(width: 8),
+                              Text(
+                                'Completed',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF1A1A1A),
+                                ),
+                              ),
+                            ],
+                          ),
+                          TextButton(
+                            onPressed: _clearAllCompletedTasks,
+                            style: TextButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            ),
+                            child: const Text(
+                              'Clear All',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Color(0xFFFF6B6B),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      ..._completedTasks.asMap().entries.map((entry) {
+                        final index = _tasks.indexOf(entry.value);
+                        final task = entry.value;
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF5F5F5),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFE0E0E0)),
+                          ),
+                          child: Row(
+                            children: [
+                              GestureDetector(
+                                onTap: () => _toggleTaskCompletion(index),
+                                child: Container(
+                                  width: 33,
+                                  height: 33,
+                                  decoration: ShapeDecoration(
+                                    color: const Color(0xFF4CAF50),
+                                    shape: OvalBorder(
+                                      side: BorderSide(
+                                        width: 1.50,
+                                        color: const Color(0xFF4CAF50),
+                                      ),
+                                    ),
+                                  ),
+                                  child: const Icon(
+                                    Icons.check,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      task.time,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Color(0xFF9E9E9E),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      task.title,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                        color: Color(0xFF9E9E9E),
+                                        decoration: TextDecoration.lineThrough,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                      const SizedBox(height: 24),
+                    ],
 
                     // ========== TODAY'S EVENT SECTION ==========
                     Row(
@@ -528,9 +668,9 @@ class _HomePageState extends State<HomePage> {
               child: CustomNavBar(
                 selectedIndex: 0,
                 onItemTapped: (index) {
-                  // TODO: Implement navigation logic
                   print('Navbar item tapped: $index');
-                  // Contoh navigasi:
+
+                  // Untuk navigasi:
                   if (index == 1) {
                     Navigator.push(context, MaterialPageRoute(builder: (context) => NotesPage()));
                   }
