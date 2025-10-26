@@ -1,7 +1,5 @@
-// auth_service.dart
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:flutter/material.dart';
 
 class AuthService {
   static final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -19,7 +17,6 @@ class AuthService {
   // Stream untuk mendengarkan perubahan auth state
   static Stream<User?> get authStateChanges => _auth.authStateChanges();
 
-  // Sign in with Google - Improved version
   static Future<UserCredential?> signInWithGoogle() async {
     try {
       print('Starting Google Sign-In process...');
