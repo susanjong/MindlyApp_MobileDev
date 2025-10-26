@@ -7,7 +7,6 @@ import 'package:notesapp/presentation/entry/resetpass.dart';
 import 'package:notesapp/presentation/entry/signup.dart';
 import 'package:notesapp/presentation/entry/forgotpass.dart';
 //ini untuk isi utama dan ada navbar
-import 'package:notesapp/widgets/navbar.dart';
 import 'package:notesapp/presentation/screen/main_home/home.dart';
 //import 'package:notesapp/presentation/screen/notes/awalnotes.dart'
 //import 'package:notesapp/presentation/screen/todolist/awaltodo.dart';
