@@ -49,11 +49,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       await Future.delayed(const Duration(seconds: 2));
       
       // Simulasi sukses atau error (ubah ke false untuk test error)
-      bool isSuccess = true; // Ganti ke false untuk test error
-      
-      if (!isSuccess) {
-        throw Exception('Gagal mengirim ke email');
-      }
+      bool isSuccess = true; // Ganti ke false untuk test error (OPSIONAL)
       
       if (mounted) {
         setState(() {
