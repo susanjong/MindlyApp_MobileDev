@@ -4,7 +4,7 @@ class FontStyles {
   // Style di judul utama
 
   //pakai static supaya bisa diakses langsung tanpa instance
-    static const TextStyle appTitle = TextStyle(
+  static const TextStyle appTitle = TextStyle(
     color: Color(0xFF0D5F5F),
     fontSize: 24,
     fontWeight: FontWeight.bold,

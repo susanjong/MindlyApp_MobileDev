@@ -42,7 +42,7 @@ class _NavbarRootState extends State<NavbarRoot> {
         child: SafeArea(
           child: CustomNavBar(
             selectedIndex: _selectedIndex,
-            onItemTapped: _onItemTapped,
+            onItemTapped: _onItemTapped, // sekarang wajib ada
           ),
         ),
       ),
@@ -50,21 +50,19 @@ class _NavbarRootState extends State<NavbarRoot> {
   }
 }
 
-
-// Isi utama dari navbar
+// ================= CustomNavBar =================
 class CustomNavBar extends StatelessWidget {
   final int selectedIndex;
-  final Function(int)? onItemTapped;
+  final Function(int) onItemTapped; // diubah jadi non-nullable
   final bool autoNavigate;
 
   const CustomNavBar({
     super.key,
     required this.selectedIndex,
-    this.onItemTapped,
+    required this.onItemTapped, // wajib diisi
     this.autoNavigate = true,
   });
 
-   // Logic untuk perpindahan isi navbar berdasarkan indexnya dibuat permisalan
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -91,7 +89,9 @@ class CustomNavBar extends StatelessWidget {
                 child: Center(
                   child: InkWell(
                     borderRadius: BorderRadius.circular(14),
+
                     onTap: () => onItemTapped?.call(index),
+
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 180),
                       padding: EdgeInsets.symmetric(
@@ -139,7 +139,7 @@ class CustomNavBar extends StatelessWidget {
   }
 }
 
-// Models navbar item dibuat isinya disini
+// ================= Models Navbar Item =================
 class NavBarItem {
   final IconData icon;
   final String label;
