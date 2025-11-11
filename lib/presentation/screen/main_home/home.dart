@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:notesapp/widgets/navbar.dart';
+import 'package:notesapp/presentation/screen/main_home/profile.dart';
+import 'package:notesapp/widgets/custom_navbar_widget.dart';
 import 'package:notesapp/widgets/custom_top_app_bar.dart';
 import 'package:notesapp/models/event_model.dart';
 import 'package:notesapp/models/note_model.dart';
-import 'package:notesapp/widgets/colors.dart';
-import 'package:notesapp/widgets/font_style.dart';
 import 'package:notesapp/presentation/screen/notes/awalnotes.dart';
 
 class TaskItem {
@@ -149,7 +148,12 @@ class _HomePageState extends State<HomePage> {
       body: Column(
         children: [
           CustomTopAppBar(
-            onProfileTap: () {},
+            onProfileTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const AccountProfilePage()),
+              );
+            },
             onNotificationTap: () {},
           ),
           Expanded(
