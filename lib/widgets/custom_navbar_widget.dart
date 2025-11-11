@@ -33,7 +33,7 @@ class CustomNavBar extends StatelessWidget {
     this.autoNavigate = true,
   });
 
-   // Logic untuk perpindahan isi navbar berdasarkan indexnya dibuat permisalan
+  // Logic untuk perpindahan isi navbar berdasarkan indexnya dibuat permisalan
   @override
   Widget build(BuildContext context) {
     return Container(
