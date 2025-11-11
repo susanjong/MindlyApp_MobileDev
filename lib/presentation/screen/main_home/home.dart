@@ -669,6 +669,8 @@ class _HomePageState extends State<HomePage> {
                 selectedIndex: 0,
                 onItemTapped: (index) {
                   print('Navbar item tapped: $index');
+
+                  // Untuk navigasi:
                   if (index == 1) {
                     Navigator.push(context, MaterialPageRoute(builder: (context) => NotesPage()));
                   }
