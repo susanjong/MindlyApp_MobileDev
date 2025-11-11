@@ -1,6 +1,8 @@
+
 import 'package:flutter/material.dart';
 import 'package:notesapp/presentation/screen/main_home/home.dart';
 import 'package:notesapp/presentation/screen/notes/awalnotes.dart';
+import 'package:notesapp/widgets/custom_navbar_widget.dart';
 
 class NavbarRoot extends StatefulWidget {
   const NavbarRoot({super.key});
@@ -33,7 +35,7 @@ class _NavbarRootState extends State<NavbarRoot> {
           color: Colors.white,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
+              color: Colors.black.withOpacity(0.1),
               blurRadius: 8,
               offset: const Offset(0, -2),
             ),
@@ -50,7 +52,6 @@ class _NavbarRootState extends State<NavbarRoot> {
   }
 }
 
-// ================= CustomNavBar =================
 class CustomNavBar extends StatelessWidget {
   final int selectedIndex;
   final Function(int) onItemTapped; // diubah jadi non-nullable
@@ -139,7 +140,7 @@ class CustomNavBar extends StatelessWidget {
   }
 }
 
-// ================= Models Navbar Item =================
+// Models navbar item
 class NavBarItem {
   final IconData icon;
   final String label;
