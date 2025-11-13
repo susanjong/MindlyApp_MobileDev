@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:notesapp/models/profile_model.dart';
+import 'package:notesapp/presentation/screen/main_home/edit_bioprofile.dart';
 
 class AccountProfilePage extends StatefulWidget {
   const AccountProfilePage({Key? key}) : super(key: key);
@@ -20,18 +21,18 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
 
   void _initializeUserProfile() {
     _userProfile = UserProfile(
-      // TODO: Replace with actual user profile data and get the user data from db
       name: 'Susan Jong',
       email: 'susanjong5@gmail.com',
       bio: 'Smile in front of your assignments',
-      imageUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop',
+      imageUrl:
+          'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop',
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: Colors.white, // Change background to white
       appBar: _buildAppBar(),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -144,7 +145,6 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
           title: 'Logout',
           subtitle: 'Sign out from your account',
           iconColor: const Color(0xFFFF6B6B),
-          iconBackgroundColor: const Color(0xFFFFEBEE),
           onTap: () => _showLogoutDialog(context),
         ),
         SettingItem(
@@ -152,7 +152,6 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
           title: 'Delete Account',
           subtitle: 'Permanently remove your account data',
           iconColor: const Color(0xFFFF6B6B),
-          iconBackgroundColor: const Color(0xFFFFEBEE),
           onTap: () => _showDeleteAccountDialog(context),
         ),
       ],
@@ -161,45 +160,55 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
 
   Widget _buildButton(String label) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        border: Border.all(color: const Color(0xFFE0E0E0)),
-        borderRadius: BorderRadius.circular(6),
+      width: 88.81,
+      height: 24,
+      decoration: ShapeDecoration(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
       ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-          color: Color(0xFF1A1A1A),
-        ),
+      child: Stack(
+        children: [
+          Positioned(
+            left: 0,
+            top: 0,
+            child: Container(
+              width: 88.81,
+              height: 24,
+              decoration: ShapeDecoration(
+                color: Colors.white,
+                shape: RoundedRectangleBorder(
+                  side: const BorderSide(width: 1, color: Color(0xFFE0E0E0)),
+                  borderRadius: BorderRadius.circular(5),
+                ),
+              ),
+            ),
+          ),
+          Center(
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.black,
+                fontSize: 12,
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.w400,
+                height: 1,
+                letterSpacing: -0.24,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
   // Navigation methods
-  void _navigateToEditProfile() {
-    // TODO: Change navigate to edit bio profile
-    /*Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const Placeholder(), // Ganti dengan EditProfilePage()
-      ),
-    ); */
+  void _navigateToEditProfile() {}
 
-  }
+  void _navigateToHelpFAQ() {}
 
-  void _navigateToHelpFAQ() {
-    // TODO: Navigate to Help & FAQ page
-  }
+  void _navigateToAbout() {}
 
-  void _navigateToAbout() {
-    // TODO: Navigate to About page
-  }
-
-  void _navigateToResetPassword() {
-    // TODO: Navigate to Reset Password page
-  }
+  void _navigateToResetPassword() {}
 
   // Dialog methods
   void _showLogoutDialog(BuildContext context) {
@@ -207,10 +216,7 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
       context: context,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          'Logout',
-          style: TextStyle(fontWeight: FontWeight.w600),
-        ),
+        title: const Text('Logout', style: TextStyle(fontWeight: FontWeight.w600)),
         content: const Text('Are you sure you want to logout?'),
         actions: [
           TextButton(
@@ -220,13 +226,9 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              // TODO: Implement logout logic
               Navigator.pop(context);
             },
-            child: const Text(
-              'Logout',
-              style: TextStyle(color: Color(0xFFFF6B6B)),
-            ),
+            child: const Text('Logout', style: TextStyle(color: Color(0xFFFF6B6B))),
           ),
         ],
       ),
@@ -238,13 +240,8 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
       context: context,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          'Delete Account',
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            color: Color(0xFFFF6B6B),
-          ),
-        ),
+        title: const Text('Delete Account',
+            style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFFFF6B6B))),
         content: const Text('This action cannot be undone. Are you sure?'),
         actions: [
           TextButton(
@@ -252,14 +249,8 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // TODO: Implement delete account logic
-            },
-            child: const Text(
-              'Delete',
-              style: TextStyle(color: Color(0xFFFF6B6B)),
-            ),
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Delete', style: TextStyle(color: Color(0xFFFF6B6B))),
           ),
         ],
       ),
@@ -305,49 +296,32 @@ class _ProfileCard extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                     color: Color(0xFF1A1A1A),
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
                 Text(
                   profile.email,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: Color(0xFF6B6B6B),
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 13, color: Color(0xFF6B6B6B)),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   profile.bio,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF4CAF50),
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 12, color: Color(0xFF6B6B6B)),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 12),
-          InkWell(
-            onTap: onEdit,
-            borderRadius: BorderRadius.circular(8),
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF5F5F5),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(
-                Icons.edit_outlined,
-                size: 20,
-                color: Color(0xFF1A1A1A),
-              ),
-            ),
-          ),
+        const SizedBox(width: 12),
+        IconButton(
+            icon: const Icon(Icons.edit_outlined),
+            splashRadius: 20,
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => EditAccountInformationScreen()),
+              );
+            }
+        ),
         ],
       ),
     );
@@ -422,16 +396,24 @@ class _SettingItemWidget extends StatelessWidget {
         padding: const EdgeInsets.all(16.0),
         child: Row(
           children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: item.iconBackgroundColor ?? const Color(0xFFF5F5F5),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                item.icon,
-                color: item.iconColor ?? const Color(0xFF1A1A1A),
-                size: 24,
+            SizedBox(
+              width: 35,
+              height: 35,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Container(
+                    decoration: const ShapeDecoration(
+                      color: Color(0x7FC4C4C4),
+                      shape: OvalBorder(),
+                    ),
+                  ),
+                  Icon(
+                    item.icon,
+                    color: item.iconColor ?? const Color(0xFF1A1A1A),
+                    size: 20,
+                  ),
+                ],
               ),
             ),
             const SizedBox(width: 16),
@@ -454,8 +436,6 @@ class _SettingItemWidget extends StatelessWidget {
                       fontSize: 12,
                       color: Color(0xFF9E9E9E),
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
