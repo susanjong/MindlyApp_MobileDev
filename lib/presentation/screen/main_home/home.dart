@@ -167,7 +167,7 @@ class _HomePageState extends State<HomePage> {
                   children: [
                     // ========== GREETING SECTION ==========
                     const Text(
-                      'Good Morning, Jane Doe',
+                      'Good Morning, Susan Jong',
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
