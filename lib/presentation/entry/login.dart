@@ -1,5 +1,6 @@
 // File: screens/login.dart
 import 'package:flutter/material.dart';
+import 'package:notesapp/widgets/button.dart';
 
 class LoginAccountScreen extends StatefulWidget {
   @override
@@ -19,14 +20,14 @@ class _LoginAccountScreenState extends State<LoginAccountScreen> {
   @override
   void initState() {
     super.initState();
-    
+
     // Listen to email field focus changes
     _emailFocusNode.addListener(() {
       setState(() {
         _isEmailFocused = _emailFocusNode.hasFocus;
       });
     });
-    
+
     // Listen to password field focus changes
     _passwordFocusNode.addListener(() {
       setState(() {
@@ -38,47 +39,51 @@ class _LoginAccountScreenState extends State<LoginAccountScreen> {
   @override
   Widget build(BuildContext context) {
     final double statusBarHeight = MediaQuery.of(context).viewPadding.top;
-    
+
     return Scaffold(
       backgroundColor: Colors.grey[50],
       body: Column(
         children: [
           SizedBox(height: statusBarHeight),
-          
-          // Back button - Navigasi ke signup
+
+          // Back button - Navigasi kembali ke signup
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Align(
               alignment: Alignment.centerLeft,
-              child: GestureDetector(
-                onTap: () {
-                  Navigator.pushNamed(context, '/signup');
-                },
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.withOpacity(0.2),
-                        spreadRadius: 1,
-                        blurRadius: 3,
-                        offset: Offset(0, 1),
-                      ),
-                    ],
-                  ),
-                  child: Icon(
-                    Icons.arrow_back,
-                    color: Colors.black54,
-                    size: 20,
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () {
+                    Navigator.pop(context);
+                  },
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(0.2),
+                          spreadRadius: 1,
+                          blurRadius: 3,
+                          offset: Offset(0, 1),
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      Icons.arrow_back,
+                      color: Colors.black54,
+                      size: 20,
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-          
+
           Expanded(
             child: SingleChildScrollView(
               child: Column(
@@ -107,9 +112,9 @@ class _LoginAccountScreenState extends State<LoginAccountScreen> {
                     children: [
                       // Kotak abu-abu
                       Container(
-                        width: double.infinity, 
+                        width: double.infinity,
                         height: 100,
-                        margin: EdgeInsets.zero, 
+                        margin: EdgeInsets.zero,
                         decoration: BoxDecoration(
                           color: const Color(0x7FD9D9D9),
                           borderRadius: BorderRadius.circular(30),
@@ -122,6 +127,7 @@ class _LoginAccountScreenState extends State<LoginAccountScreen> {
                               'Login Account',
                               textAlign: TextAlign.center,
                               style: const TextStyle(
+                                fontFamily: 'Poppins',
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.black,
@@ -130,7 +136,7 @@ class _LoginAccountScreenState extends State<LoginAccountScreen> {
                           ),
                         ),
                       ),
-                      
+
                       // White container overlapping
                       Container(
                         width: double.infinity,
@@ -148,7 +154,11 @@ class _LoginAccountScreenState extends State<LoginAccountScreen> {
                           children: [
                             const Text(
                               'Sign in to continue your productivity journey',
-                              style: TextStyle(fontSize: 16, color: Colors.black54),
+                              style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 16,
+                                color: Colors.black54,
+                              ),
                               textAlign: TextAlign.center,
                             ),
                             const SizedBox(height: 40),
@@ -163,6 +173,7 @@ class _LoginAccountScreenState extends State<LoginAccountScreen> {
                                   const Text(
                                     'Email',
                                     style: TextStyle(
+                                      fontFamily: 'Poppins',
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,
                                       color: Colors.black87,
@@ -181,10 +192,14 @@ class _LoginAccountScreenState extends State<LoginAccountScreen> {
                                       controller: _emailController,
                                       focusNode: _emailFocusNode,
                                       keyboardType: TextInputType.emailAddress,
+                                      style: const TextStyle(fontFamily: 'Poppins'),
                                       decoration: InputDecoration(
                                         hintText: 'Enter Your Email',
                                         hintStyle: TextStyle(
-                                            color: Colors.grey[500], fontSize: 15),
+                                          fontFamily: 'Poppins',
+                                          color: Colors.grey[500],
+                                          fontSize: 15,
+                                        ),
                                         filled: true,
                                         fillColor: Colors.white,
                                         border: OutlineInputBorder(
@@ -217,6 +232,7 @@ class _LoginAccountScreenState extends State<LoginAccountScreen> {
                                   const Text(
                                     'Password',
                                     style: TextStyle(
+                                      fontFamily: 'Poppins',
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,
                                       color: Colors.black87,
@@ -235,10 +251,14 @@ class _LoginAccountScreenState extends State<LoginAccountScreen> {
                                       controller: _passwordController,
                                       focusNode: _passwordFocusNode,
                                       obscureText: !_isPasswordVisible,
+                                      style: const TextStyle(fontFamily: 'Poppins'),
                                       decoration: InputDecoration(
                                         hintText: 'Enter Your Password',
                                         hintStyle: TextStyle(
-                                            color: Colors.grey[500], fontSize: 15),
+                                          fontFamily: 'Poppins',
+                                          color: Colors.grey[500],
+                                          fontSize: 15,
+                                        ),
                                         filled: true,
                                         fillColor: Colors.white,
                                         border: OutlineInputBorder(
@@ -291,6 +311,7 @@ class _LoginAccountScreenState extends State<LoginAccountScreen> {
                                       child: Text(
                                         'Forgot Your Password?',
                                         style: TextStyle(
+                                          fontFamily: 'Poppins',
                                           color: Colors.purple,
                                           fontSize: 14,
                                           fontWeight: FontWeight.w500,
@@ -301,56 +322,22 @@ class _LoginAccountScreenState extends State<LoginAccountScreen> {
 
                                   const SizedBox(height: 30),
 
-                                  // Login Button
-                                  SizedBox(
-                                    width: double.infinity,
-                                    height: 55,
-                                    child: ElevatedButton(
+                                  // Login Button pakai widget button yang primary tu
+                                  Center(
+                                    child: PrimaryButton(
+                                      label: 'Login Account',
                                       onPressed: () {
                                         if (_formKey.currentState!.validate()) {
                                           // Navigasi ke home setelah login berhasil
                                           Navigator.pushNamed(context, '/home');
                                         }
                                       },
-                                      child: const Text(
-                                        'Login Account',
-                                        style: TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.purple,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(30),
-                                        ),
-                                        elevation: 0,
-                                      ),
+                                      width: double.infinity,
+                                      height: 55,
                                     ),
                                   ),
 
                                   const SizedBox(height: 25),
-
-                                  // // Create Account Link
-                                  // Align(
-                                  //   alignment: Alignment.topLeft,
-                                  //   child: GestureDetector(
-                                  //     onTap: () {
-                                  //       Navigator.pushNamed(context, '/signup');
-                                  //     },
-                                  //     child: Text(
-                                  //       'Create Account',
-                                  //       style: TextStyle(
-                                  //         color: Colors.purple,
-                                  //         fontSize: 16,
-                                  //         fontWeight: FontWeight.w600,
-                                  //       ),
-                                  //     ),
-                                  //   ),
-                                  // ),
-
-                                  // const SizedBox(height: 30),
                                 ],
                               ),
                             ),
