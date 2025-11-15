@@ -1,16 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:notesapp/presentation/screen/splash_screen.dart';
 import 'package:notesapp/firebase_options.dart';
-import 'package:notesapp/presentation/entry/login.dart';
-import 'package:notesapp/presentation/entry/resetpass.dart';
-import 'package:notesapp/presentation/entry/signup.dart';
-import 'package:notesapp/presentation/entry/forgotpass.dart';
-import 'package:notesapp/presentation/screen/main_home/home.dart';
-import 'package:notesapp/presentation/screen/main_home/profile.dart';
-import 'package:notesapp/presentation/screen/notes/awalnotes.dart';
-import 'package:notesapp/presentation/screen/todolist/awaltodo.dart';
-import 'package:notesapp/presentation/screen/calendar/awalcalendar.dart';
+import 'package:notesapp/routes/routes.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -40,20 +32,9 @@ class MyApp extends StatelessWidget {
         fontFamily: 'Poppins',
       ),
       debugShowCheckedModeBanner: false,
-      initialRoute: '/',
-      routes: {
-        '/': (context) => const LogoSplash(),
-        '/splash': (context) => const LogoSplash(),
-        '/sign_up': (context) => SignUpScreen(),
-        '/sign_in': (context) => LoginAccountScreen(),
-        '/home': (context) => const HomePage(),
-        '/reset_password': (context) => ResetPasswordScreen(),
-        '/forgot_password': (context) => ForgotPasswordScreen(),
-        '/profile': (context) => const AccountProfilePage(),
-        '/notes': (context) => const NotesPage(),
-        '/todo': (context) => const TodoListPage(),
-        '/calendar': (context) => const CalendarPage(),
-      },
+      initialRoute: AppRoutes.splash,
+      routes: AppRoutes.routes,
+      onGenerateRoute: AppRoutes.generateRoute,
     );
   }
 }
