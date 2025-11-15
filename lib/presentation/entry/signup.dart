@@ -232,13 +232,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.purple),
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFD9D9D9)),
               ),
               SizedBox(height: 16),
               Text(
                 'Please Wait...',
                 style: GoogleFonts.poppins(
-                  color: Colors.purple,
+                  color: Colors.black,
                   fontSize: 16,
                 ),
               ),
@@ -456,7 +456,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                             decoration: InputDecoration(
                                               hintText: 'Enter Your Email',
                                               hintStyle: GoogleFonts.poppins(
-                                                color: Colors.black.withOpacity(0.5),
+                                                color: Colors.black,
                                                 fontSize: 13,
                                                 fontWeight: FontWeight.w300,
                                                 letterSpacing: -0.26,
@@ -529,7 +529,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                                   decoration: InputDecoration(
                                                     hintText: 'Enter Your Password',
                                                     hintStyle: GoogleFonts.poppins(
-                                                      color: Colors.black.withOpacity(0.5),
+                                                      color: Colors.black,
                                                       fontSize: 13,
                                                       fontWeight: FontWeight.w300,
                                                       letterSpacing: -0.26,
@@ -619,7 +619,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                                   decoration: InputDecoration(
                                                     hintText: 'Enter Your Password Again',
                                                     hintStyle: GoogleFonts.poppins(
-                                                      color: Colors.black.withOpacity(0.5),
+                                                      color: Colors.black,
                                                       fontSize: 13,
                                                       fontWeight: FontWeight.w300,
                                                       letterSpacing: -0.26,
