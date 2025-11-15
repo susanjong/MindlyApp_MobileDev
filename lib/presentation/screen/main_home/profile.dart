@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:notesapp/models/profile_model.dart';
 import 'package:notesapp/presentation/screen/main_home/edit_bioprofile.dart';
+import 'package:notesapp/routes/routes.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:notesapp/widgets/alert_dialog.dart';
 
 class AccountProfilePage extends StatefulWidget {
-  const AccountProfilePage({Key? key}) : super(key: key);
+  const AccountProfilePage({super.key});
 
   @override
   State<AccountProfilePage> createState() => _AccountProfilePageState();
@@ -25,14 +28,14 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
       email: 'susanjong5@gmail.com',
       bio: 'Smile in front of your assignments',
       imageUrl:
-          'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop',
+      'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop',
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // Change background to white
+      backgroundColor: Colors.white,
       appBar: _buildAppBar(),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -66,14 +69,14 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
       elevation: 0,
       leading: IconButton(
         icon: const Icon(Icons.arrow_back, color: Color(0xFF1A1A1A)),
-        onPressed: () => Navigator.pop(context),
+        onPressed: () => Navigator.pushNamed(context, AppRoutes.home),
       ),
-      title: const Text(
+      title: Text(
         'Account Profile',
-        style: TextStyle(
+        style: GoogleFonts.poppins(
           fontSize: 18,
           fontWeight: FontWeight.w600,
-          color: Color(0xFF1A1A1A),
+          color: const Color(0xFF1A1A1A),
         ),
       ),
       centerTitle: true,
@@ -93,7 +96,7 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
             onChanged: (value) {
               setState(() => _notificationsEnabled = value);
             },
-            activeColor: const Color(0xFF4CAF50),
+            activeThumbColor: const Color(0xFF4CAF50),
           ),
         ),
       ],
@@ -109,14 +112,18 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
           title: 'Help & FAQ',
           subtitle: 'Get answers to common questions',
           trailing: _buildButton('View'),
-          onTap: _navigateToHelpFAQ,
+          onTap: () {
+            Navigator.pushNamed(context, AppRoutes.helpFaq);
+          },
         ),
         SettingItem(
           icon: Icons.info_outline,
           title: 'About',
           subtitle: 'App version and information',
           trailing: _buildButton('Info'),
-          onTap: _navigateToAbout,
+          onTap: () {
+            Navigator.pushNamed(context, AppRoutes.aboutUs);
+          },
         ),
       ],
     );
@@ -130,7 +137,7 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
           icon: Icons.lock_outline,
           title: 'Reset Password',
           subtitle: 'Change your account password',
-          onTap: _navigateToResetPassword,
+          onTap: () => _showResetDialog(context),
         ),
       ],
     );
@@ -163,102 +170,89 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
       width: 88.81,
       height: 24,
       decoration: ShapeDecoration(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
+        color: Colors.white,
+        shape: RoundedRectangleBorder(
+          side: const BorderSide(width: 1, color: Color(0xFF000000)),
+          borderRadius: BorderRadius.circular(5),
+        ),
       ),
-      child: Stack(
-        children: [
-          Positioned(
-            left: 0,
-            top: 0,
-            child: Container(
-              width: 88.81,
-              height: 24,
-              decoration: ShapeDecoration(
-                color: Colors.white,
-                shape: RoundedRectangleBorder(
-                  side: const BorderSide(width: 1, color: Color(0xFFE0E0E0)),
-                  borderRadius: BorderRadius.circular(5),
-                ),
-              ),
-            ),
+      child: Center(
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: GoogleFonts.poppins(
+            color: Colors.black,
+            fontSize: 12,
+            fontWeight: FontWeight.w400,
+            height: 1,
+            letterSpacing: -0.24,
           ),
-          Center(
-            child: Text(
-              label,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.black,
-                fontSize: 12,
-                fontFamily: 'Poppins',
-                fontWeight: FontWeight.w400,
-                height: 1,
-                letterSpacing: -0.24,
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  // Navigation methods
   void _navigateToEditProfile() {}
 
-  void _navigateToHelpFAQ() {}
-
-  void _navigateToAbout() {}
-
-  void _navigateToResetPassword() {}
-
-  // Dialog methods
-  void _showLogoutDialog(BuildContext context) {
-    showDialog(
+  // reset password dialog
+  void _showResetDialog(BuildContext context) {
+    showIOSDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Logout', style: TextStyle(fontWeight: FontWeight.w600)),
-        content: const Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pop(context);
-            },
-            child: const Text('Logout', style: TextStyle(color: Color(0xFFFF6B6B))),
-          ),
-        ],
-      ),
+      title: 'Reset Password',
+      message: 'Are you sure you want to \nreset your password ?',
+      cancelText: 'Cancel',
+      confirmText: 'Reset',
+      confirmTextColor: const Color(0xFFFF453A),
+      onConfirm: () {
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRoutes.resetPassword,
+              (route) => false,
+        );
+      },
     );
   }
 
-  void _showDeleteAccountDialog(BuildContext context) {
-    showDialog(
+  // logout dialog
+  void _showLogoutDialog(BuildContext context) {
+    showIOSDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Delete Account',
-            style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFFFF6B6B))),
-        content: const Text('This action cannot be undone. Are you sure?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Delete', style: TextStyle(color: Color(0xFFFF6B6B))),
-          ),
-        ],
-      ),
+      title: 'Logout',
+      message: 'Are you sure you want to \nlogout this account?',
+      cancelText: 'Cancel',
+      confirmText: 'Logout',
+      confirmTextColor: const Color(0xFFFF453A),
+      onConfirm: () {
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRoutes.signIn,
+              (route) => false,
+        );
+      },
+    );
+  }
+
+  // delete account dialog
+  void _showDeleteAccountDialog(BuildContext context) {
+    showIOSDialog(
+      context: context,
+      title: 'Delete Account',
+      message: 'This action cannot be undone.\nAre you sure?',
+      cancelText: 'Cancel',
+      confirmText: 'Delete',
+      confirmTextColor: const Color(0xFFFF453A),
+      onConfirm: () {
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRoutes.signUp,
+              (route) => false,
+        );
+      },
     );
   }
 }
 
-// Profile Card Widget
+// profile card widget
 class _ProfileCard extends StatelessWidget {
   final UserProfile profile;
   final VoidCallback onEdit;
@@ -275,7 +269,7 @@ class _ProfileCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE0E0E0), width: 1),
+        border: Border.all(color: const Color(0xFF000000), width: 1),
       ),
       child: Row(
         children: [
@@ -291,44 +285,51 @@ class _ProfileCard extends StatelessWidget {
               children: [
                 Text(
                   profile.name,
-                  style: const TextStyle(
+                  style: GoogleFonts.poppins(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF1A1A1A),
+                    color: const Color(0xFF1A1A1A),
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   profile.email,
-                  style: const TextStyle(fontSize: 13, color: Color(0xFF6B6B6B)),
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: const Color(0xFF6B6B6B),
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   profile.bio,
-                  style: const TextStyle(fontSize: 12, color: Color(0xFF6B6B6B)),
+                  style: GoogleFonts.poppins(
+                    fontSize: 10,
+                    color: const Color(0xFF3C527E),
+                  ),
                 ),
               ],
             ),
           ),
-        const SizedBox(width: 12),
-        IconButton(
+          const SizedBox(width: 12),
+          IconButton(
             icon: const Icon(Icons.edit_outlined),
             splashRadius: 20,
             onPressed: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                    builder: (context) => EditAccountInformationScreen()),
+                  builder: (context) => EditAccountInformationScreen(),
+                ),
               );
-            }
-        ),
+            },
+          ),
         ],
       ),
     );
   }
 }
 
-// Setting Section Widget
+// setting section widget
 class _SettingSection extends StatelessWidget {
   final String title;
   final List<SettingItem> items;
@@ -347,10 +348,10 @@ class _SettingSection extends StatelessWidget {
           padding: const EdgeInsets.only(left: 4.0, bottom: 8.0),
           child: Text(
             title,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF9E9E9E),
+            style: GoogleFonts.poppins(
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
+              color: Colors.black45,
               letterSpacing: 0.5,
             ),
           ),
@@ -359,7 +360,7 @@ class _SettingSection extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFE0E0E0), width: 1),
+            border: Border.all(color: const Color(0xFF000000), width: 1),
           ),
           child: ListView.separated(
             shrinkWrap: true,
@@ -368,8 +369,9 @@ class _SettingSection extends StatelessWidget {
             itemCount: items.length,
             separatorBuilder: (context, index) => const Divider(
               height: 1,
-              color: Color(0xFFE0E0E0),
-              indent: 60,
+              color: Color(0xFF999191),
+              indent: 25,
+              endIndent: 25,
             ),
             itemBuilder: (context, index) {
               return _SettingItemWidget(item: items[index]);
@@ -381,7 +383,7 @@ class _SettingSection extends StatelessWidget {
   }
 }
 
-// Setting Item Widget
+// setting item widget
 class _SettingItemWidget extends StatelessWidget {
   final SettingItem item;
 
@@ -423,18 +425,19 @@ class _SettingItemWidget extends StatelessWidget {
                 children: [
                   Text(
                     item.title,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
                       color: item.iconColor ?? const Color(0xFF1A1A1A),
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     item.subtitle,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF9E9E9E),
+                    style: GoogleFonts.poppins(
+                      fontSize: 10,
+                      color: Colors.black,
+                      fontWeight: FontWeight.w300,
                     ),
                   ),
                 ],
