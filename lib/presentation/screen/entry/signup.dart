@@ -5,6 +5,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:notesapp/widgets/button.dart';
 import 'package:notesapp/routes/routes.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class SignUpScreen extends StatefulWidget {
   @override
@@ -213,16 +214,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 children: [
                   const SizedBox(height: 10),
 
-                  // Header image
+                  // header SVG image
                   Center(
-                    child: Container(
-                      width: 192,
-                      height: 211,
-                      decoration: const BoxDecoration(
-                        image: DecorationImage(
-                          image: AssetImage("assets/images/signup_elemen.png"),
-                          fit: BoxFit.contain,
-                        ),
+                    child: SizedBox(
+                      width: 213,
+                      height: 165,
+                      child: SvgPicture.asset(
+                        'assets/images/SignUp_elemen.svg',
+                        fit: BoxFit.contain,
                       ),
                     ),
                   ),
@@ -730,7 +729,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
             ],
           ),
         ),
-        // ✅ Error message di bawah field
+        // error message di bawah field
         if (hasError)
           Padding(
             padding: const EdgeInsets.only(top: 4),

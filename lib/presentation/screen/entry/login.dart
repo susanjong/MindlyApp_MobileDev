@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:notesapp/widgets/button.dart';
 import 'package:notesapp/routes/routes.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class LoginAccountScreen extends StatefulWidget {
   const LoginAccountScreen({super.key});
@@ -149,23 +150,21 @@ class _LoginAccountScreenState extends State<LoginAccountScreen> {
                   children: [
                     const SizedBox(height: 10),
 
-                    // Image
+                    // image
                     Center(
-                      child: Container(
-                        width: 250,
-                        height: 200,
-                        decoration: const BoxDecoration(
-                          image: DecorationImage(
-                            image: AssetImage("assets/images/sigin_elemen.png"),
-                            fit: BoxFit.contain,
-                          ),
+                      child: SizedBox(
+                        width: 180,
+                        height: 150,
+                        child: SvgPicture.asset(
+                          'assets/images/Login_elemen.svg',
+                          fit: BoxFit.contain,
                         ),
                       ),
                     ),
 
                     const SizedBox(height: 30),
 
-                    // Stack
+                    // stack
                     Stack(
                       alignment: Alignment.topCenter,
                       children: [
@@ -259,7 +258,7 @@ class _LoginAccountScreenState extends State<LoginAccountScreen> {
 
                                     const SizedBox(height: 30),
 
-                                    // Login button
+                                    // login button
                                     Center(
                                       child: LayoutBuilder(
                                         builder: (context, constraints) {
