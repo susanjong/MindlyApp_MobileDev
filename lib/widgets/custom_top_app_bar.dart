@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:notesapp/widgets/font_style.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class CustomTopAppBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback? onProfileTap;
   final VoidCallback? onNotificationTap;
 
   const CustomTopAppBar({
-    Key? key,
+    super.key,
     this.onProfileTap,
     this.onNotificationTap,
-  }) : super(key: key);
+  });
 
   @override
   Size get preferredSize => const Size.fromHeight(70);
@@ -24,47 +25,55 @@ class CustomTopAppBar extends StatelessWidget implements PreferredSizeWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            // kiri: kotak hijau + Mindly
+            // Mindly logo in here
             Row(
               children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF0D5F5F),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
+                SizedBox(
+                  width: 32.36,
+                  height: 30,
                   child: Center(
-                    child: Image.asset(
-                      'assets/images/vectorlogo.png',
-                      width: 22,
-                      height: 22,
+                    child: SvgPicture.asset(
+                      'assets/images/Mindly_logo.svg',
+                      width: 32.36,
+                      height: 30,
                       fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) =>
-                      const Icon(Icons.image_not_supported_outlined,
-                          color: Colors.white),
+                      errorBuilder: (context, error, stackTrace) => const Icon(
+                        Icons.image_not_supported_outlined,
+                        color: Colors.grey,
+                      ),
                     ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Text(
                   'Mindly',
-                  style: FontStyles.appTitle,
+                  style: GoogleFonts.poppins(
+                    fontSize: 30,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF004455),
+                    letterSpacing: -0.5,
+                  ),
                 ),
               ],
             ),
 
-            // kanan: profil + notifikasi
+            // right: icon profile + notification
             Row(
               children: [
                 IconButton(
-                  icon: const Icon(Icons.person_outline,
-                      color: Color(0xFF1A1A1A), size: 26),
+                  icon: const Icon(
+                    Icons.person_outline,
+                    color: Color(0xFF1A1A1A),
+                    size: 26,
+                  ),
                   onPressed: onProfileTap ?? () {},
                 ),
                 IconButton(
-                  icon: const Icon(Icons.notifications_none_outlined,
-                      color: Color(0xFF1A1A1A), size: 26),
+                  icon: const Icon(
+                    Icons.notifications_none_outlined,
+                    color: Color(0xFF1A1A1A),
+                    size: 26,
+                  ),
                   onPressed: onNotificationTap ?? () {},
                 ),
               ],
