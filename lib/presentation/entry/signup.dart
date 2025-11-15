@@ -1,10 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:notesapp/widgets/snackbar.dart';
 import 'package:notesapp/widgets/button.dart';
+import 'package:notesapp/routes/routes.dart';
 
 class SignUpScreen extends StatefulWidget {
   @override
@@ -16,13 +17,76 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _emailFocusNode = FocusNode();
+  final _passwordFocusNode = FocusNode();
+  final _confirmPasswordFocusNode = FocusNode();
+
   bool _agreeToTerms = false;
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
   bool _isLoading = false;
+  bool _isEmailFocused = false;
+  bool _isPasswordFocused = false;
+  bool _isConfirmPasswordFocused = false;
+
+  // Error messages
+  String? _emailError;
+  String? _passwordError;
+  String? _confirmPasswordError;
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Listen to email field focus
+    _emailFocusNode.addListener(() {
+      setState(() {
+        _isEmailFocused = _emailFocusNode.hasFocus;
+      });
+    });
+
+    // Listen to password field focus
+    _passwordFocusNode.addListener(() {
+      setState(() {
+        _isPasswordFocused = _passwordFocusNode.hasFocus;
+      });
+    });
+
+    // Listen to confirm password field focus
+    _confirmPasswordFocusNode.addListener(() {
+      setState(() {
+        _isConfirmPasswordFocused = _confirmPasswordFocusNode.hasFocus;
+      });
+    });
+
+    // Add listeners to clear errors when typing
+    _emailController.addListener(() {
+      if (_emailError != null) {
+        setState(() {
+          _emailError = null;
+        });
+      }
+    });
+
+    _passwordController.addListener(() {
+      if (_passwordError != null) {
+        setState(() {
+          _passwordError = null;
+        });
+      }
+    });
+
+    _confirmPasswordController.addListener(() {
+      if (_confirmPasswordError != null) {
+        setState(() {
+          _confirmPasswordError = null;
+        });
+      }
+    });
+  }
 
   Future<void> _signInWithGoogle() async {
     if (_isLoading) return;
@@ -43,7 +107,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       Snackbar.success(context, 'Successfully signed in as ${googleUser.displayName ?? googleUser.email}');
       if (mounted) {
         await Future.delayed(Duration(milliseconds: 1000));
-        Navigator.pushReplacementNamed(context, '/home');
+        Navigator.pushReplacementNamed(context, AppRoutes.home);
       }
     } catch (e) {
       print('Google Sign-In error: $e');
@@ -66,10 +130,60 @@ class _SignUpScreenState extends State<SignUpScreen> {
     }
   }
 
+  bool _validateFields() {
+    bool isValid = true;
+
+    // Validate email
+    if (_emailController.text.trim().isEmpty) {
+      setState(() {
+        _emailError = 'Please enter your email';
+      });
+      isValid = false;
+    } else if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(_emailController.text.trim())) {
+      setState(() {
+        _emailError = 'Please enter a valid email';
+      });
+      isValid = false;
+    }
+
+    // Validate password
+    if (_passwordController.text.isEmpty) {
+      setState(() {
+        _passwordError = 'Please enter your password';
+      });
+      isValid = false;
+    } else if (_passwordController.text.length < 6) {
+      setState(() {
+        _passwordError = 'Password must be at least 6 characters';
+      });
+      isValid = false;
+    } else if (!RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)').hasMatch(_passwordController.text)) {
+      setState(() {
+        _passwordError = 'Password must contain uppercase, lowercase, and numbers';
+      });
+      isValid = false;
+    }
+
+    // Validate confirm password
+    if (_confirmPasswordController.text.isEmpty) {
+      setState(() {
+        _confirmPasswordError = 'Please confirm your password';
+      });
+      isValid = false;
+    } else if (_confirmPasswordController.text != _passwordController.text) {
+      setState(() {
+        _confirmPasswordError = 'Password does not match';
+      });
+      isValid = false;
+    }
+
+    return isValid;
+  }
+
   Future<void> _createAccountWithEmail() async {
     if (_isLoading) return;
 
-    if (!_formKey.currentState!.validate()) {
+    if (!_validateFields()) {
       return;
     }
 
@@ -81,9 +195,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
     setState(() {
       _isLoading = true;
     });
+
+    // Simulate account creation
+    await Future.delayed(Duration(milliseconds: 500));
+
     Snackbar.success(context, 'Account created successfully!');
     if (mounted) {
-      Navigator.pushReplacementNamed(context, '/home');
+      Navigator.pushReplacementNamed(context, AppRoutes.home);
     }
 
     setState(() {
@@ -91,421 +209,483 @@ class _SignUpScreenState extends State<SignUpScreen> {
     });
   }
 
-  // Ini belum ada di pake, bisa dihapus kalau memang nggak dipake
-  String _getFirebaseErrorMessage(FirebaseAuthException e) {
-    switch (e.code) {
-      case 'weak-password':
-        return 'Password is too weak. Use at least 6 characters.';
-      case 'email-already-in-use':
-        return 'An account already exists for this email.';
-      case 'invalid-email':
-        return 'Invalid email address.';
-      case 'operation-not-allowed':
-        return 'Email/password accounts are not enabled.';
-      case 'user-disabled':
-        return 'This account has been disabled.';
-      case 'account-exists-with-different-credential':
-        return 'Account exists with different sign-in method.';
-      case 'invalid-credential':
-        return 'Invalid credentials. Check Firebase configuration.';
-      case 'missing-token':
-        return 'Authentication failed. Check Firebase setup.';
-      case 'network-request-failed':
-        return 'Network error. Check your internet connection.';
-      default:
-        return e.message ?? 'Authentication failed. Please try again.';
-    }
-  }
-
-  // Ini belum ada di pake, bisa dihapus kalau memang nggak dipake
-  Future<void> _saveUserToFirestore(User user) async {
-    try {
-      print('Saving user to Firestore: ${user.uid}');
-
-      final userDoc = _firestore.collection('users').doc(user.uid);
-
-      final userData = {
-        'uid': user.uid,
-        'email': user.email ?? '',
-        'displayName': user.displayName ?? '',
-        'photoURL': user.photoURL ?? '',
-        'createdAt': FieldValue.serverTimestamp(),
-        'lastSignIn': FieldValue.serverTimestamp(),
-        'emailVerified': user.emailVerified,
-      };
-
-      await userDoc.set(userData, SetOptions(merge: true));
-      print('User saved to Firestore successfully');
-
-    } catch (e) {
-      print('Firestore error: $e');
-      // Don't throw - authentication was successful
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final double statusBarHeight = MediaQuery.of(context).viewPadding.top;
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final double screenHeight = MediaQuery.of(context).size.height;
+
+    // Responsive values
+    final double horizontalPadding = screenWidth > 600 ? 50 : 40;
+    final double buttonWidth = screenWidth > 600
+        ? (screenWidth * 0.4).clamp(360.0, 500.0)
+        : (screenWidth - (horizontalPadding * 2)).clamp(280.0, 313.0);
+    final double buttonHeight = screenWidth > 600 ? 45 : 38;
+    final double titleFontSize = screenWidth > 600 ? 22 : 20;
+    final double subtitleFontSize = screenWidth > 600 ? 16 : 15;
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      body: Column(
-        children: [
-          SizedBox(height: statusBarHeight),
-
-          Expanded(
-            child: _isLoading
-                ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.purple),
-                  ),
-                  SizedBox(height: 16),
-                  Text(
-                    'Please Wait...',
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      color: Colors.purple,
-                      fontSize: 16,
-                    ),
-                  ),
-                ],
+      body: SafeArea(
+        child: _isLoading
+            ? Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.purple),
               ),
-            )
-                : SingleChildScrollView(
-              child: Column(
-                children: [
-                  const SizedBox(height: 10),
+              SizedBox(height: 16),
+              Text(
+                'Please Wait...',
+                style: GoogleFonts.poppins(
+                  color: Colors.purple,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+        )
+            : SingleChildScrollView(
+          child: Column(
+            children: [
+              const SizedBox(height: 10),
 
-                  // Header image
-                  Center(
-                    child: Container(
-                      width: 192,
-                      height: 211,
-                      decoration: const BoxDecoration(
-                        image: DecorationImage(
-                          image: AssetImage("assets/images/signup_elemen.png"),
-                          fit: BoxFit.contain,
+              // Header image - Responsive
+              Center(
+                child: Container(
+                  width: screenWidth > 600 ? 220 : 192,
+                  height: screenWidth > 600 ? 240 : 211,
+                  decoration: const BoxDecoration(
+                    image: DecorationImage(
+                      image: AssetImage("assets/images/signup_elemen.png"),
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              Stack(
+                alignment: Alignment.topCenter,
+                children: [
+                  Container(
+                    width: double.infinity,
+                    height: 108,
+                    margin: EdgeInsets.zero,
+                    decoration: BoxDecoration(
+                      color: const Color(0x7FD9D9D9),
+                      borderRadius: BorderRadius.circular(45),
+                    ),
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 50),
+                        child: Text(
+                          'Create New Account',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.poppins(
+                            fontSize: titleFontSize,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black,
+                            letterSpacing: -0.40,
+                            height: 1,
+                          ),
                         ),
                       ),
                     ),
                   ),
 
-                  const SizedBox(height: 20),
-
-                  Stack(
-                    alignment: Alignment.topCenter,
-                    children: [
-                      Container(
-                        width: double.infinity,
-                        height: 100,
-                        margin: EdgeInsets.zero,
-                        decoration: BoxDecoration(
-                          color: const Color(0x7FD9D9D9),
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                        child: Align(
-                          alignment: Alignment.center,
-                          child: Padding(
-                            padding: const EdgeInsets.only(bottom: 30),
-                            child: Text(
-                              'Create New Account',
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontFamily: 'Poppins',
-                                fontSize: 25,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black,
-                              ),
-                            ),
-                          ),
-                        ),
+                  Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(top: 54),
+                    padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 30),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(35),
+                        topRight: Radius.circular(35),
                       ),
-
-                      Container(
-                        width: double.infinity,
-                        margin: const EdgeInsets.only(top: 60),
-                        padding: const EdgeInsets.all(30),
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.only(
-                            topLeft: Radius.circular(45),
-                            topRight: Radius.circular(45),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: screenWidth > 600 ? 320 : 270,
+                          child: Text(
+                            'Start your productivity journey today!',
+                            style: GoogleFonts.poppins(
+                              fontSize: subtitleFontSize,
+                              fontWeight: FontWeight.w400,
+                              color: Colors.black,
+                              letterSpacing: -0.30,
+                              height: 1,
+                            ),
+                            textAlign: TextAlign.center,
                           ),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            const Text(
-                              'Start your productivity journey today!',
-                              style: TextStyle(
-                                fontFamily: 'Poppins',
-                                fontSize: 16,
-                                color: Colors.black54,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 40),
+                        const SizedBox(height: 16),
 
-                            Form(
-                              key: _formKey,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  SizedBox(
-                                    width: double.infinity,
-                                    height: 55,
-                                    child: OutlinedButton.icon(
-                                      onPressed: _isLoading ? null : _signInWithGoogle,
-                                      icon: Container(
-                                        width: 24,
-                                        height: 24,
-                                        child: Image.asset(
+                        Form(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              // Google Sign In Button - Responsive
+                              Container(
+                                width: buttonWidth,
+                                height: buttonHeight,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFFFFF),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(width: 1, color: Colors.black),
+                                ),
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    onTap: _isLoading ? null : _signInWithGoogle,
+                                    borderRadius: BorderRadius.circular(10),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Image.asset(
                                           'assets/images/google.png',
-                                          width: 18,
-                                          height: 18,
+                                          width: 16,
+                                          height: 16,
                                           errorBuilder: (context, error, stackTrace) {
-                                            return Icon(Icons.g_mobiledata, color: Colors.blue);
+                                            return Icon(Icons.g_mobiledata, color: Colors.blue, size: 16);
                                           },
                                         ),
-                                      ),
-                                      label: Text(
-                                        'Sign In with Google',
-                                        style: TextStyle(
-                                          fontFamily: 'Poppins',
-                                          fontSize: 16,
-                                          color: Colors.black87,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                      style: OutlinedButton.styleFrom(
-                                        side: BorderSide(color: Colors.grey[300]!, width: 1.5),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(30),
-                                        ),
-                                        backgroundColor: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-
-                                  const SizedBox(height: 30),
-
-                                  // OR Divider
-                                  Row(
-                                    children: [
-                                      Expanded(child: Divider(color: Colors.grey[400])),
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                                        child: Text(
-                                          'OR',
-                                          style: TextStyle(
-                                            fontFamily: 'Poppins',
-                                            color: Colors.grey[600],
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          'Sign In with Google',
+                                          style: GoogleFonts.poppins(
+                                            color: Colors.black,
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w500,
+                                            letterSpacing: -0.30,
+                                            height: 1,
                                           ),
                                         ),
-                                      ),
-                                      Expanded(child: Divider(color: Colors.grey[400])),
-                                    ],
-                                  ),
-
-                                  const SizedBox(height: 30),
-
-                                  // Email Field
-                                  const Text(
-                                    'Email',
-                                    style: TextStyle(
-                                      fontFamily: 'Poppins',
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.black87,
+                                      ],
                                     ),
                                   ),
-                                  const SizedBox(height: 10),
-                                  TextFormField(
-                                    controller: _emailController,
-                                    keyboardType: TextInputType.emailAddress,
-                                    style: const TextStyle(fontFamily: 'Poppins'),
-                                    decoration: InputDecoration(
-                                      hintText: 'Enter Your Email',
-                                      hintStyle: TextStyle(
-                                        fontFamily: 'Poppins',
-                                        color: Colors.grey[500],
-                                        fontSize: 15,
-                                      ),
-                                      filled: true,
-                                      fillColor: Colors.white,
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(15),
-                                        borderSide: BorderSide(color: Colors.grey[300]!),
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(15),
-                                        borderSide: BorderSide(color: Colors.grey[300]!),
-                                      ),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(15),
-                                        borderSide: BorderSide(color: Colors.purple, width: 2),
-                                      ),
-                                      contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-                                    ),
-                                    validator: (value) {
-                                      if (value?.trim().isEmpty ?? true) {
-                                        return 'Please enter your email';
-                                      }
-                                      if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value!.trim())) {
-                                        return 'Please enter a valid email';
-                                      }
-                                      return null;
-                                    },
-                                  ),
+                                ),
+                              ),
 
-                                  const SizedBox(height: 20),
+                              const SizedBox(height: 20),
 
-                                  // Password Field
-                                  const Text(
-                                    'Password',
-                                    style: TextStyle(
-                                      fontFamily: 'Poppins',
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.black87,
+                              // OR Divider
+                              SizedBox(
+                                width: buttonWidth,
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Container(
+                                        height: 1,
+                                        color: Colors.black.withValues(alpha: 0.5),
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  TextFormField(
-                                    controller: _passwordController,
-                                    obscureText: !_isPasswordVisible,
-                                    style: const TextStyle(fontFamily: 'Poppins'),
-                                    decoration: InputDecoration(
-                                      hintText: 'Enter Your Password',
-                                      hintStyle: TextStyle(
-                                        fontFamily: 'Poppins',
-                                        color: Colors.grey[500],
-                                        fontSize: 15,
-                                      ),
-                                      filled: true,
-                                      fillColor: Colors.white,
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(15),
-                                        borderSide: BorderSide(color: Colors.grey[300]!),
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(15),
-                                        borderSide: BorderSide(color: Colors.grey[300]!),
-                                      ),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(15),
-                                        borderSide: BorderSide(color: Colors.purple, width: 2),
-                                      ),
-                                      contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-                                      suffixIcon: IconButton(
-                                        icon: Icon(
-                                          _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
-                                          color: Colors.grey[600],
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                                      child: Text(
+                                        'OR',
+                                        style: GoogleFonts.poppins(
+                                          color: Colors.black,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w200,
+                                          letterSpacing: -0.24,
+                                          height: 1,
                                         ),
-                                        onPressed: () {
-                                          setState(() {
-                                            _isPasswordVisible = !_isPasswordVisible;
-                                          });
-                                        },
                                       ),
                                     ),
-                                    validator: (value) {
-                                      if (value?.isEmpty ?? true) {
-                                        return 'Please enter your password';
-                                      }
-                                      if (value!.length < 6) {
-                                        return 'Password must be at least 6 characters';
-                                      }
-                                      if (!RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)').hasMatch(value)) {
-                                        return 'Password must contain uppercase, \n lowercase, and numbers';
-                                      }
-                                      return null;
-                                    },
-                                  ),
-
-                                  const SizedBox(height: 10),
-
-                                  // Confirm Password Field
-                                  const Text(
-                                    'Confirm Password',
-                                    style: TextStyle(
-                                      fontFamily: 'Poppins',
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.black87,
+                                    Expanded(
+                                      child: Container(
+                                        height: 1,
+                                        color: Colors.black.withValues(alpha: 0.5),
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  TextFormField(
-                                    controller: _confirmPasswordController,
-                                    obscureText: !_isConfirmPasswordVisible,
-                                    style: const TextStyle(fontFamily: 'Poppins'),
-                                    decoration: InputDecoration(
-                                      hintText: 'Enter Your Password Again',
-                                      hintStyle: TextStyle(
-                                        fontFamily: 'Poppins',
-                                        color: Colors.grey[500],
-                                        fontSize: 15,
+                                  ],
+                                ),
+                              ),
+
+                              const SizedBox(height: 15),
+
+                              // Form fields container with fixed width
+                              SizedBox(
+                                width: buttonWidth,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Email Field
+                                    Text(
+                                      'Email',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500,
+                                        color: Colors.black,
+                                        letterSpacing: -0.26,
+                                        height: 1,
                                       ),
-                                      filled: true,
-                                      fillColor: Colors.white,
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(15),
-                                        borderSide: BorderSide(color: Colors.grey[300]!),
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(15),
-                                        borderSide: BorderSide(color: Colors.grey[300]!),
-                                      ),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(15),
-                                        borderSide: BorderSide(color: Colors.purple, width: 2),
-                                      ),
-                                      contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-                                      suffixIcon: IconButton(
-                                        icon: Icon(
-                                          _isConfirmPasswordVisible ? Icons.visibility : Icons.visibility_off,
-                                          color: Colors.grey[600],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Container(
+                                          height: 36,
+                                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 9),
+                                          decoration: BoxDecoration(
+                                            border: Border.all(
+                                              width: _isEmailFocused ? 2 : 1,
+                                              color: _emailError != null
+                                                  ? const Color(0xFFD4183D)
+                                                  : (_isEmailFocused ? const Color(0xFF5784EB) : Colors.black),
+                                            ),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: TextFormField(
+                                            controller: _emailController,
+                                            focusNode: _emailFocusNode,
+                                            keyboardType: TextInputType.emailAddress,
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w300,
+                                              letterSpacing: -0.26,
+                                              height: 1,
+                                            ),
+                                            decoration: InputDecoration(
+                                              hintText: 'Enter Your Email',
+                                              hintStyle: GoogleFonts.poppins(
+                                                color: Colors.black.withOpacity(0.5),
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w300,
+                                                letterSpacing: -0.26,
+                                                height: 1,
+                                              ),
+                                              border: InputBorder.none,
+                                              contentPadding: EdgeInsets.zero,
+                                              isDense: true,
+                                            ),
+                                          ),
                                         ),
-                                        onPressed: () {
-                                          setState(() {
-                                            _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
-                                          });
-                                        },
+                                        if (_emailError != null) ...[
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            _emailError!,
+                                            style: GoogleFonts.poppins(
+                                              color: const Color(0xFFD4183D),
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w300,
+                                              letterSpacing: -0.20,
+                                              height: 1,
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+
+                                    const SizedBox(height: 15),
+
+                                    // Password Field
+                                    Text(
+                                      'Password',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500,
+                                        color: Colors.black,
+                                        letterSpacing: -0.26,
+                                        height: 1,
                                       ),
                                     ),
-                                    validator: (value) {
-                                      if (value?.isEmpty ?? true) {
-                                        return 'Please confirm your password';
-                                      }
-                                      if (value != _passwordController.text) {
-                                        return 'Passwords do not match';
-                                      }
-                                      return null;
-                                    },
-                                  ),
+                                    const SizedBox(height: 8),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Container(
+                                          height: 36,
+                                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 9),
+                                          decoration: BoxDecoration(
+                                            border: Border.all(
+                                              width: _isPasswordFocused ? 2 : 1,
+                                              color: _passwordError != null
+                                                  ? const Color(0xFFD4183D)
+                                                  : (_isPasswordFocused ? const Color(0xFF5784EB) : Colors.black),
+                                            ),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Expanded(
+                                                child: TextFormField(
+                                                  controller: _passwordController,
+                                                  focusNode: _passwordFocusNode,
+                                                  obscureText: !_isPasswordVisible,
+                                                  style: GoogleFonts.poppins(
+                                                    fontSize: 13,
+                                                    fontWeight: FontWeight.w300,
+                                                    letterSpacing: -0.26,
+                                                    height: 1,
+                                                  ),
+                                                  decoration: InputDecoration(
+                                                    hintText: 'Enter Your Password',
+                                                    hintStyle: GoogleFonts.poppins(
+                                                      color: Colors.black.withOpacity(0.5),
+                                                      fontSize: 13,
+                                                      fontWeight: FontWeight.w300,
+                                                      letterSpacing: -0.26,
+                                                      height: 1,
+                                                    ),
+                                                    border: InputBorder.none,
+                                                    contentPadding: EdgeInsets.zero,
+                                                    isDense: true,
+                                                  ),
+                                                ),
+                                              ),
+                                              IconButton(
+                                                icon: Icon(
+                                                  _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                                                  size: 18,
+                                                  color: Colors.grey[600],
+                                                ),
+                                                padding: EdgeInsets.zero,
+                                                constraints: BoxConstraints(),
+                                                onPressed: () {
+                                                  setState(() {
+                                                    _isPasswordVisible = !_isPasswordVisible;
+                                                  });
+                                                },
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        if (_passwordError != null) ...[
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            _passwordError!,
+                                            style: GoogleFonts.poppins(
+                                              color: const Color(0xFFD4183D),
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w300,
+                                              letterSpacing: -0.20,
+                                              height: 1,
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
 
-                                  const SizedBox(height: 25),
+                                    const SizedBox(height: 15),
 
-                                  // Terms checkbox
-                                  Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Checkbox(
-                                        value: _agreeToTerms,
-                                        onChanged: (value) {
-                                          setState(() {
-                                            _agreeToTerms = value ?? false;
-                                          });
-                                        },
-                                        activeColor: Colors.purple,
+                                    // Confirm Password Field
+                                    Text(
+                                      'Confirm Password',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500,
+                                        color: Colors.black,
+                                        letterSpacing: -0.26,
+                                        height: 1,
                                       ),
-                                      Expanded(
-                                        child: Padding(
-                                          padding: const EdgeInsets.only(top: 12),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Container(
+                                          height: 36,
+                                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 9),
+                                          decoration: BoxDecoration(
+                                            border: Border.all(
+                                              width: _isConfirmPasswordFocused ? 2 : 1,
+                                              color: _confirmPasswordError != null
+                                                  ? const Color(0xFFD4183D)
+                                                  : (_isConfirmPasswordFocused ? const Color(0xFF5784EB) : Colors.black),
+                                            ),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Expanded(
+                                                child: TextFormField(
+                                                  controller: _confirmPasswordController,
+                                                  focusNode: _confirmPasswordFocusNode,
+                                                  obscureText: !_isConfirmPasswordVisible,
+                                                  style: GoogleFonts.poppins(
+                                                    fontSize: 13,
+                                                    fontWeight: FontWeight.w300,
+                                                    letterSpacing: -0.26,
+                                                    height: 1,
+                                                  ),
+                                                  decoration: InputDecoration(
+                                                    hintText: 'Enter Your Password Again',
+                                                    hintStyle: GoogleFonts.poppins(
+                                                      color: Colors.black.withOpacity(0.5),
+                                                      fontSize: 13,
+                                                      fontWeight: FontWeight.w300,
+                                                      letterSpacing: -0.26,
+                                                      height: 1,
+                                                    ),
+                                                    border: InputBorder.none,
+                                                    contentPadding: EdgeInsets.zero,
+                                                    isDense: true,
+                                                  ),
+                                                ),
+                                              ),
+                                              IconButton(
+                                                icon: Icon(
+                                                  _isConfirmPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                                                  size: 18,
+                                                  color: Colors.grey[600],
+                                                ),
+                                                padding: EdgeInsets.zero,
+                                                constraints: BoxConstraints(),
+                                                onPressed: () {
+                                                  setState(() {
+                                                    _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
+                                                  });
+                                                },
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        if (_confirmPasswordError != null) ...[
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            _confirmPasswordError!,
+                                            style: GoogleFonts.poppins(
+                                              color: const Color(0xFFD4183D),
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w300,
+                                              letterSpacing: -0.20,
+                                              height: 1,
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+
+                                    const SizedBox(height: 20),
+
+                                    // Terms checkbox
+                                    Row(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        SizedBox(
+                                          height: 20,
+                                          width: 20,
+                                          child: Checkbox(
+                                            value: _agreeToTerms,
+                                            onChanged: (value) {
+                                              setState(() {
+                                                _agreeToTerms = value ?? false;
+                                              });
+                                            },
+                                            activeColor: const Color(0xFFFF4000),
+                                            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Expanded(
                                           child: GestureDetector(
                                             onTap: () {
                                               setState(() {
@@ -514,73 +694,86 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                             },
                                             child: Text(
                                               'I agree to the Terms of Service and Privacy Policy',
-                                              style: TextStyle(
-                                                fontFamily: 'Poppins',
-                                                color: Colors.grey[700],
-                                                fontSize: 14,
+                                              style: GoogleFonts.poppins(
+                                                color: Colors.black,
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w300,
+                                                letterSpacing: -0.22,
+                                                height: 1,
                                               ),
                                             ),
                                           ),
                                         ),
-                                      ),
-                                    ],
-                                  ),
-
-                                  const SizedBox(height: 30),
-
-                                  // Create Account Button - Menggunakan PrimaryButton
-                                  Center(
-                                    child: PrimaryButton(
-                                      label: 'Create Account',
-                                      onPressed: _createAccountWithEmail,
-                                      enabled: _agreeToTerms, // Button disabled jika checkbox tidak dicentang
-                                      width: double.infinity,
-                                      height: 55,
+                                      ],
                                     ),
-                                  ),
-
-                                  const SizedBox(height: 25),
-
-                                  Center(
-                                    child: GestureDetector(
-                                      onTap: () => Navigator.pushNamed(context, '/sign_in'),
-                                      child: Text.rich(
-                                        TextSpan(
-                                          text: 'Already have an account? ',
-                                          style: TextStyle(
-                                            fontFamily: 'Poppins',
-                                            color: Colors.grey[700],
-                                            fontSize: 15,
-                                          ),
-                                          children: [
-                                            TextSpan(
-                                              text: 'Sign In',
-                                              style: TextStyle(
-                                                fontFamily: 'Poppins',
-                                                color: Colors.purple,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-
-                                  const SizedBox(height: 30),
-                                ],
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
+
+                              const SizedBox(height: 30),
+
+                              // Create Account button - Responsive
+                              PrimaryButton(
+                                label: 'Create Account',
+                                onPressed: _createAccountWithEmail,
+                                enabled: _agreeToTerms && !_isLoading,
+                                width: buttonWidth,
+                                height: buttonHeight,
+                              ),
+
+                              const SizedBox(height: 20),
+
+                              // Sign In link
+                              SizedBox(
+                                width: buttonWidth,
+                                child: Align(
+                                  alignment: Alignment.centerRight,
+                                  child: GestureDetector(
+                                    onTap: () => Navigator.pushReplacementNamed(context, AppRoutes.signIn),
+                                    child: Text.rich(
+                                      TextSpan(
+                                        children: [
+                                          TextSpan(
+                                            text: 'Already have an account? ',
+                                            style: GoogleFonts.poppins(
+                                              color: Colors.black,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w500,
+                                              letterSpacing: -0.24,
+                                              height: 1,
+                                            ),
+                                          ),
+                                          TextSpan(
+                                            text: 'Sign In',
+                                            style: GoogleFonts.poppins(
+                                              color: const Color(0xFFFBAE38),
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w500,
+                                              decoration: TextDecoration.underline,
+                                              decorationColor: const Color(0xFFFBAE38),
+                                              letterSpacing: -0.24,
+                                              height: 1,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+
+                              const SizedBox(height: 30),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -590,6 +783,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _emailFocusNode.dispose();
+    _passwordFocusNode.dispose();
+    _confirmPasswordFocusNode.dispose();
     super.dispose();
   }
 }
