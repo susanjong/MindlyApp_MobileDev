@@ -156,7 +156,6 @@ class HelpFaqScreen extends StatelessWidget {
                           question: 'How to contact customer service?',
                           answer: 'You can reach our customer service through:\n'
                               '• Email: mindlyapp@gmail.com\n'
-                              '• In-app chat: Go to Profile > Help & Support\n'
                               '• Phone: +1-800-123-4567 (Mon-Fri, 9AM-6PM)\n'
                               '• Social media: @mindlyapp on Twitter and Facebook\n\n'
                               'We typically respond within 24 hours.',
