@@ -60,6 +60,9 @@ class AppRoutes {
       case calendar:
         return MaterialPageRoute(builder: (_) => const CalendarPage());
 
+      case helpFaq:
+        return MaterialPageRoute(builder: (_) => const HelpFaqScreen());
+
       case aboutUs:
         return MaterialPageRoute(builder: (_) => const AboutPage());
 
@@ -94,8 +97,8 @@ class AppRoutes {
       notes: (context) => const NotesPage(),
       todo: (context) => const TodoListPage(),
       calendar: (context) => const CalendarPage(),
-      aboutUs: (context) => const AboutPage(),
       helpFaq: (context) => const HelpFaqScreen(),
+      aboutUs: (context) => const AboutPage(),
     };
   }
 }
