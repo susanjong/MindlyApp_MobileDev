@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:notesapp/presentation/screen/main_home/help_faq.dart';
-import 'package:notesapp/presentation/screen/splash_screen.dart';
-import 'package:notesapp/presentation/entry/login.dart';
-import 'package:notesapp/presentation/entry/resetpass.dart';
-import 'package:notesapp/presentation/entry/signup.dart';
-import 'package:notesapp/presentation/entry/forgotpass.dart';
+import 'package:notesapp/presentation/screen/entry/splash_screen.dart';
+import 'package:notesapp/presentation/screen/entry/login.dart';
+import 'package:notesapp/presentation/screen/entry/resetpass.dart';
+import 'package:notesapp/presentation/screen/entry/signup.dart';
+import 'package:notesapp/presentation/screen//entry/forgotpass.dart';
 import 'package:notesapp/presentation/screen/main_home/home.dart';
 import 'package:notesapp/presentation/screen/main_home/profile.dart';
 import 'package:notesapp/presentation/screen/main_home/about_info.dart';
