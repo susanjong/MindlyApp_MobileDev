@@ -1,4 +1,3 @@
-// File: lib/widgets/faq_item.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -32,7 +31,7 @@ class _FaqItemState extends State<FaqItem> {
         borderRadius: BorderRadius.circular(10),
         child: Column(
           children: [
-            // Question section (always visible)
+            // question section (always visible)
             InkWell(
               onTap: () {
                 setState(() {
@@ -63,7 +62,7 @@ class _FaqItemState extends State<FaqItem> {
               ),
             ),
 
-            // Answer section (expandable)
+            // answer section (expandable)
             AnimatedContainer(
               duration: const Duration(milliseconds: 300),
               curve: Curves.easeInOut,
@@ -97,7 +96,7 @@ class _FaqItemState extends State<FaqItem> {
   }
 }
 
-// Widget untuk section category
+// widget for category section
 class FaqSection extends StatelessWidget {
   final String title;
   final List<Widget> children;
@@ -127,7 +126,7 @@ class FaqSection extends StatelessWidget {
             child: Text(
               title,
               style: GoogleFonts.poppins(
-                color: Colors.black.withOpacity(0.5),
+                color: Colors.black.withValues(alpha: 0.5),
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
               ),
