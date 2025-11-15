@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:notesapp/routes/routes.dart';
 
 class LogoSplash extends StatefulWidget {
-  const LogoSplash({Key? key}) : super(key: key);
+  const LogoSplash({super.key});
 
   @override
   State<LogoSplash> createState() => _LogoSplashState();
@@ -22,15 +25,11 @@ class _LogoSplashState extends State<LogoSplash>
   String _displayedText = '';
   final String _fullText = 'Mindly';
 
-      // FASE 1: Logo mulai dari BAWAH lingkaran abu (tidak terlihat)
-    // FASE 2: Melesat naik tinggi (40%)
-    // FASE 3: Turun ke center dengan bounce (30%)
-
   @override
   void initState() {
     super.initState();
 
-    // Controller untuk lubang muncul (500ms)
+    // Controller for hole to appear (500ms)
     _holeController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 500),
@@ -40,26 +39,26 @@ class _LogoSplashState extends State<LogoSplash>
       CurvedAnimation(parent: _holeController, curve: Curves.easeIn),
     );
 
-    // Controller untuk animasi logo (2000ms)
+    // Controller for logo animation (2000ms)
     _logoController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2000),
     );
 
     _logoMove = TweenSequence([
-      // FASE 1: Mulai dari bawah lingkaran (posisi -20, di bawah lubang)
+      // PHASE 1
       TweenSequenceItem(
         tween: Tween(begin: -20.0, end: 50.0)
             .chain(CurveTween(curve: Curves.easeOut)),
         weight: 30,
       ),
-      // FASE 2: Melesat naik tinggi
+      // PHASE 2
       TweenSequenceItem(
         tween: Tween(begin: 50.0, end: 200.0)
             .chain(CurveTween(curve: Curves.easeOutCubic)),
         weight: 40,
       ),
-      // FASE 3: Turun ke center dengan bounce
+      // PHASE 3
       TweenSequenceItem(
         tween: Tween(begin: 200.0, end: 105.0)
             .chain(CurveTween(curve: Curves.bounceOut)),
@@ -67,7 +66,7 @@ class _LogoSplashState extends State<LogoSplash>
       ),
     ]).animate(_logoController);
 
-    // Lubang fade out saat logo mulai naik tinggi
+    // fade out hole as the logo starts to rise high
     _holeFadeOut = TweenSequence([
       TweenSequenceItem(
         tween: Tween(begin: 1.0, end: 1.0),
@@ -80,27 +79,24 @@ class _LogoSplashState extends State<LogoSplash>
       ),
     ]).animate(_logoController);
 
-    // Logo opacity: mulai transparan, baru muncul saat mulai naik
+    // logo opacity: starts transparent, only appears when it starts to rise
     _logoOpacity = TweenSequence([
-      // Transparan saat di bawah
       TweenSequenceItem(
         tween: Tween(begin: 0.0, end: 0.0),
         weight: 10,
       ),
-      // Muncul saat mulai loncat
       TweenSequenceItem(
         tween: Tween(begin: 0.0, end: 1.0)
             .chain(CurveTween(curve: Curves.easeIn)),
         weight: 20,
       ),
-      // agar tetap terlihat
       TweenSequenceItem(
         tween: Tween(begin: 1.0, end: 1.0),
         weight: 70,
       ),
     ]).animate(_logoController);
 
-    // Controller untuk text (600ms)
+    // controller for text (600ms)
     _textController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
@@ -110,28 +106,28 @@ class _LogoSplashState extends State<LogoSplash>
       CurvedAnimation(parent: _textController, curve: Curves.easeIn),
     );
 
-    // Jalankan animasi
+    // run animations
     _startAnimations();
   }
 
   void _startAnimations() async {
-    // 1. Munculkan lubang
+    // 1. show the hole animation
     await _holeController.forward();
     await Future.delayed(const Duration(milliseconds: 300));
 
-    // 2. Logo bounce naik
+    // 2. play the bounce-up animation for the logo
     _logoController.forward();
-    
-    // 3. Tunggu logo sampai posisi center (setelah 70% animasi logo)
+
+    // 3. wait until the logo reaches center (after 70% of the animation)
     await Future.delayed(const Duration(milliseconds: 1400));
 
-    // 4. Typing effect untuk text
+    // 4. start the typing effect for the text
     await _startTypingEffect();
 
-    // 5. Navigate ke sign_up screen
+    // 5. navigate to the sign_up screen
     await Future.delayed(const Duration(milliseconds: 1000));
     if (mounted) {
-      Navigator.pushReplacementNamed(context, '/sign_up');
+      Navigator.pushReplacementNamed(context, AppRoutes.signUp);
     }
   }
 
@@ -177,20 +173,20 @@ class _LogoSplashState extends State<LogoSplash>
                 Positioned(
                   left: 0,
                   right: 0,
-                  top: screenHeight / 2 - 80, // Center vertikal
+                  top: screenHeight / 2 - 80,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      // Area untuk animasi logo dan lubang
+                      // area for the logo and hole animation
                       SizedBox(
-                        width: 70, // Dikurangi agar logo tetap center
+                        width: 70,
                         height: 250,
                         child: Stack(
-                          alignment: Alignment.center, 
+                          alignment: Alignment.center,
                           clipBehavior: Clip.none,
                           children: [
-                            // Lubang tikus di bawah
+                            // mouse hole at the bottom
                             Positioned(
                               bottom: 45,
                               child: Opacity(
@@ -199,11 +195,11 @@ class _LogoSplashState extends State<LogoSplash>
                                   width: 140,
                                   height: 8,
                                   decoration: BoxDecoration(
-                                    color: Colors.grey.shade400.withOpacity(0.6),
+                                    color: Colors.grey.shade400.withValues(alpha: 0.6),
                                     borderRadius: BorderRadius.circular(50),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.grey.shade400.withOpacity(0.4),
+                                        color: Colors.grey.shade400.withValues(alpha: 0.4),
                                         blurRadius: 8,
                                         spreadRadius: 2,
                                       ),
@@ -213,20 +209,20 @@ class _LogoSplashState extends State<LogoSplash>
                               ),
                             ),
 
-                            // Logo yang bergerak (mulai dari bawah, baru muncul saat naik)
+                            // moving logo
                             Positioned(
                               bottom: 45 + _logoMove.value,
                               child: Opacity(
                                 opacity: _logoOpacity.value,
                                 child: Container(
-                                  width: 60, 
-                                  height: 60, 
+                                  width: 60,
+                                  height: 60,
                                   decoration: BoxDecoration(
-                                    color: Colors.transparent, 
+                                    color: Colors.transparent,
                                     borderRadius: BorderRadius.circular(15),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.black.withOpacity(0.1),
+                                        color: Colors.black.withValues(alpha: 0.1),
                                         blurRadius: 15,
                                         offset: const Offset(0, 5),
                                       ),
@@ -234,11 +230,11 @@ class _LogoSplashState extends State<LogoSplash>
                                   ),
                                   child: ClipRRect(
                                     borderRadius: BorderRadius.circular(15),
-                                    child: Image.asset(
-                                      'assets/images/LogoAplikasi.png', 
+                                    child: SvgPicture.asset(
+                                      'assets/images/Mindly_logo.svg',
                                       width: 60,
                                       height: 60,
-                                      fit: BoxFit.cover, 
+                                      fit: BoxFit.cover,
                                     ),
                                   ),
                                 ),
@@ -248,24 +244,24 @@ class _LogoSplashState extends State<LogoSplash>
                         ),
                       ),
 
-                      // Teks "Mindly" DI SAMPING logo - muncul setelah logo selesai transisi
+                      // ✅ "Mindly" text with Google Fonts Poppins
                       AnimatedOpacity(
                         opacity: _textOpacity.value,
                         duration: const Duration(milliseconds: 300),
                         curve: Curves.easeInOut,
                         child: Transform.translate(
-                          offset: Offset(0, (1 - _textOpacity.value) * 10), 
+                          offset: Offset(0, (1 - _textOpacity.value) * 10),
                           child: Padding(
                             padding: const EdgeInsets.only(
-                              left: 15,   
-                              bottom: 110,  
+                              left: 15,
+                              bottom: 110,
                             ),
                             child: Text(
                               _displayedText,
-                              style: TextStyle(
+                              style: GoogleFonts.poppins(
                                 fontSize: 36,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.grey.shade800,
+                                color: const Color(0xFF004455),
                                 letterSpacing: 0.5,
                                 height: 1.0,
                               ),

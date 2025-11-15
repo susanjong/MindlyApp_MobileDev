@@ -4,6 +4,7 @@ import 'package:notesapp/routes/routes.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class LoginAccountScreen extends StatefulWidget {
+  const LoginAccountScreen({super.key});
   @override
   _LoginAccountScreenState createState() => _LoginAccountScreenState();
 }
@@ -211,8 +212,8 @@ class _LoginAccountScreenState extends State<LoginAccountScreen> {
                               Text(
                                 'Sign in to continue your productivity journey',
                                 style: GoogleFonts.poppins(
-                                  fontSize: 16,
-                                  color: Colors.black54,
+                                  fontSize: 15,
+                                  color: Colors.black,
                                   fontWeight: FontWeight.w400,
                                 ),
                                 textAlign: TextAlign.center,
