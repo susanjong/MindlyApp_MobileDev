@@ -239,7 +239,7 @@ class _LoginAccountScreenState extends State<LoginAccountScreen> {
                                       alignment: Alignment.centerRight,
                                       child: GestureDetector(
                                         onTap: () {
-                                          Navigator.pushReplacementNamed(context, AppRoutes.forgotPassword);
+                                          Navigator.pushReplacementNamed(context, AppRoutes.resetPassword);
                                         },
                                         child: Text(
                                           'Forgot Your Password?',
