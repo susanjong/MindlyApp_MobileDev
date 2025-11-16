@@ -4,10 +4,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:notesapp/widgets/button.dart';
+import 'package:notesapp/widgets/loading_overlay.dart';
 import 'package:notesapp/routes/routes.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 class SignUpScreen extends StatefulWidget {
+  const SignUpScreen({super.key});
+
   @override
   _SignUpScreenState createState() => _SignUpScreenState();
 }
@@ -43,21 +46,27 @@ class _SignUpScreenState extends State<SignUpScreen> {
     super.initState();
 
     _emailFocusNode.addListener(() {
-      setState(() {
-        _isEmailFocused = _emailFocusNode.hasFocus;
-      });
+      if (mounted) {
+        setState(() {
+          _isEmailFocused = _emailFocusNode.hasFocus;
+        });
+      }
     });
 
     _passwordFocusNode.addListener(() {
-      setState(() {
-        _isPasswordFocused = _passwordFocusNode.hasFocus;
-      });
+      if (mounted) {
+        setState(() {
+          _isPasswordFocused = _passwordFocusNode.hasFocus;
+        });
+      }
     });
 
     _confirmPasswordFocusNode.addListener(() {
-      setState(() {
-        _isConfirmPasswordFocused = _confirmPasswordFocusNode.hasFocus;
-      });
+      if (mounted) {
+        setState(() {
+          _isConfirmPasswordFocused = _confirmPasswordFocusNode.hasFocus;
+        });
+      }
     });
 
     // real-time validation
@@ -67,53 +76,61 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   void _validateEmail() {
-    setState(() {
-      final value = _emailController.text.trim();
-      if (value.isEmpty) {
-        _emailError = null;
-      } else if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-        _emailError = 'Please enter a valid email';
-      } else {
-        _emailError = null;
-      }
-    });
+    if (mounted) {
+      setState(() {
+        final value = _emailController.text.trim();
+        if (value.isEmpty) {
+          _emailError = null;
+        } else if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+          _emailError = 'Please enter a valid email';
+        } else {
+          _emailError = null;
+        }
+      });
+    }
   }
 
   void _validatePassword() {
-    setState(() {
-      final value = _passwordController.text;
-      if (value.isEmpty) {
-        _passwordError = null;
-      } else if (value.length < 6) {
-        _passwordError = 'Password must be at least 6 characters';
-      } else if (!RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)').hasMatch(value)) {
-        _passwordError = 'Password must contain uppercase, lowercase, and numbers';
-      } else {
-        _passwordError = null;
-      }
-    });
+    if (mounted) {
+      setState(() {
+        final value = _passwordController.text;
+        if (value.isEmpty) {
+          _passwordError = null;
+        } else if (value.length < 6) {
+          _passwordError = 'Password must be at least 6 characters';
+        } else if (!RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)').hasMatch(value)) {
+          _passwordError = 'Password must contain uppercase, lowercase, and numbers';
+        } else {
+          _passwordError = null;
+        }
+      });
+    }
     _validateConfirmPassword();
   }
 
   void _validateConfirmPassword() {
-    setState(() {
-      final value = _confirmPasswordController.text;
-      if (value.isEmpty) {
-        _confirmPasswordError = null;
-      } else if (value != _passwordController.text) {
-        _confirmPasswordError = 'Password does not match';
-      } else {
-        _confirmPasswordError = null;
-      }
-    });
+    if (mounted) {
+      setState(() {
+        final value = _confirmPasswordController.text;
+        if (value.isEmpty) {
+          _confirmPasswordError = null;
+        } else if (value != _passwordController.text) {
+          _confirmPasswordError = 'Password does not match';
+        } else {
+          _confirmPasswordError = null;
+        }
+      });
+    }
   }
 
   Future<void> _signInWithGoogle() async {
     if (_isLoading) return;
 
-    setState(() {
-      _isLoading = true;
-    });
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+      });
+    }
 
     try {
       await _googleSignIn.signOut();
@@ -123,13 +140,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
         return;
       }
 
-      // Success - navigate to home
       if (mounted) {
         await Future.delayed(const Duration(milliseconds: 500));
-        Navigator.pushReplacementNamed(context, AppRoutes.home);
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, AppRoutes.home);
+        }
       }
     } catch (e) {
-      print('Google Sign-In error: $e');
+      debugPrint('Google Sign-In error: $e');
       // error will show in snackbar
     } finally {
       if (mounted) {
@@ -144,54 +162,53 @@ class _SignUpScreenState extends State<SignUpScreen> {
     if (_isLoading) return;
 
     // validate all button if user click it
-    setState(() {
-      // Validate email
-      if (_emailController.text.trim().isEmpty) {
-        _emailError = 'Please enter your email';
-      } else {
-        _validateEmail();
-      }
+    if (mounted) {
+      setState(() {
+        if (_emailController.text.trim().isEmpty) {
+          _emailError = 'Please enter your email';
+        } else {
+          _validateEmail();
+        }
 
-      // Validate password
-      if (_passwordController.text.isEmpty) {
-        _passwordError = 'Please enter your password';
-      } else {
-        _validatePassword();
-      }
+        if (_passwordController.text.isEmpty) {
+          _passwordError = 'Please enter your password';
+        } else {
+          _validatePassword();
+        }
 
-      // Validate confirm password
-      if (_confirmPasswordController.text.isEmpty) {
-        _confirmPasswordError = 'Please confirm your password';
-      } else {
-        _validateConfirmPassword();
-      }
+        if (_confirmPasswordController.text.isEmpty) {
+          _confirmPasswordError = 'Please confirm your password';
+        } else {
+          _validateConfirmPassword();
+        }
 
-      // Validate terms agreement
-      if (!_agreeToTerms) {
-        _termsError = 'Please agree to the Terms of Service and Privacy Policy';
-      } else {
-        _termsError = null;
-      }
-    });
+        if (!_agreeToTerms) {
+          _termsError = 'Please agree to the Terms of Service and Privacy Policy';
+        } else {
+          _termsError = null;
+        }
+      });
+    }
 
-    // Check if any errors exist
+    // check if any errors exist
     if (_emailError != null || _passwordError != null || _confirmPasswordError != null || _termsError != null) {
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+      });
+    }
 
     try {
       await Future.delayed(const Duration(seconds: 1));
 
-      // Success - navigate to home
       if (mounted) {
         Navigator.pushReplacementNamed(context, AppRoutes.home);
       }
     } catch (e) {
-      print('Create account error: $e');
+      debugPrint('Create account error: $e');
       // show error in fields if needed
     } finally {
       if (mounted) {
@@ -379,7 +396,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                                   const SizedBox(height: 15),
 
-                                  // password Field with error message
+                                  // password field with error message
                                   _buildPasswordField(
                                     label: 'Password',
                                     controller: _passwordController,
@@ -414,7 +431,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                                   const SizedBox(height: 20),
 
-                                  // Terms checkbox with error
+                                  // terms checkbox with error
                                   Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
@@ -481,7 +498,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                                   const SizedBox(height: 30),
 
-                                  // Create Account button
+                                  // create Account button
                                   Center(
                                     child: PrimaryButton(
                                       label: 'Create Account',
@@ -494,7 +511,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                                   const SizedBox(height: 20),
 
-                                  // Sign In link
+                                  // sign In link
                                   Align(
                                     alignment: Alignment.centerRight,
                                     child: GestureDetector(
@@ -544,30 +561,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
             ),
           ),
 
-          // Loading overlay
-          if (_isLoading)
-            Container(
-              color: Colors.black.withValues(alpha: 0.5),
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Please Wait...',
-                      style: GoogleFonts.poppins(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+          // Loading overlay widget
+          if (_isLoading) const LoadingOverlay(),
         ],
       ),
     );
@@ -633,7 +628,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
             ),
           ),
         ),
-        // ✅ Error message di bawah field
+        // Error message di bawah field
         if (hasError)
           Padding(
             padding: const EdgeInsets.only(top: 4),
@@ -729,7 +724,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
             ],
           ),
         ),
-        // error message di bawah field
+
         if (hasError)
           Padding(
             padding: const EdgeInsets.only(top: 4),
