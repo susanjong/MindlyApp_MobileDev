@@ -4,6 +4,7 @@ import 'package:notesapp/presentation/screen/main_home/edit_bioprofile.dart';
 import 'package:notesapp/routes/routes.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:notesapp/widgets/alert_dialog.dart';
+import 'package:notesapp/widgets/succes_popup.dart';
 
 class AccountProfilePage extends StatefulWidget {
   const AccountProfilePage({super.key});
@@ -204,10 +205,16 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
       confirmText: 'Reset',
       confirmTextColor: const Color(0xFFFF453A),
       onConfirm: () {
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          AppRoutes.resetPassword,
-              (route) => false,
+        // close confirmation dialog
+        Navigator.of(context).pop();
+
+        // show success dialog and auto navigate after 2 seconds
+        SuccessDialog.showWithNavigation(
+          context: context,
+          title: 'Success !',
+          message: 'Your password has been\nsuccessfully reset.',
+          routeName: AppRoutes.resetPassword,
+          useReplacement: false,
         );
       },
     );
@@ -223,10 +230,16 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
       confirmText: 'Logout',
       confirmTextColor: const Color(0xFFFF453A),
       onConfirm: () {
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          AppRoutes.signIn,
-              (route) => false,
+        // close confirmation dialog
+        Navigator.of(context).pop();
+
+        // show success dialog and auto navigate to sign in after 2 seconds
+        SuccessDialog.showWithNavigation(
+          context: context,
+          title: 'Success !',
+          message: 'Your account was\nsuccessfully logout.',
+          routeName: AppRoutes.signIn,
+          useReplacement: true,
         );
       },
     );
@@ -242,10 +255,16 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
       confirmText: 'Delete',
       confirmTextColor: const Color(0xFFFF453A),
       onConfirm: () {
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          AppRoutes.signUp,
-              (route) => false,
+        // close confirmation dialog
+        Navigator.of(context).pop();
+
+        // show success dialog and auto navigate after 2 seconds
+        SuccessDialog.showWithNavigation(
+          context: context,
+          title: 'Success !',
+          message: 'Your account has been\nsuccessfully deleted.',
+          routeName: AppRoutes.signUp,
+          useReplacement: true,
         );
       },
     );
@@ -318,7 +337,7 @@ class _ProfileCard extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => EditAccountInformationScreen(),
+                  builder: (context) => const EditAccountInformationScreen(),
                 ),
               );
             },
@@ -383,7 +402,7 @@ class _SettingSection extends StatelessWidget {
   }
 }
 
-// setting item widget
+//  setting item widget
 class _SettingItemWidget extends StatelessWidget {
   final SettingItem item;
 
@@ -452,4 +471,23 @@ class _SettingItemWidget extends StatelessWidget {
       ),
     );
   }
+}
+
+//setting item model
+class SettingItem {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Widget? trailing;
+  final VoidCallback? onTap;
+  final Color? iconColor;
+
+  SettingItem({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    this.trailing,
+    this.onTap,
+    this.iconColor,
+  });
 }
