@@ -127,7 +127,7 @@ class _LogoSplashState extends State<LogoSplash>
     // 5. navigate to the sign_up screen
     await Future.delayed(const Duration(milliseconds: 1000));
     if (mounted) {
-      Navigator.pushReplacementNamed(context, AppRoutes.signUp);
+      Navigator.pushReplacementNamed(context, AppRoutes.introApp);
     }
   }
 
