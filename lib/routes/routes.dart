@@ -9,7 +9,7 @@ import 'package:notesapp/presentation/screen/entry/forgotpass.dart';
 import 'package:notesapp/presentation/screen/main_home/home.dart';
 import 'package:notesapp/presentation/screen/main_home/profile.dart';
 import 'package:notesapp/presentation/screen/main_home/about_info.dart';
-import 'package:notesapp/presentation/screen/notes/awalnotes.dart';
+import 'package:notesapp/presentation/screen/notes/notes_page.dart';
 import 'package:notesapp/presentation/screen/todolist/awaltodo.dart';
 import 'package:notesapp/presentation/screen/calendar/awalcalendar.dart';
 
