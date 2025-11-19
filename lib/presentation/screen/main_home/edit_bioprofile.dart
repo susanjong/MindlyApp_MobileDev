@@ -37,21 +37,10 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: Container(
-          margin: const EdgeInsets.only(left: 11, top: 8),
-          child: Container(
-            width: 29,
-            height: 29,
-            decoration: const ShapeDecoration(
-              color: Colors.white,
-              shape: OvalBorder(),
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.black, size: 21),
-              padding: EdgeInsets.zero,
-              onPressed: () => Navigator.pop(context),
-            ),
-          ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black, size: 24),
+          padding: const EdgeInsets.only(left: 16),
+          onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           'Edit Account Information',
