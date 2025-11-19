@@ -1,7 +1,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:notesapp/presentation/screen/main_home/home.dart';
-import 'package:notesapp/presentation/screen/notes/awalnotes.dart';
+import 'package:notesapp/presentation/screen/notes/notes_page.dart';
 import 'package:notesapp/widgets/custom_navbar_widget.dart';
 
 class NavbarRoot extends StatefulWidget {

@@ -5,7 +5,7 @@ import 'package:notesapp/widgets/custom_navbar_widget.dart';
 import 'package:notesapp/widgets/custom_top_app_bar.dart';
 import 'package:notesapp/models/event_model.dart';
 import 'package:notesapp/models/note_model.dart';
-import 'package:notesapp/presentation/screen/notes/awalnotes.dart';
+import 'package:notesapp/presentation/screen/notes/notes_page.dart';
 
 class TaskItem {
   String title;
