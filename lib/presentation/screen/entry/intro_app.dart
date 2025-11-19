@@ -17,27 +17,52 @@ class WelcomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    // Deteksi orientasi
+    final isPortrait = screenHeight > screenWidth;
+
     return Scaffold(
       body: SafeArea(
         child: SizedBox(
           width: double.infinity,
-          height: MediaQuery.of(context).size.height,
+          height: screenHeight,
           child: Stack(
             children: [
               _buildDecorativeCircles(),
 
               // main content
               Positioned.fill(
-                child: Column(
-                  children: [
-                    const Spacer(flex: 2),
-                    _buildLogoAndTagline(),
-                    const Spacer(flex: 1),
-                    _buildButtons(context),
-                    const SizedBox(height: 24),
-                    _buildTermsAndPrivacy(context),
-                    const SizedBox(height: 32),
-                  ],
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return SingleChildScrollView(
+                      physics: const ClampingScrollPhysics(),
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minHeight: constraints.maxHeight,
+                        ),
+                        child: IntrinsicHeight(
+                          child: Column(
+                            children: [
+                              // Top spacer
+                              const Spacer(flex: 12),
+                              _buildLogoAndTagline(context),
+                              // Center spacer
+                              if (isPortrait)
+                                const Spacer(flex: 3)
+                              else
+                                const Spacer(flex: 30),
+                              _buildButtons(context),
+                              const SizedBox(height: 16),
+                              _buildTermsAndPrivacy(context),
+                              const SizedBox(height: 20),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
             ],
@@ -93,9 +118,19 @@ class WelcomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildLogoAndTagline() {
-    return Container(
-      margin: const EdgeInsets.only(top: 350),
+  Widget _buildLogoAndTagline(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isPortrait = screenHeight > screenWidth;
+
+    // Ukuran font LEBIH BESAR untuk landscape/horizontal
+    final appNameSize = isPortrait ? 40.0 : 40.0;
+    final taglineSize = isPortrait ? 20.0 : 20.0;
+    final logoSize = isPortrait ? 36.0 : 56.0;
+    final logoHeight = isPortrait ? 36.0 : 54.0;
+    final spacingAfterLogo = isPortrait ? 12.0 : 24.0;
+
+    return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -105,8 +140,8 @@ class WelcomeScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 48,
-                height: 46,
+                width: logoSize,
+                height: logoHeight,
                 decoration: BoxDecoration(
                   color: AppColors.logo,
                   borderRadius: BorderRadius.circular(10),
@@ -115,18 +150,18 @@ class WelcomeScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                   child: SvgPicture.asset(
                     'assets/images/Mindly_logo.svg',
-                    width: 48,
-                    height: 46,
+                    width: logoSize,
+                    height: logoHeight,
                     fit: BoxFit.contain,
                   ),
                 ),
               ),
-              const SizedBox(width: 20),
+              SizedBox(width: isPortrait ? 16 : 24),
               Text(
                 'Mindly',
                 style: GoogleFonts.poppins(
                   color: AppColors.logo,
-                  fontSize: 40,
+                  fontSize: appNameSize,
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.80,
                 ),
@@ -134,7 +169,7 @@ class WelcomeScreen extends StatelessWidget {
             ],
           ),
 
-          const SizedBox(height: 20),
+          SizedBox(height: spacingAfterLogo),
 
           // tagline
           Text(
@@ -142,7 +177,7 @@ class WelcomeScreen extends StatelessWidget {
             textAlign: TextAlign.center,
             style: GoogleFonts.poppins(
               color: Colors.black,
-              fontSize: 20,
+              fontSize: taglineSize,
               fontWeight: FontWeight.w500,
               letterSpacing: -0.40,
             ),
@@ -153,8 +188,17 @@ class WelcomeScreen extends StatelessWidget {
   }
 
   Widget _buildButtons(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isPortrait = screenHeight > screenWidth;
+
+    // Ukuran font dan padding lebih kecil untuk portrait
+    final buttonFontSize = isPortrait ? 12.0 : 15.0;
+    final horizontalPadding = isPortrait ? 30.0 : 40.0;
+    final verticalPadding = isPortrait ? 12.0 : 14.0;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 40),
+      padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
       child: Column(
         children: [
           // get started button
@@ -167,7 +211,7 @@ class WelcomeScreen extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                padding: EdgeInsets.symmetric(vertical: verticalPadding),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -177,14 +221,14 @@ class WelcomeScreen extends StatelessWidget {
               child: Text(
                 'Get Started',
                 style: GoogleFonts.poppins(
-                  fontSize: 15,
+                  fontSize: buttonFontSize,
                   fontWeight: FontWeight.w500,
                   letterSpacing: -0.30,
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: isPortrait ? 12 : 16),
           // sign in button
           SizedBox(
             width: double.infinity,
@@ -195,7 +239,10 @@ class WelcomeScreen extends StatelessWidget {
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.primary,
                 side: const BorderSide(color: AppColors.primary, width: 1),
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                padding: EdgeInsets.symmetric(
+                  vertical: verticalPadding,
+                  horizontal: 8,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -203,12 +250,17 @@ class WelcomeScreen extends StatelessWidget {
                 elevation: 4,
                 shadowColor: Colors.black.withValues(alpha: 0.25),
               ),
-              child: Text(
-                'Already have an account? Sign In',
-                style: GoogleFonts.poppins(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: -0.30,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  'Already have an account? Sign In',
+                  style: GoogleFonts.poppins(
+                    fontSize: buttonFontSize,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: -0.30,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ),
@@ -219,14 +271,22 @@ class WelcomeScreen extends StatelessWidget {
   }
 
   Widget _buildTermsAndPrivacy(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isPortrait = screenHeight > screenWidth;
+
+    // font size for potrait mode
+    final textSize = isPortrait ? 10.0 : 13.0;
+    final horizontalPadding = isPortrait ? 30.0 : 40.0;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 40),
+      padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
       child: RichText(
         textAlign: TextAlign.center,
         text: TextSpan(
           style: GoogleFonts.poppins(
             color: AppColors.textGrey,
-            fontSize: 13,
+            fontSize: textSize,
             fontWeight: FontWeight.w500,
             height: 1.50,
             letterSpacing: -0.26,
@@ -234,6 +294,8 @@ class WelcomeScreen extends StatelessWidget {
           children: [
             const TextSpan(text: 'By continuing, you agree to our '),
             WidgetSpan(
+              alignment: PlaceholderAlignment.baseline,
+              baseline: TextBaseline.alphabetic,
               child: GestureDetector(
                 onTap: () {
                   // todo: change this Navigator.pushNamed(context, AppRoutes.termsOfService);
@@ -242,7 +304,7 @@ class WelcomeScreen extends StatelessWidget {
                   'Terms of Service',
                   style: GoogleFonts.poppins(
                     color: AppColors.textGrey,
-                    fontSize: 13,
+                    fontSize: textSize,
                     fontWeight: FontWeight.w500,
                     decoration: TextDecoration.underline,
                     height: 1.50,
@@ -253,6 +315,8 @@ class WelcomeScreen extends StatelessWidget {
             ),
             const TextSpan(text: ' and '),
             WidgetSpan(
+              alignment: PlaceholderAlignment.baseline,
+              baseline: TextBaseline.alphabetic,
               child: GestureDetector(
                 onTap: () {
                   // todo: change this Navigator.pushNamed(context, AppRoutes.privacyPolicy);
@@ -261,7 +325,7 @@ class WelcomeScreen extends StatelessWidget {
                   'Privacy Policy',
                   style: GoogleFonts.poppins(
                     color: AppColors.textGrey,
-                    fontSize: 13,
+                    fontSize: textSize,
                     fontWeight: FontWeight.w500,
                     decoration: TextDecoration.underline,
                     height: 1.50,
