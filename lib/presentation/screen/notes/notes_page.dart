@@ -5,6 +5,8 @@ import 'package:notesapp/widgets/custom_top_app_bar.dart';
 import '../../../widgets/colors.dart';
 import '../../../widgets/expandable_fab.dart';
 import '../../../widgets/note_card.dart';
+import '../../../widgets/notes_tab.dart';
+import 'categories_tab.dart'; // Import Categories Tab
 
 class NotesPage extends StatefulWidget {
   const NotesPage({super.key});
@@ -16,7 +18,7 @@ class NotesPage extends StatefulWidget {
 class _NotesPageState extends State<NotesPage> {
   bool _isNavBarVisible = true;
   final ScrollController _scrollController = ScrollController();
-  int _selectedTabIndex = 0;
+  int _selectedTabIndex = 0; // 0: All Notes, 1: Categories, 2: Favorite
 
   // Data dummy untuk notes
   final List<Map<String, dynamic>> notes = [
@@ -46,13 +48,13 @@ class _NotesPageState extends State<NotesPage> {
     },
     {
       'title': 'Volunteer',
-      'content': 'Merekrut mahasiswa dan mahasiswi usu, sekitar 80 orang, dan nanti untuk mahasiswa mahasiswi ini akan diseleksi, untuk fully funded, dan dibuka dalam waktu dekat ini.\n\nFully funded hanya beberapa orang saja. Untuk yang tidak maka akan setengah funded. Akan ada 2 kali oprec kalau misalnya gak memungkinkan partisipannya.',
+      'content': 'Merekrut mahasiswa dan mahasiswi usu, sekitar 80 orang, dan nanti untuk mahasiswa mahasiswi ini akan diseleksi, untuk fully funded, dan dibuka dalam waktu dekat ini.\n\nFully funded hanya beberapa orang saja.',
       'date': 'September 30, 2025',
       'color': Color(0xFFFFBEBE),
     },
     {
       'title': 'Clustering',
-      'content': 'This research successfully developed an optimal clustering model for analyzing household electricity consumption patterns using a combination of RobustScaler and PCA (90% retained variance), which achieved a Silhouette Score of 0.9589. The K-Means model with K = 5 and Standard++ initialization identified five distinct consumption patterns with high interpretability.',
+      'content': 'This research successfully developed an optimal clustering model for analyzing household electricity consumption patterns using a combination of RobustScaler and PCA (90% retained variance).',
       'date': 'September 30, 2025',
       'color': Color(0xFFF4FFBE),
     },
@@ -105,13 +107,18 @@ class _NotesPageState extends State<NotesPage> {
   }
 
   void _handleAddNote() {
-    // TODO: Navigate to add note page
     Navigator.pushNamed(context, '/add-note');
   }
 
   void _handleAddFolder() {
-    // TODO: Navigate to add folder page
     Navigator.pushNamed(context, '/add-folder');
+  }
+
+  // ✅ HANDLER untuk tab selection
+  void _onTabSelected(int index) {
+    setState(() {
+      _selectedTabIndex = index;
+    });
   }
 
   @override
@@ -131,12 +138,15 @@ class _NotesPageState extends State<NotesPage> {
           // Greeting & Search Bar
           _buildGreetingAndSearch(),
 
-          // Tab Bar
-          _buildTabBar(),
+          // ✅ Tab Bar - Gunakan NotesTabBar widget dengan callback
+          NotesTabBar(
+            selectedIndex: _selectedTabIndex,
+            onTabSelected: _onTabSelected, // Pass callback
+          ),
 
-          // Notes Grid
+          // ✅ Content based on selected tab
           Expanded(
-            child: _buildNotesGrid(),
+            child: _buildTabContent(),
           ),
         ],
       ),
@@ -230,53 +240,18 @@ class _NotesPageState extends State<NotesPage> {
     );
   }
 
-  Widget _buildTabBar() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 33, vertical: 16),
-      child: Row(
-        children: [
-          _buildTabButton('All Notes', 0),
-          const SizedBox(width: 14),
-          _buildTabButton('Categories', 1),
-          const SizedBox(width: 14),
-          _buildTabButton('Favorite', 2),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTabButton(String text, int index) {
-    final isSelected = _selectedTabIndex == index;
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedTabIndex = index;
-        });
-      },
-      child: Container(
-        height: 30,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        decoration: BoxDecoration(
-          color: isSelected ? iconOrStroke : Colors.white,
-          border: Border.all(
-            color: isSelected ? iconOrStroke : const Color(0xB2C4C4C4),
-          ),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Center(
-          child: Text(
-            text,
-            style: TextStyle(
-              color: isSelected ? Colors.white : const Color(0xFFC4C4C4),
-              fontSize: 14,
-              fontFamily: 'Poppins',
-              fontWeight: FontWeight.w500,
-              letterSpacing: -0.28,
-            ),
-          ),
-        ),
-      ),
-    );
+  // ✅ KUNCI: Method untuk render konten berdasarkan tab
+  Widget _buildTabContent() {
+    switch (_selectedTabIndex) {
+      case 0:
+        return _buildNotesGrid(); // All Notes
+      case 1:
+        return const CategoriesTab(); // Categories ✅✅✅
+      case 2:
+        return _buildFavoriteGrid(); // Favorite
+      default:
+        return _buildNotesGrid();
+    }
   }
 
   Widget _buildNotesGrid() {
@@ -297,6 +272,55 @@ class _NotesPageState extends State<NotesPage> {
           content: notes[index]['content'],
           date: notes[index]['date'],
           color: notes[index]['color'],
+        );
+      },
+    );
+  }
+
+  Widget _buildFavoriteGrid() {
+    // Filter notes yang favorite
+    final favoriteNotes = notes.where((note) {
+      // TODO: Add isFavorite property to your notes model
+      return true; // Temporary: show all notes
+    }).toList();
+
+    if (favoriteNotes.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.favorite_border, size: 64, color: Colors.grey.shade300),
+            const SizedBox(height: 16),
+            Text(
+              'No favorite notes yet',
+              style: TextStyle(
+                fontSize: 16,
+                fontFamily: 'Poppins',
+                color: Colors.grey.shade600,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return GridView.builder(
+      controller: _scrollController,
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 9,
+        mainAxisSpacing: 9,
+        childAspectRatio: 170 / 201.90,
+      ),
+      itemCount: favoriteNotes.length,
+      itemBuilder: (context, index) {
+        return NoteCard(
+          title: favoriteNotes[index]['title'],
+          content: favoriteNotes[index]['content'],
+          date: favoriteNotes[index]['date'],
+          color: favoriteNotes[index]['color'],
         );
       },
     );
