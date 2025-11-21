@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:notesapp/firebase_options.dart';
-import 'package:notesapp/routes/routes.dart';
+import 'package:notesapp/config/routes/routes.dart';
 
 
 void main() async {
