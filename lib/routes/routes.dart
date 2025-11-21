@@ -10,7 +10,7 @@ import 'package:notesapp/presentation/screen/main_home/home.dart';
 import 'package:notesapp/presentation/screen/main_home/profile.dart';
 import 'package:notesapp/presentation/screen/main_home/about_info.dart';
 import 'package:notesapp/presentation/screen/notes/awalnotes.dart';
-import 'package:notesapp/presentation/screen/todolist/awaltodo.dart';
+import 'package:notesapp/presentation/screen/todolist/mainTodo.dart';
 import 'package:notesapp/presentation/screen/calendar/awalcalendar.dart';
 
 class AppRoutes {
@@ -60,7 +60,7 @@ class AppRoutes {
         return MaterialPageRoute(builder: (_) => NotesPage());
 
       case todo:
-        return MaterialPageRoute(builder: (_) => TodoListPage());
+        return MaterialPageRoute(builder: (_) => MainTodoScreen());
 
       case calendar:
         return MaterialPageRoute(builder: (_) => CalendarPage());
@@ -100,7 +100,7 @@ class AppRoutes {
       forgotPassword: (context) => ForgotPasswordScreen(),
       profile: (context) => AccountProfilePage(),
       notes: (context) => NotesPage(),
-      todo: (context) => TodoListPage(),
+      todo: (context) => MainTodoScreen(),
       calendar: (context) => CalendarPage(),
       helpFaq: (context) => HelpFaqScreen(),
       aboutUs: (context) => AboutPage(),
