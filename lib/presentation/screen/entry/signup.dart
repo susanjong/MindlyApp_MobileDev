@@ -1,11 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:notesapp/widgets/button.dart';
 import 'package:notesapp/widgets/loading_overlay.dart';
 import 'package:notesapp/routes/routes.dart';
+import 'package:notesapp/data/service/auth_service.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 class SignUpScreen extends StatefulWidget {
@@ -17,9 +16,11 @@ class SignUpScreen extends StatefulWidget {
 
 class _SignUpScreenState extends State<SignUpScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _nameFocusNode = FocusNode();
   final _emailFocusNode = FocusNode();
   final _passwordFocusNode = FocusNode();
   final _confirmPasswordFocusNode = FocusNode();
@@ -28,22 +29,29 @@ class _SignUpScreenState extends State<SignUpScreen> {
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
   bool _isLoading = false;
+  bool _isNameFocused = false;
   bool _isEmailFocused = false;
   bool _isPasswordFocused = false;
   bool _isConfirmPasswordFocused = false;
 
   // error messages
+  String? _nameError;
   String? _emailError;
   String? _passwordError;
   String? _confirmPasswordError;
   String? _termsError;
 
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
-
   @override
   void initState() {
     super.initState();
+
+    _nameFocusNode.addListener(() {
+      if (mounted) {
+        setState(() {
+          _isNameFocused = _nameFocusNode.hasFocus;
+        });
+      }
+    });
 
     _emailFocusNode.addListener(() {
       if (mounted) {
@@ -70,9 +78,25 @@ class _SignUpScreenState extends State<SignUpScreen> {
     });
 
     // real-time validation
+    _nameController.addListener(_validateName);
     _emailController.addListener(_validateEmail);
     _passwordController.addListener(_validatePassword);
     _confirmPasswordController.addListener(_validateConfirmPassword);
+  }
+
+  void _validateName() {
+    if (mounted) {
+      setState(() {
+        final value = _nameController.text.trim();
+        if (value.isEmpty) {
+          _nameError = null;
+        } else if (value.length < 3) {
+          _nameError = 'Name must be at least 3 characters';
+        } else {
+          _nameError = null;
+        }
+      });
+    }
   }
 
   void _validateEmail() {
@@ -133,14 +157,26 @@ class _SignUpScreenState extends State<SignUpScreen> {
     }
 
     try {
-      await _googleSignIn.signOut();
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      final userCredential = await AuthService.signInWithGoogle();
 
-      if (googleUser == null) {
+      if (userCredential == null) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
         return;
       }
 
       if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Welcome ${userCredential.user?.displayName ?? "User"}!'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+
         await Future.delayed(const Duration(milliseconds: 500));
         if (mounted) {
           Navigator.pushReplacementNamed(context, AppRoutes.home);
@@ -148,7 +184,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
       }
     } catch (e) {
       debugPrint('Google Sign-In error: $e');
-      // error will show in snackbar
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll('Exception: ', '')),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -161,9 +205,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
   Future<void> _createAccountWithEmail() async {
     if (_isLoading) return;
 
-    // validate all button if user click it
+    // validate all fields
     if (mounted) {
       setState(() {
+        if (_nameController.text.trim().isEmpty) {
+          _nameError = 'Please enter your name';
+        } else {
+          _validateName();
+        }
+
         if (_emailController.text.trim().isEmpty) {
           _emailError = 'Please enter your email';
         } else {
@@ -191,7 +241,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
     }
 
     // check if any errors exist
-    if (_emailError != null || _passwordError != null || _confirmPasswordError != null || _termsError != null) {
+    if (_nameError != null || _emailError != null || _passwordError != null ||
+        _confirmPasswordError != null || _termsError != null) {
       return;
     }
 
@@ -202,14 +253,38 @@ class _SignUpScreenState extends State<SignUpScreen> {
     }
 
     try {
-      await Future.delayed(const Duration(seconds: 1));
+      // Create account used AuthService
+      final userCredential = await AuthService.createAccountWithEmailPassword(
+        _emailController.text.trim(),
+        _passwordController.text,
+        displayName: _nameController.text.trim(),
+      );
 
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, AppRoutes.home);
+      if (userCredential != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Account created successfully! '),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+
+        await Future.delayed(const Duration(seconds: 1));
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, AppRoutes.home);
+        }
       }
     } catch (e) {
       debugPrint('Create account error: $e');
-      // show error in fields if needed
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll('Exception: ', '')),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -383,7 +458,20 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                                   const SizedBox(height: 15),
 
-                                  // email Field with inline error
+                                  // NAME Field (BARU)
+                                  _buildTextField(
+                                    label: 'Full Name',
+                                    controller: _nameController,
+                                    focusNode: _nameFocusNode,
+                                    isFocused: _isNameFocused,
+                                    hintText: 'Enter Your Full Name',
+                                    keyboardType: TextInputType.name,
+                                    errorText: _nameError,
+                                  ),
+
+                                  const SizedBox(height: 15),
+
+                                  // email Field
                                   _buildTextField(
                                     label: 'Email',
                                     controller: _emailController,
@@ -396,7 +484,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                                   const SizedBox(height: 15),
 
-                                  // password field with error message
+                                  // password field
                                   _buildPasswordField(
                                     label: 'Password',
                                     controller: _passwordController,
@@ -413,7 +501,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                                   const SizedBox(height: 15),
 
-                                  // confirm Password Field with inline error
+                                  // confirm Password Field
                                   _buildPasswordField(
                                     label: 'Confirm Password',
                                     controller: _confirmPasswordController,
@@ -431,7 +519,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                                   const SizedBox(height: 20),
 
-                                  // terms checkbox with error
+                                  // terms checkbox
                                   Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
@@ -561,7 +649,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
             ),
           ),
 
-          // Loading overlay widget
           if (_isLoading) const LoadingOverlay(),
         ],
       ),
@@ -628,7 +715,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
             ),
           ),
         ),
-        // Error message di bawah field
         if (hasError)
           Padding(
             padding: const EdgeInsets.only(top: 4),
@@ -646,7 +732,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
   }
 
-  // password field with error message
   Widget _buildPasswordField({
     required String label,
     required TextEditingController controller,
@@ -744,9 +829,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   @override
   void dispose() {
+    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _nameFocusNode.dispose();
     _emailFocusNode.dispose();
     _passwordFocusNode.dispose();
     _confirmPasswordFocusNode.dispose();
