@@ -1,14 +1,12 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AuthService {
   static final FirebaseAuth _auth = FirebaseAuth.instance;
+  static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static final GoogleSignIn _googleSignIn = GoogleSignIn(
-    // Tambahkan scopes jika diperlukan
-    scopes: [
-      'email',
-      'profile',
-    ],
+    scopes: ['email', 'profile'],
   );
 
   // Get current user
@@ -17,142 +15,305 @@ class AuthService {
   // Stream untuk mendengarkan perubahan auth state
   static Stream<User?> get authStateChanges => _auth.authStateChanges();
 
-  static Future<UserCredential?> signInWithGoogle() async {
+  // ==================== CORE FUNCTION ====================
+  // FUNGSI INI YANG MEMBUAT TABEL USERS DI FIRESTORE
+  static Future<void> _createOrUpdateUserInFirestore(User user, {String? displayName}) async {
     try {
-      print('Starting Google Sign-In process...');
-      
-      // Pastikan Google Sign-In tersedia
-      final bool isAvailable = await _googleSignIn.isSignedIn();
-      print('Google Sign-In availability check: $isAvailable');
-      
-      // Sign out dari sesi sebelumnya untuk memastikan fresh login
+      print('🔄 Starting to create/update user in Firestore...');
+      print('👤 User ID: ${user.uid}');
+      print('📧 Email: ${user.email}');
+
+      final userDoc = _firestore.collection('users').doc(user.uid);
+      final docSnapshot = await userDoc.get();
+
+      final userData = {
+        'uid': user.uid,
+        'email': user.email ?? '',
+        'displayName': displayName ?? user.displayName ?? '',
+        'photoURL': user.photoURL ?? '',
+        'updatedAt': FieldValue.serverTimestamp(),
+        'emailVerified': user.emailVerified,
+      };
+
+      if (!docSnapshot.exists) {
+        // User baru - buat dokumen baru
+        userData['createdAt'] = FieldValue.serverTimestamp();
+        userData['provider'] = user.providerData.isNotEmpty
+            ? user.providerData.first.providerId
+            : 'password';
+
+        await userDoc.set(userData);
+        print('✅ NEW USER CREATED in Firestore successfully!');
+      } else {
+        // User sudah ada - update data
+        await userDoc.update(userData);
+        print('✅ USER UPDATED in Firestore successfully!');
+      }
+
+      print('🎉 Firestore operation completed!');
+    } catch (e) {
+      print('❌ ERROR creating/updating user in Firestore: $e');
+      print('📝 Stack trace: ${StackTrace.current}');
+      // JANGAN throw error, biarkan proses login tetap lanjut
+      // User tetap bisa login meskipun gagal save ke Firestore
+    }
+  }
+
+  // ==================== GOOGLE SIGN IN ====================
+  static Future<UserCredential?> signInWithGoogle() async {
+    UserCredential? userCredential;
+
+    try {
+      print('🚀 Starting Google Sign-In process...');
+
+      // PENTING: Sign out dulu untuk clear cache
       await _googleSignIn.signOut();
-      
-      // Trigger the authentication flow
+      print('🔓 Previous session cleared');
+
+      // Trigger Google Sign-In
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      
+
       if (googleUser == null) {
-        print('User cancelled Google Sign-In');
+        print('❌ User cancelled Google Sign-In');
         return null;
       }
-      
-      print('Google user signed in: ${googleUser.email}');
 
-      // Obtain the auth details from the request
+      print('✅ Google account selected: ${googleUser.email}');
+
+      // Get authentication details
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-      
-      if (googleAuth.accessToken == null || googleAuth.idToken == null) {
-        print('Failed to get Google auth tokens');
-        throw Exception('Failed to get Google authentication tokens');
-      }
-      
-      print('Got Google auth tokens successfully');
 
-      // Create a new credential
+      print('🔑 Access Token: ${googleAuth.accessToken != null ? "AVAILABLE" : "NULL"}');
+      print('🔑 ID Token: ${googleAuth.idToken != null ? "AVAILABLE" : "NULL"}');
+
+      if (googleAuth.accessToken == null && googleAuth.idToken == null) {
+        throw Exception('Failed to get authentication tokens from Google');
+      }
+
+      // PENTING: Gunakan idToken untuk accessToken dan sebaliknya
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
-      // Sign in to Firebase with the Google credential
-      final UserCredential userCredential = await _auth.signInWithCredential(credential);
-      
-      print('Firebase sign-in successful: ${userCredential.user?.email}');
-      
+      print('🔐 Firebase credential created');
+
+      // Sign in to Firebase
+      userCredential = await _auth.signInWithCredential(credential);
+
+      print('🎉 Firebase authentication successful!');
+      print('👤 User: ${userCredential.user?.email}');
+
+      // OTOMATIS BUAT/UPDATE USER DI FIRESTORE - INI YANG BIKIN TABEL
+      if (userCredential.user != null) {
+        print('💾 Saving user to Firestore...');
+        await _createOrUpdateUserInFirestore(userCredential.user!);
+      }
+
       return userCredential;
+
     } on FirebaseAuthException catch (e) {
-      print('FirebaseAuthException during Google Sign-In: ${e.code} - ${e.message}');
+      print('🔥 FirebaseAuthException: ${e.code}');
+      print('📝 Message: ${e.message}');
+
       switch (e.code) {
         case 'account-exists-with-different-credential':
-          throw Exception('An account already exists with a different credential');
+          throw Exception('Account already exists with different login method');
         case 'invalid-credential':
-          throw Exception('Invalid credential provided');
+          throw Exception('Invalid credentials. Please try again');
         case 'operation-not-allowed':
-          throw Exception('Google Sign-In is not enabled in Firebase Console');
+          throw Exception('Google Sign-In is not enabled. Contact support');
         case 'user-disabled':
-          throw Exception('User account has been disabled');
+          throw Exception('This account has been disabled');
+        case 'user-not-found':
+          throw Exception('No account found');
+        case 'wrong-password':
+          throw Exception('Wrong password');
         default:
-          throw Exception('Google Sign-In failed: ${e.message}');
+          throw Exception('Sign-in failed: ${e.message}');
       }
     } catch (e) {
-      print('Unexpected error during Google Sign-In: $e');
+      print('💥 Unexpected error: $e');
+      print('📝 Stack: ${StackTrace.current}');
+
       if (e.toString().contains('network')) {
-        throw Exception('Network error. Please check your internet connection');
+        throw Exception('No internet connection');
       }
       throw Exception('Google Sign-In failed. Please try again');
     }
   }
 
-  // Sign in with email and password
+  // ==================== EMAIL/PASSWORD SIGN IN ====================
   static Future<UserCredential?> signInWithEmailPassword(String email, String password) async {
     try {
+      print('🚀 Starting email sign-in...');
+      print('📧 Email: $email');
+
       final UserCredential userCredential = await _auth.signInWithEmailAndPassword(
         email: email.trim(),
         password: password,
       );
+
+      print('✅ Email sign-in successful!');
+
+      // OTOMATIS UPDATE USER DI FIRESTORE
+      if (userCredential.user != null) {
+        print('💾 Updating user in Firestore...');
+        await _createOrUpdateUserInFirestore(userCredential.user!);
+      }
+
       return userCredential;
+
     } on FirebaseAuthException catch (e) {
-      print('FirebaseAuthException during email sign-in: ${e.code} - ${e.message}');
+      print('🔥 FirebaseAuthException: ${e.code}');
+
       switch (e.code) {
         case 'user-not-found':
-          throw Exception('No user found with this email');
+          throw Exception('No account found with this email');
         case 'wrong-password':
-          throw Exception('Wrong password provided');
+          throw Exception('Incorrect password');
         case 'invalid-email':
           throw Exception('Invalid email format');
         case 'user-disabled':
-          throw Exception('User account has been disabled');
+          throw Exception('This account has been disabled');
         case 'too-many-requests':
-          throw Exception('Too many failed attempts. Please try again later');
+          throw Exception('Too many attempts. Try again later');
+        case 'invalid-credential':
+          throw Exception('Invalid email or password');
         default:
           throw Exception('Sign-in failed: ${e.message}');
       }
     } catch (e) {
-      print('Error signing in with email: $e');
+      print('💥 Error: $e');
       throw Exception('Sign-in failed. Please try again');
     }
   }
 
-  // Create account with email and password
-  static Future<UserCredential?> createAccountWithEmailPassword(String email, String password) async {
+  // ==================== CREATE ACCOUNT ====================
+  static Future<UserCredential?> createAccountWithEmailPassword(
+      String email,
+      String password,
+      {String? displayName}
+      ) async {
     try {
+      print('🚀 Starting account creation...');
+      print('📧 Email: $email');
+      print('👤 Name: ${displayName ?? "Not provided"}');
+
       final UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
         email: email.trim(),
         password: password,
       );
-      
-      // Send email verification
-      await userCredential.user?.sendEmailVerification();
-      
+
+      print('✅ Account created in Firebase Auth!');
+
+      // Update display name jika ada
+      if (displayName != null && displayName.isNotEmpty) {
+        await userCredential.user?.updateDisplayName(displayName);
+        await userCredential.user?.reload();
+        print('✅ Display name updated: $displayName');
+      }
+
+      // Send verification email
+      try {
+        await userCredential.user?.sendEmailVerification();
+        print('📧 Verification email sent');
+      } catch (e) {
+        print('⚠️ Could not send verification email: $e');
+      }
+
+      // OTOMATIS BUAT USER DI FIRESTORE - INI YANG BIKIN TABEL
+      if (userCredential.user != null) {
+        print('💾 Creating user in Firestore...');
+        await _createOrUpdateUserInFirestore(
+            userCredential.user!,
+            displayName: displayName
+        );
+      }
+
+      print('🎉 Account creation complete!');
       return userCredential;
+
     } on FirebaseAuthException catch (e) {
-      print('FirebaseAuthException during account creation: ${e.code} - ${e.message}');
+      print('🔥 FirebaseAuthException: ${e.code}');
+
       switch (e.code) {
         case 'weak-password':
-          throw Exception('Password is too weak');
+          throw Exception('Password is too weak. Use 6+ characters');
         case 'email-already-in-use':
-          throw Exception('An account already exists with this email');
+          throw Exception('Email already registered. Try signing in');
         case 'invalid-email':
           throw Exception('Invalid email format');
         case 'operation-not-allowed':
-          throw Exception('Email/password accounts are not enabled');
+          throw Exception('Email/password accounts not enabled');
         default:
           throw Exception('Account creation failed: ${e.message}');
       }
     } catch (e) {
-      print('Error creating account: $e');
+      print('💥 Error: $e');
       throw Exception('Account creation failed. Please try again');
     }
   }
 
-  // Send email verification
+  // ==================== UPDATE PROFILE ====================
+  static Future<void> updateUserProfile({String? displayName, String? photoURL}) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        throw Exception('No user signed in');
+      }
+
+      if (displayName != null) {
+        await user.updateDisplayName(displayName);
+      }
+
+      if (photoURL != null) {
+        await user.updatePhotoURL(photoURL);
+      }
+
+      await user.reload();
+
+      // Update di Firestore juga
+      await _createOrUpdateUserInFirestore(user, displayName: displayName);
+
+      print('✅ Profile updated successfully');
+    } catch (e) {
+      print('❌ Error updating profile: $e');
+      throw Exception('Failed to update profile');
+    }
+  }
+
+  // ==================== GET USER DATA ====================
+  static Future<Map<String, dynamic>?> getUserData() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return null;
+
+      final docSnapshot = await _firestore.collection('users').doc(user.uid).get();
+
+      if (docSnapshot.exists) {
+        return docSnapshot.data();
+      }
+      return null;
+    } catch (e) {
+      print('Error getting user data: $e');
+      return null;
+    }
+  }
+
+  // Stream user data from Firestore
+  static Stream<DocumentSnapshot<Map<String, dynamic>>>? getUserDataStream() {
+    final user = _auth.currentUser;
+    if (user == null) return null;
+    return _firestore.collection('users').doc(user.uid).snapshots();
+  }
+
+  // ==================== OTHER FUNCTIONS ====================
   static Future<void> sendEmailVerification() async {
     try {
       final user = _auth.currentUser;
       if (user != null && !user.emailVerified) {
         await user.sendEmailVerification();
-      } else if (user == null) {
-        throw Exception('No user signed in');
       }
     } catch (e) {
       print('Error sending email verification: $e');
@@ -160,68 +321,44 @@ class AuthService {
     }
   }
 
-  // Check if email is verified
   static bool isEmailVerified() {
     return _auth.currentUser?.emailVerified ?? false;
   }
 
-  // Reload user to get updated verification status
   static Future<void> reloadUser() async {
     try {
       await _auth.currentUser?.reload();
     } catch (e) {
       print('Error reloading user: $e');
-      throw Exception('Failed to refresh user data');
     }
   }
 
-  // Sign out - Improved version
   static Future<void> signOut() async {
     try {
-      // Sign out dari Google terlebih dahulu
       if (await _googleSignIn.isSignedIn()) {
         await _googleSignIn.signOut();
       }
-      
-      // Kemudian sign out dari Firebase
       await _auth.signOut();
-      
-      print('User signed out successfully');
+      print('✅ User signed out successfully');
     } catch (e) {
-      print('Error signing out: $e');
+      print('❌ Error signing out: $e');
       throw Exception('Sign-out failed');
     }
   }
 
-  // Check if user is signed in
   static bool isSignedIn() {
     return _auth.currentUser != null;
   }
 
-  // Get user display name
   static String? getUserDisplayName() {
     return _auth.currentUser?.displayName;
   }
 
-  // Get user email
   static String? getUserEmail() {
     return _auth.currentUser?.email;
   }
 
-  // Get user photo URL
   static String? getUserPhotoURL() {
     return _auth.currentUser?.photoURL;
-  }
-
-  // Method untuk testing koneksi Google Sign-In
-  static Future<bool> testGoogleSignInAvailability() async {
-    try {
-      final bool isAvailable = await _googleSignIn.isSignedIn();
-      print('Google Sign-In is available: $isAvailable');
-      return true;
-    } catch (e) {
-      print('Google Sign-In not available: $e');
-      return false;
-    }
   }
 }
