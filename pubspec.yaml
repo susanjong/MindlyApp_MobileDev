@@ -1,6 +1,6 @@
 name: notesapp
 description: "A new Flutter project."
-publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+publish_to: 'none'
 
 version: 1.0.0+1
 
@@ -11,12 +11,12 @@ dependencies:
   flutter:
     sdk: flutter
 
-
   cupertino_icons: ^1.0.8
-  firebase_core: ^2.24.2
-  firebase_auth: ^4.10.1
-  cloud_firestore: ^4.13.6
-  google_sign_in: ^6.3.0
+  firebase_core: 2.27.1
+  firebase_auth: 4.17.8
+  cloud_firestore: 4.15.3
+
+  google_sign_in: 6.1.5
   google_fonts: ^6.3.2
   provider: ^6.1.5+1
   flutter_svg: ^2.2.2
@@ -30,4 +30,4 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-     - assets/images/
+    - assets/images/
