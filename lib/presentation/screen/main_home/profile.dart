@@ -4,7 +4,7 @@ import 'package:notesapp/presentation/screen/main_home/edit_bioprofile.dart';
 import 'package:notesapp/routes/routes.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:notesapp/widgets/alert_dialog.dart';
-import 'package:notesapp/widgets/succes_popup.dart';
+import 'package:notesapp/data/service/auth_service.dart';
 
 class AccountProfilePage extends StatefulWidget {
   const AccountProfilePage({super.key});
@@ -205,11 +205,8 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
       confirmText: 'Reset',
       confirmTextColor: const Color(0xFFFF453A),
       onConfirm: () {
-        // close confirmation dialog
         Navigator.of(context).pop();
-
-        // show success dialog and auto navigate after 2 seconds
-        SuccessDialog.showWithNavigation(
+        _showSuccessAndNavigate(
           context: context,
           title: 'Success !',
           message: 'Your password has been\nsuccessfully reset.',
@@ -229,18 +226,31 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
       cancelText: 'Cancel',
       confirmText: 'Logout',
       confirmTextColor: const Color(0xFFFF453A),
-      onConfirm: () {
-        // close confirmation dialog
+      onConfirm: () async {
         Navigator.of(context).pop();
 
-        // show success dialog and auto navigate to sign in after 2 seconds
-        SuccessDialog.showWithNavigation(
-          context: context,
-          title: 'Success !',
-          message: 'Your account was\nsuccessfully logout.',
-          routeName: AppRoutes.signIn,
-          useReplacement: true,
-        );
+        try {
+          await AuthService.signOut();
+
+          if (mounted) {
+            _showSuccessAndNavigate(
+              context: context,
+              title: 'Success !',
+              message: 'Your account was\nsuccessfully logout.',
+              routeName: AppRoutes.signIn,
+              useReplacement: true,
+            );
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Logout failed: ${e.toString()}'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
       },
     );
   }
@@ -255,16 +265,122 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
       confirmText: 'Delete',
       confirmTextColor: const Color(0xFFFF453A),
       onConfirm: () {
-        // close confirmation dialog
         Navigator.of(context).pop();
 
-        // show success dialog and auto navigate after 2 seconds
-        SuccessDialog.showWithNavigation(
+        // show success dialog immediately
+        _showSuccessAndNavigate(
           context: context,
           title: 'Success !',
           message: 'Your account has been\nsuccessfully deleted.',
           routeName: AppRoutes.signUp,
           useReplacement: true,
+        );
+
+        // delete account in background
+        AuthService.deleteAccount().catchError((e) {
+          debugPrint('Delete account error: $e');
+        });
+      },
+    );
+  }
+
+  // success dialog with auto navigation
+  Future<void> _showSuccessAndNavigate({
+    required BuildContext context,
+    required String title,
+    required String message,
+    required String routeName,
+    bool useReplacement = true,
+  }) async {
+    final navigator = Navigator.of(context);
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        Future.delayed(const Duration(seconds: 2), () {
+          if (Navigator.canPop(dialogContext)) {
+            Navigator.of(dialogContext).pop();
+
+            Future.delayed(const Duration(milliseconds: 100), () {
+              if (useReplacement) {
+                navigator.pushReplacementNamed(routeName);
+              } else {
+                navigator.pushNamed(routeName);
+              }
+            });
+          }
+        });
+
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          child: Container(
+            width: 317,
+            padding: const EdgeInsets.all(24.0),
+            decoration: ShapeDecoration(
+              color: const Color(0xFFF2F2F2),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF4CAF50),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.check,
+                    color: Colors.white,
+                    size: 40,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  title,
+                  style: GoogleFonts.poppins(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF1A1A1A),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  message,
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w400,
+                    color: const Color(0xFF6B6B6B),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF4CAF50)),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Redirecting...',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
+                    color: const Color(0xFF6B6B6B),
+                  ),
+                ),
+              ],
+            ),
+          ),
         );
       },
     );
@@ -471,23 +587,4 @@ class _SettingItemWidget extends StatelessWidget {
       ),
     );
   }
-}
-
-//setting item model
-class SettingItem {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final Widget? trailing;
-  final VoidCallback? onTap;
-  final Color? iconColor;
-
-  SettingItem({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    this.trailing,
-    this.onTap,
-    this.iconColor,
-  });
 }
