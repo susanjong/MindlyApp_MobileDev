@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:notesapp/features/profile/presentation/widgets/faq_item.dart';
-import 'package:notesapp/config/routes/routes.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../../config/routes/routes.dart';
+import '../widgets/faq_item.dart';
 
 class HelpFaqScreen extends StatelessWidget {
   const HelpFaqScreen({Key? key}) : super(key: key);

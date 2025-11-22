@@ -1,4 +1,3 @@
-import '../../presentation/widgets/categories_tab.dart';
 import '../models/category_model.dart';
 import '../models/note_model.dart';
 
@@ -7,7 +6,6 @@ class NoteService {
   factory NoteService() => _instance;
   NoteService._internal();
 
-  // Dummy data
   final List<CategoryModel> _categories = [
     CategoryModel(id: 'all', name: 'All'),
     CategoryModel(id: '1', name: 'Work'),
@@ -19,7 +17,7 @@ class NoteService {
     NoteModel(
       id: 'n1',
       title: 'To-do list',
-      content: '1. Reply to emails\n2. Prepare presentation slides for the marketing meeting\n3. Conduct research on competitor products\n4. Reply to emails',
+      content: '1. Reply to emails\n2. Prepare presentation slides\n3. Conduct research on competitor products',
       createdAt: DateTime.now().subtract(const Duration(days: 1)),
       updatedAt: DateTime.now().subtract(const Duration(hours: 2)),
       categoryId: '1',
@@ -28,7 +26,7 @@ class NoteService {
     NoteModel(
       id: 'n2',
       title: 'Review Program',
-      content: 'The program highlighted demographic and economic developments in the region, with projections of continued population growth.\n\nIt also addressed recent border tensions between',
+      content: 'The program highlighted demographic and economic developments in the region.',
       createdAt: DateTime.now().subtract(const Duration(days: 2)),
       updatedAt: DateTime.now().subtract(const Duration(hours: 5)),
       categoryId: '1',
@@ -37,7 +35,7 @@ class NoteService {
     NoteModel(
       id: 'n3',
       title: 'New Product Idea',
-      content: 'Create a mobile app UI Kit that provide a basic notes functionality but with some improvement.\n\nThere will be a choice to select what kind of notes that user needed, so the',
+      content: 'Create a mobile app UI Kit that provides basic notes functionality with improvements.',
       createdAt: DateTime.now().subtract(const Duration(days: 3)),
       updatedAt: DateTime.now().subtract(const Duration(hours: 10)),
       categoryId: '3',
@@ -47,7 +45,7 @@ class NoteService {
     NoteModel(
       id: 'n4',
       title: 'Bunni Executor',
-      content: 'Thanks for downloading Bunni,\nOur team is constantly working to bring you a smooth, clean, and malware-free experience.',
+      content: 'Thanks for downloading Bunni. Our team is constantly working to bring you a smooth experience.',
       createdAt: DateTime.now().subtract(const Duration(days: 4)),
       updatedAt: DateTime.now().subtract(const Duration(days: 1)),
       categoryId: '2',
@@ -56,7 +54,7 @@ class NoteService {
     NoteModel(
       id: 'n5',
       title: 'Volunteer',
-      content: 'Merekrut mahasiswa dan mahasiswi usu, sekitar 80 orang, dan nanti untuk mahasiswa mahasiswi ini akan diseleksi, untuk fully funded, dan dibuka dalam waktu dekat ini.\n\nFully funded hanya beberapa orang saja.',
+      content: 'Recruiting students, around 80 people, and they will be selected for fully funded program.',
       createdAt: DateTime.now().subtract(const Duration(days: 5)),
       updatedAt: DateTime.now().subtract(const Duration(days: 2)),
       categoryId: '2',
@@ -64,8 +62,8 @@ class NoteService {
     ),
     NoteModel(
       id: 'n6',
-      title: 'Clustering',
-      content: 'This research successfully developed an optimal clustering model for analyzing household electricity consumption patterns using a combination of RobustScaler and PCA (90% retained variance).',
+      title: 'Clustering Research',
+      content: 'This research developed an optimal clustering model for analyzing household electricity patterns.',
       createdAt: DateTime.now().subtract(const Duration(days: 6)),
       updatedAt: DateTime.now().subtract(const Duration(days: 3)),
       categoryId: '3',
@@ -74,40 +72,40 @@ class NoteService {
     ),
   ];
 
-  // Getters
+  // === Getters ===
+
   List<CategoryModel> get categories => List.unmodifiable(_categories);
   List<NoteModel> get allNotes => List.unmodifiable(_notes);
+  List<NoteModel> get favoriteNotes => _notes.where((n) => n.isFavorite).toList();
 
-  // Get notes by category
+  // === Note Operations ===
+
   List<NoteModel> getNotesByCategory(String categoryId) {
-    if (categoryId == 'all') {
-      return allNotes;
-    }
-    return _notes.where((note) => note.categoryId == categoryId).toList();
+    if (categoryId == 'all') return allNotes;
+    return _notes.where((n) => n.categoryId == categoryId).toList();
   }
 
-  // Get favorite notes
-  List<NoteModel> get favoriteNotes {
-    return _notes.where((note) => note.isFavorite).toList();
-  }
-
-  // Search notes
   List<NoteModel> searchNotes(String query) {
     if (query.isEmpty) return allNotes;
-
-    final lowercaseQuery = query.toLowerCase();
-    return _notes.where((note) {
-      return note.title.toLowerCase().contains(lowercaseQuery) ||
-          note.content.toLowerCase().contains(lowercaseQuery);
-    }).toList();
+    final q = query.toLowerCase();
+    return _notes.where((n) =>
+    n.title.toLowerCase().contains(q) ||
+        n.content.toLowerCase().contains(q)
+    ).toList();
   }
 
-  // Add note
+  NoteModel? getNoteById(String id) {
+    try {
+      return _notes.firstWhere((n) => n.id == id);
+    } catch (_) {
+      return null;
+    }
+  }
+
   void addNote(NoteModel note) {
     _notes.insert(0, note);
   }
 
-  // Update note
   void updateNote(NoteModel note) {
     final index = _notes.indexWhere((n) => n.id == note.id);
     if (index != -1) {
@@ -115,14 +113,12 @@ class NoteService {
     }
   }
 
-  // Delete note
-  void deleteNote(String noteId) {
-    _notes.removeWhere((note) => note.id == noteId);
+  void deleteNote(String id) {
+    _notes.removeWhere((n) => n.id == id);
   }
 
-  // Toggle favorite
-  void toggleFavorite(String noteId) {
-    final index = _notes.indexWhere((n) => n.id == noteId);
+  void toggleFavorite(String id) {
+    final index = _notes.indexWhere((n) => n.id == id);
     if (index != -1) {
       _notes[index] = _notes[index].copyWith(
         isFavorite: !_notes[index].isFavorite,
@@ -130,7 +126,6 @@ class NoteService {
     }
   }
 
-  // Move note to category
   void moveNoteToCategory(String noteId, String categoryId) {
     final index = _notes.indexWhere((n) => n.id == noteId);
     if (index != -1) {
@@ -138,7 +133,16 @@ class NoteService {
     }
   }
 
-  // Category management
+  // === Category Operations ===
+
+  CategoryModel? getCategoryById(String id) {
+    try {
+      return _categories.firstWhere((c) => c.id == id);
+    } catch (_) {
+      return null;
+    }
+  }
+
   void addCategory(CategoryModel category) {
     _categories.add(category);
   }
@@ -150,40 +154,22 @@ class NoteService {
     }
   }
 
-  void deleteCategory(String categoryId) {
-    // Move notes from deleted category to "All"
-    for (var note in _notes) {
-      if (note.categoryId == categoryId) {
-        moveNoteToCategory(note.id, 'all');
+  void deleteCategory(String id) {
+    // Move all notes in this category to 'all'
+    for (var i = 0; i < _notes.length; i++) {
+      if (_notes[i].categoryId == id) {
+        _notes[i] = _notes[i].copyWith(categoryId: 'all');
       }
     }
-    _categories.removeWhere((c) => c.id == categoryId);
+    _categories.removeWhere((c) => c.id == id);
   }
 
-  void toggleCategoryFavorite(String categoryId) {
-    final index = _categories.indexWhere((c) => c.id == categoryId);
+  void toggleCategoryFavorite(String id) {
+    final index = _categories.indexWhere((c) => c.id == id);
     if (index != -1) {
       _categories[index] = _categories[index].copyWith(
         isFavorite: !_categories[index].isFavorite,
       );
-    }
-  }
-
-  // Get note by ID
-  NoteModel? getNoteById(String noteId) {
-    try {
-      return _notes.firstWhere((note) => note.id == noteId);
-    } catch (e) {
-      return null;
-    }
-  }
-
-  // Get category by ID
-  CategoryModel? getCategoryById(String categoryId) {
-    try {
-      return _categories.firstWhere((c) => c.id == categoryId);
-    } catch (e) {
-      return null;
     }
   }
 }

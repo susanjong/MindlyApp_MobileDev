@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:notesapp/core/widgets/buttons/primary_button.dart';
+import '../../../../core/widgets/buttons/primary_button.dart';
 
 class EditAccountInformationScreen extends StatefulWidget {
   const EditAccountInformationScreen({super.key});

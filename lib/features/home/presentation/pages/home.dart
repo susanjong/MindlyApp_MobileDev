@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:notesapp/features/profile/presentation/pages/profile.dart';
-import 'package:notesapp/core/widgets/navigation/custom_navbar_widget.dart';
-import 'package:notesapp/core/widgets/navigation/custom_top_app_bar.dart';
-import 'package:notesapp/features/calendar/data/model/event_model.dart';
-import 'package:notesapp/features/notes/data/models/note_model.dart';
-import 'package:notesapp/features/notes/data/services/notes_service.dart';
-import 'package:notesapp/features/notes/presentation/pages/notes_page.dart';
+import '../../../../core/widgets/navigation/custom_navbar_widget.dart';
+import '../../../../core/widgets/navigation/custom_top_app_bar.dart';
+import '../../../calendar/data/model/event_model.dart';
+import '../../../notes/data/models/note_model.dart';
+import '../../../notes/data/services/note_service.dart';
+import '../../../notes/presentation/pages/notes_main_page.dart';
+import '../../../profile/presentation/pages/profile.dart';
 
 class TaskItem {
   String title;
@@ -590,7 +590,7 @@ class _HomePageState extends State<HomePage> {
                               // ✅ Navigate ke Notes Page
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (context) => const NotesPage()),
+                                MaterialPageRoute(builder: (context) => const NotesMainPage()),
                               );
                             },
                             child: const Text(
@@ -741,7 +741,7 @@ class _HomePageState extends State<HomePage> {
                   if (index == 1) {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const NotesPage()),
+                      MaterialPageRoute(builder: (context) => const NotesMainPage()),
                     ).then((_) {
                       // Refresh halaman setelah kembali dari Notes
                       setState(() {});

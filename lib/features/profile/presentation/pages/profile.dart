@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:notesapp/features/profile/data/models/profile_model.dart';
-import 'package:notesapp/features/profile/presentation/pages/edit_bioprofile.dart';
-import 'package:notesapp/config/routes/routes.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:notesapp/core/widgets/dialog/alert_dialog.dart';
-import 'package:notesapp/core/widgets/dialog/succes_popup.dart';
+import '../../../../config/routes/routes.dart';
+import '../../../../core/widgets/dialog/alert_dialog.dart';
+import '../../../../core/widgets/dialog/succes_popup.dart';
+import '../../data/models/profile_model.dart';
+import 'edit_bioprofile.dart';
 
 class AccountProfilePage extends StatefulWidget {
   const AccountProfilePage({super.key});
