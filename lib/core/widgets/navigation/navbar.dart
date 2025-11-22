@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../features/home/presentation/pages/home.dart';
 import '../../../features/notes/presentation/pages/notes_main_page.dart';
+import '../../../features/to_do_list/presentation/pages/mainTodo.dart';
 
 class NavbarRoot extends StatefulWidget {
   const NavbarRoot({super.key});
@@ -14,7 +15,7 @@ class _NavbarRootState extends State<NavbarRoot> {
   final List<Widget> _pages = [
     const HomePage(),
     const NotesMainPage(),
-    const Center(child: Text('Todo Page', style: TextStyle(fontSize: 24))),
+    const MainTodoScreen(),
     const Center(child: Text('Calendar Page', style: TextStyle(fontSize: 24))),
   ];
 

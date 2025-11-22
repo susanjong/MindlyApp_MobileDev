@@ -1,13 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../../../config/routes/routes.dart';
+import '../../../../core/services/auth_service.dart';
 import '../../../../core/widgets/buttons/primary_button.dart';
-import './../../../../core/services/auth_service.dart';
-import './../../../../core/widgets/navigation/loading_overlay.dart';
+import '../../../../core/widgets/navigation/loading_overlay.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
