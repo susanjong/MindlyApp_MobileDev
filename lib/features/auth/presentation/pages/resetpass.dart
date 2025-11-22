@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:notesapp/core/widgets/buttons/primary_button.dart';
-import 'package:notesapp/config/routes/routes.dart';
+import '../../../../config/routes/routes.dart';
+import '../../../../core/widgets/buttons/primary_button.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
   const ResetPasswordScreen({super.key});
