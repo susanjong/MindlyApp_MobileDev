@@ -255,6 +255,126 @@ class AuthService {
     }
   }
 
+  // ==================== DELETE ACCOUNT ====================
+  /// Menghapus akun user secara permanen dari Firebase Auth dan Firestore
+  /// PERINGATAN: Aksi ini tidak dapat dibatalkan!
+  static Future<void> deleteAccount() async {
+    try {
+      print('🚀 Starting account deletion process...');
+
+      final user = _auth.currentUser;
+      if (user == null) {
+        throw Exception('No user is currently signed in');
+      }
+
+      final userId = user.uid;
+      final userEmail = user.email;
+      print('👤 Deleting account for: $userEmail (ID: $userId)');
+
+      // STEP 1: Hapus data user dari Firestore
+      print('🗑️ Step 1: Deleting user data from Firestore...');
+      try {
+        await _firestore.collection('users').doc(userId).delete();
+        print('✅ User data deleted from Firestore');
+      } catch (e) {
+        print('⚠️ Warning: Could not delete Firestore data: $e');
+        // Lanjutkan proses meskipun gagal hapus Firestore
+      }
+
+      // STEP 2: Sign out dari Google jika login via Google
+      print('🔓 Step 2: Signing out from Google (if applicable)...');
+      try {
+        if (await _googleSignIn.isSignedIn()) {
+          await _googleSignIn.signOut();
+          print('✅ Signed out from Google');
+        }
+      } catch (e) {
+        print('⚠️ Warning: Could not sign out from Google: $e');
+      }
+
+      // STEP 3: Hapus akun dari Firebase Authentication
+      print('🔥 Step 3: Deleting account from Firebase Authentication...');
+      await user.delete();
+      print('✅ Account deleted from Firebase Auth');
+
+      print('🎉 ACCOUNT DELETION COMPLETE!');
+      print('📧 Deleted email: $userEmail');
+
+    } on FirebaseAuthException catch (e) {
+      print('🔥 FirebaseAuthException: ${e.code}');
+      print('📝 Message: ${e.message}');
+
+      switch (e.code) {
+        case 'requires-recent-login':
+        // User harus login ulang sebelum hapus akun
+          throw Exception(
+              'For security reasons, please log in again before deleting your account'
+          );
+        case 'no-current-user':
+          throw Exception('No user is currently signed in');
+        default:
+          throw Exception('Failed to delete account: ${e.message}');
+      }
+    } catch (e) {
+      print('💥 Unexpected error during account deletion: $e');
+      print('📝 Stack trace: ${StackTrace.current}');
+
+      if (e.toString().contains('network')) {
+        throw Exception('No internet connection. Please check your network');
+      }
+      throw Exception('Failed to delete account. Please try again');
+    }
+  }
+
+  /// Re-authenticate user sebelum hapus akun (untuk keamanan)
+  /// Dipanggil jika user mendapat error 'requires-recent-login'
+  static Future<void> reauthenticateUser(String password) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null || user.email == null) {
+        throw Exception('No user signed in');
+      }
+
+      final credential = EmailAuthProvider.credential(
+        email: user.email!,
+        password: password,
+      );
+
+      await user.reauthenticateWithCredential(credential);
+      print('✅ User re-authenticated successfully');
+    } on FirebaseAuthException catch (e) {
+      switch (e.code) {
+        case 'wrong-password':
+          throw Exception('Incorrect password');
+        case 'user-mismatch':
+          throw Exception('Credential does not match current user');
+        case 'invalid-credential':
+          throw Exception('Invalid password');
+        default:
+          throw Exception('Re-authentication failed: ${e.message}');
+      }
+    }
+  }
+
+  /// Re-authenticate untuk Google Sign-In users
+  static Future<void> reauthenticateWithGoogle() async {
+    try {
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) return;
+
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      await _auth.currentUser?.reauthenticateWithCredential(credential);
+      print('✅ User re-authenticated with Google successfully');
+    } catch (e) {
+      throw Exception('Google re-authentication failed');
+    }
+  }
+
   // ==================== UPDATE PROFILE ====================
   static Future<void> updateUserProfile({String? displayName, String? photoURL}) async {
     try {
@@ -360,5 +480,12 @@ class AuthService {
 
   static String? getUserPhotoURL() {
     return _auth.currentUser?.photoURL;
+  }
+
+  /// Mendapatkan provider yang digunakan user untuk login
+  static String? getAuthProvider() {
+    final user = _auth.currentUser;
+    if (user == null || user.providerData.isEmpty) return null;
+    return user.providerData.first.providerId;
   }
 }
