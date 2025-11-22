@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../../../config/routes/routes.dart';
-import '../../../../core/widgets/navigation/custom_navbar_widget.dart';
 import '../../../../core/widgets/navigation/custom_top_app_bar.dart';
+import '../../../../core/widgets/navigation/custom_navbar_widget.dart';
 import '../widgets/task_item.dart';
+
 class MainTodoScreen extends StatefulWidget {
   final String? username;
 
@@ -15,7 +16,6 @@ class MainTodoScreen extends StatefulWidget {
 class _MainTodoScreenState extends State<MainTodoScreen> {
   int selectedDay = 16; // Tuesday selected
   String _username = 'User';
-  int _selectedNavIndex = 2; // Todo tab selected
 
   final List<Map<String, dynamic>> tasks = [
     {'time': '4:50 PM', 'title': 'Diskusi project', 'completed': false},
@@ -30,24 +30,10 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
     _username = widget.username ?? 'User';
   }
 
-  void _onNavItemTapped(int index) {
-    setState(() {
-      _selectedNavIndex = index;
-    });
-
-    switch (index) {
-      case 0: // Home
-        Navigator.pushReplacementNamed(context, AppRoutes.home);
-        break;
-      case 1: // Notes
-        Navigator.pushReplacementNamed(context, AppRoutes.notes);
-        break;
-      case 2: // Todo (current page)
-      // Already on Todo page
-        break;
-      case 3: // Calendar
-        Navigator.pushReplacementNamed(context, AppRoutes.calendar);
-        break;
+  void _handleNavigation(int index) {
+    final routes = ['/home', '/notes', '/todo', '/calendar'];
+    if (index != 2) {
+      Navigator.pushReplacementNamed(context, routes[index]);
     }
   }
 
@@ -224,11 +210,12 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
           ),
         ],
       ),
-
-      // Bottom Navigation using CustomNavBar
-      bottomNavigationBar: CustomNavBar(
-        selectedIndex: _selectedNavIndex,
-        onItemTapped: _onNavItemTapped,
+      // PERBAIKAN: Tambahkan bottomNavigationBar seperti di NotesMainPage
+      bottomNavigationBar: SafeArea(
+        child: CustomNavBar(
+          selectedIndex: 2, // Todo tab (index 2)
+          onItemTapped: _handleNavigation,
+        ),
       ),
     );
   }
