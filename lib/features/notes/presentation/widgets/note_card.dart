@@ -1,5 +1,5 @@
-// lib/presentation/widgets/notes/note_card.dart
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class NoteCard extends StatelessWidget {
   final String title;
@@ -8,6 +8,7 @@ class NoteCard extends StatelessWidget {
   final Color color;
   final bool isFavorite;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
 
   const NoteCard({
     super.key,
@@ -17,35 +18,43 @@ class NoteCard extends StatelessWidget {
     required this.color,
     this.isFavorite = false,
     this.onTap,
+    this.onLongPress,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
+      onLongPress: onLongPress,
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: color,
           borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Title and Favorite Icon
+            // Header with title and favorite icon
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
                   child: Text(
-                    title,
-                    style: const TextStyle(
-                      color: Color(0xFF131313),
+                    title.isEmpty ? 'Untitled' : title,
+                    style: GoogleFonts.poppins(
                       fontSize: 14,
-                      fontFamily: 'Roboto',
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF131313),
                     ),
-                    maxLines: 1,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -60,34 +69,29 @@ class NoteCard extends StatelessWidget {
                   ),
               ],
             ),
-            const SizedBox(height: 9),
-
-            // Content
+            const SizedBox(height: 8),
+            // Content preview
             Expanded(
               child: Text(
-                content,
-                style: const TextStyle(
-                  color: Color(0xFF131313),
+                content.isEmpty ? 'No content' : content,
+                style: GoogleFonts.poppins(
                   fontSize: 12,
-                  fontFamily: 'Poppins',
                   fontWeight: FontWeight.w400,
+                  color: const Color(0xFF4A4A4A),
                   height: 1.4,
                 ),
-                maxLines: 8,
+                maxLines: 5,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-
             const SizedBox(height: 8),
-
             // Date
             Text(
               date,
-              style: const TextStyle(
-                color: Color(0xBF111827),
+              style: GoogleFonts.poppins(
                 fontSize: 10,
-                fontFamily: 'Roboto',
                 fontWeight: FontWeight.w400,
+                color: const Color(0xFF7C7B7B),
               ),
             ),
           ],

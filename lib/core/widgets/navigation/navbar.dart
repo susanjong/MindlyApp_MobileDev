@@ -1,8 +1,6 @@
-
 import 'package:flutter/material.dart';
-import 'package:notesapp/features/home/presentation/pages/home.dart';
-import 'package:notesapp/features/notes/presentation/pages/notes_page.dart';
-import 'package:notesapp/core/widgets/navigation/custom_navbar_widget.dart';
+import '../../../features/home/presentation/pages/home.dart';
+import '../../../features/notes/presentation/pages/notes_main_page.dart';
 
 class NavbarRoot extends StatefulWidget {
   const NavbarRoot({super.key});
@@ -15,7 +13,7 @@ class _NavbarRootState extends State<NavbarRoot> {
   int _selectedIndex = 0;
   final List<Widget> _pages = [
     const HomePage(),
-    const NotesPage(),
+    const NotesMainPage(),
     const Center(child: Text('Todo Page', style: TextStyle(fontSize: 24))),
     const Center(child: Text('Calendar Page', style: TextStyle(fontSize: 24))),
   ];

@@ -23,7 +23,7 @@ class DefaultFirebaseOptions {
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
+              'you can reconfigure this by running the FlutterFire CLI again.',
         );
       default:
         throw UnsupportedError(
@@ -38,6 +38,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '16618628362',
     projectId: 'appnotes-4be34',
     authDomain: 'appnotes-4be34.firebaseapp.com',
+    databaseURL: 'https://appnotes-4be34-default-rtdb.asia-southeast1.firebasedatabase.app',
     storageBucket: 'appnotes-4be34.firebasestorage.app',
     measurementId: 'G-B6VM40V9WG',
   );
@@ -47,6 +48,7 @@ class DefaultFirebaseOptions {
     appId: '1:16618628362:android:e11d2ba09588757aacc6f3',
     messagingSenderId: '16618628362',
     projectId: 'appnotes-4be34',
+    databaseURL: 'https://appnotes-4be34-default-rtdb.asia-southeast1.firebasedatabase.app',
     storageBucket: 'appnotes-4be34.firebasestorage.app',
   );
 
@@ -55,7 +57,10 @@ class DefaultFirebaseOptions {
     appId: '1:16618628362:ios:ff63047e64722dd3acc6f3',
     messagingSenderId: '16618628362',
     projectId: 'appnotes-4be34',
+    databaseURL: 'https://appnotes-4be34-default-rtdb.asia-southeast1.firebasedatabase.app',
     storageBucket: 'appnotes-4be34.firebasestorage.app',
+    androidClientId: '16618628362-mnb4d5lb66u1u3b6dc8qf289iltcge83.apps.googleusercontent.com',
+    iosClientId: '16618628362-ieehfvsnd81ai7jdd8el4v9lckpold1c.apps.googleusercontent.com',
     iosBundleId: 'com.example.notesapp',
   );
 
@@ -64,7 +69,10 @@ class DefaultFirebaseOptions {
     appId: '1:16618628362:ios:ff63047e64722dd3acc6f3',
     messagingSenderId: '16618628362',
     projectId: 'appnotes-4be34',
+    databaseURL: 'https://appnotes-4be34-default-rtdb.asia-southeast1.firebasedatabase.app',
     storageBucket: 'appnotes-4be34.firebasestorage.app',
+    androidClientId: '16618628362-mnb4d5lb66u1u3b6dc8qf289iltcge83.apps.googleusercontent.com',
+    iosClientId: '16618628362-ieehfvsnd81ai7jdd8el4v9lckpold1c.apps.googleusercontent.com',
     iosBundleId: 'com.example.notesapp',
   );
 
@@ -74,7 +82,9 @@ class DefaultFirebaseOptions {
     messagingSenderId: '16618628362',
     projectId: 'appnotes-4be34',
     authDomain: 'appnotes-4be34.firebaseapp.com',
+    databaseURL: 'https://appnotes-4be34-default-rtdb.asia-southeast1.firebasedatabase.app',
     storageBucket: 'appnotes-4be34.firebasestorage.app',
     measurementId: 'G-5KHLJ7HMCW',
   );
+
 }
