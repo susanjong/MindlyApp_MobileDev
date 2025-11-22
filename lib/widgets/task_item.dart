@@ -16,9 +16,14 @@ class TaskItem extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFF5784EB), width: 1.5),
+        color: const Color(0xFFF4F7FF),
+        borderRadius: BorderRadius.circular(42),
+        border: Border.all(
+          color: task['completed']
+              ? const Color(0xFF000000)
+              : Color(0xFF000000),
+          width: 1.5,
+        ),
       ),
       child: Row(
         children: [
@@ -29,9 +34,9 @@ class TaskItem extends StatelessWidget {
               height: 32,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.black, width: 2),
+                border: Border.all(color: Color(0xFF5784EB), width: 2),
                 color: task['completed']
-                    ? const Color(0xFF318F61)
+                    ? const Color(0xFF5784EB)
                     : Colors.transparent,
               ),
               child: task['completed']
