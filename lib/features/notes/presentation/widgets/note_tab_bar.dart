@@ -43,6 +43,9 @@ class _TabItem extends StatelessWidget {
   final bool isSelected;
   final VoidCallback onTap;
 
+  // Warna sesuai request: 5784EB
+  static const Color _selectedColor = Color(0xFF5784EB);
+
   const _TabItem({
     required this.label,
     required this.isSelected,
@@ -61,10 +64,11 @@ class _TabItem extends StatelessWidget {
           curve: Curves.easeInOut,
           height: 32,
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFF004455) : Colors.white,
+            // 1. Warna background jadi 5784EB jika selected
+            color: isSelected ? _selectedColor : Colors.white,
             border: Border.all(
               color: isSelected
-                  ? const Color(0xFF004455)
+                  ? _selectedColor
                   : const Color(0xFFD9D9D9),
               width: 1,
             ),
