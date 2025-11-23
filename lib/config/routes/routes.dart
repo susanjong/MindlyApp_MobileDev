@@ -48,6 +48,8 @@ class AppRoutes {
         return _buildRoute(const ForgotPasswordScreen());
       case profile:
         return _buildRoute(const AccountProfilePage());
+      case resetPassword:
+        return MaterialPageRoute(builder: (_) => ResetPasswordScreen());
       case notes:
         return _buildRoute(const NotesMainPage());
       case noteEditor:
@@ -82,6 +84,7 @@ class AppRoutes {
       resetPassword: (context) => ResetPasswordScreen(),
       forgotPassword: (context) => ForgotPasswordScreen(),
       profile: (context) => AccountProfilePage(),
+      resetPassword: (context) => ResetPasswordScreen(),
       notes: (_) => const NotesMainPage(),
       noteEditor: (_) => const NoteEditorPage(),
       todo: (context) => MainTodoScreen(),
