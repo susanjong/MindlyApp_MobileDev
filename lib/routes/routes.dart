@@ -5,7 +5,6 @@ import 'package:notesapp/presentation/screen/entry/splash_screen.dart';
 import 'package:notesapp/presentation/screen/entry/login.dart';
 import 'package:notesapp/presentation/screen/entry/resetpass.dart';
 import 'package:notesapp/presentation/screen/entry/signup.dart';
-import 'package:notesapp/presentation/screen/entry/forgotpass.dart';
 import 'package:notesapp/presentation/screen/main_home/home.dart';
 import 'package:notesapp/presentation/screen/main_home/profile.dart';
 import 'package:notesapp/presentation/screen/main_home/about_info.dart';
@@ -49,9 +48,6 @@ class AppRoutes {
 
       case resetPassword:
         return MaterialPageRoute(builder: (_) => ResetPasswordScreen());
-
-      case forgotPassword:
-        return MaterialPageRoute(builder: (_) => ForgotPasswordScreen());
 
       case profile:
         return MaterialPageRoute(builder: (_) => AccountProfilePage());
@@ -97,7 +93,6 @@ class AppRoutes {
       signIn: (context) => LoginAccountScreen(),
       home: (context) => HomePage(),
       resetPassword: (context) => ResetPasswordScreen(),
-      forgotPassword: (context) => ForgotPasswordScreen(),
       profile: (context) => AccountProfilePage(),
       notes: (context) => NotesPage(),
       todo: (context) => TodoListPage(),
