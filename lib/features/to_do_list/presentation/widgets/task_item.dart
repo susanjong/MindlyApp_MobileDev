@@ -17,8 +17,8 @@ class TaskItem extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFF5784EB), width: 1.5),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: Colors.black, width: 1.5),
       ),
       child: Row(
         children: [
@@ -29,14 +29,11 @@ class TaskItem extends StatelessWidget {
               height: 32,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.black, width: 2),
+                border: Border.all(color: Color(0xFF5784EB), width: 2),
                 color: task['completed']
-                    ? const Color(0xFF318F61)
+                    ? const Color(0xFF5784EB)
                     : Colors.transparent,
               ),
-              child: task['completed']
-                  ? const Icon(Icons.check, color: Colors.white, size: 18)
-                  : null,
             ),
           ),
           const SizedBox(width: 16),
