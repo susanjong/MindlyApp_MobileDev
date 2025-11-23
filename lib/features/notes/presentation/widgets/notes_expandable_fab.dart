@@ -21,19 +21,21 @@ class _NotesExpandableFabState extends State<NotesExpandableFab>
   late Animation<double> _expandAnimation;
   bool _isExpanded = false;
 
-  static const Color _primaryColor = Color(0xFFD732A8);
-  static const Color _secondaryColor = Color(0xFF004455);
+  // Warna sesuai instruksi
+  static const Color _primaryColor = Color(0xFFD732A8); // Pink Button
+  static const Color _secondaryColor = Color(0xFFFBAE38); // Kuning/Orange
+  static const Color _subtlePurpleWhite = Color(0xFFFAF8FC); // Putih keunguan tipis
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 250),
+      duration: const Duration(milliseconds: 180),
       vsync: this,
     );
     _expandAnimation = CurvedAnimation(
       parent: _controller,
-      curve: Curves.easeInOut,
+      curve: Curves.easeInOutCubic,
     );
   }
 
@@ -56,7 +58,9 @@ class _NotesExpandableFabState extends State<NotesExpandableFab>
 
   void _onActionTap(VoidCallback? action) {
     _toggle();
-    action?.call();
+    Future.delayed(const Duration(milliseconds: 150), () {
+      action?.call();
+    });
   }
 
   @override
@@ -68,48 +72,54 @@ class _NotesExpandableFabState extends State<NotesExpandableFab>
         alignment: Alignment.bottomCenter,
         clipBehavior: Clip.none,
         children: [
-          // Background container when expanded
+          // Background container panjang
           AnimatedBuilder(
             animation: _expandAnimation,
             builder: (context, child) {
+              final height = 60.0 + (130.0 * _expandAnimation.value);
+
               return Positioned(
                 bottom: 0,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: 62,
-                  height: 62 + (60 * 2 * _expandAnimation.value),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(31),
-                    border: Border.all(
-                      color: _primaryColor.withValues(alpha:0.3),
-                      width: 1,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha:0.1),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
+                child: Opacity(
+                  opacity: _expandAnimation.value == 0 ? 0 : 1,
+                  child: Container(
+                    width: 60,
+                    height: height,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(30),
+                      border: Border.all(
+                        color: _primaryColor.withValues(alpha: 0.1 * _expandAnimation.value),
+                        width: 1,
                       ),
-                    ],
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1 * _expandAnimation.value),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               );
             },
           ),
 
-          // Add Note Button
+          // Add Note Button (Posisi Bawah)
           _buildActionButton(
-            offset: 65,
+            intervalStart: 0.3,
+            bottomOffset: 75,
             icon: Icons.edit_outlined,
             tooltip: 'Add Note',
             onTap: () => _onActionTap(widget.onAddNoteTap),
           ),
 
-          // Add Category Button
+          // Add Category Button (Posisi Atas)
           _buildActionButton(
-            offset: 125,
-            icon: Icons.folder_outlined,
+            intervalStart: 0.6,
+            bottomOffset: 135,
+            icon: Icons.folder,
             tooltip: 'Add Category',
             onTap: () => _onActionTap(widget.onAddCategoryTap),
           ),
@@ -127,7 +137,7 @@ class _NotesExpandableFabState extends State<NotesExpandableFab>
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: _primaryColor.withValues(alpha:0.4),
+                      color: _primaryColor.withValues(alpha: 0.4),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
                     ),
@@ -141,7 +151,7 @@ class _NotesExpandableFabState extends State<NotesExpandableFab>
                       child: const Icon(
                         Icons.add,
                         color: Colors.white,
-                        size: 30,
+                        size: 32,
                       ),
                     );
                   },
@@ -155,39 +165,46 @@ class _NotesExpandableFabState extends State<NotesExpandableFab>
   }
 
   Widget _buildActionButton({
-    required double offset,
+    required double intervalStart,
+    required double bottomOffset,
     required IconData icon,
     required String tooltip,
     required VoidCallback onTap,
   }) {
+    final animation = CurvedAnimation(
+      parent: _controller,
+      curve: Interval(intervalStart, 1.0, curve: Curves.easeOutBack),
+    );
+
     return AnimatedBuilder(
-      animation: _expandAnimation,
+      animation: _controller,
       builder: (context, child) {
         return Positioned(
-          bottom: offset * _expandAnimation.value,
-          child: Opacity(
-            opacity: _expandAnimation.value,
-            child: Transform.scale(
-              scale: _expandAnimation.value,
+          bottom: bottomOffset * _expandAnimation.value,
+          child: Transform.scale(
+            // Scale boleh > 1.0 untuk efek 'bounce'
+            scale: animation.value,
+            child: Opacity(
+              // FIX: Clamp value agar Opacity tidak pernah > 1.0 atau < 0.0
+              // Ini mencegah crash saat animasi 'overshoot'
+              opacity: animation.value.clamp(0.0, 1.0),
               child: Tooltip(
                 message: tooltip,
                 child: GestureDetector(
-                  onTap: _expandAnimation.value > 0.5 ? onTap : null,
+                  onTap: _expandAnimation.value > 0.8 ? onTap : null,
                   child: Container(
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          _secondaryColor.withValues(alpha:0.15),
-                          _primaryColor.withValues(alpha:0.15),
-                        ],
-                      ),
+                      color: _subtlePurpleWhite,
                       shape: BoxShape.circle,
-                      border: Border.all(
-                        color: _secondaryColor.withValues(alpha:0.3),
-                        width: 1,
-                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        )
+                      ],
                     ),
                     child: Icon(
                       icon,
