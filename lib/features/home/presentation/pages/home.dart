@@ -7,7 +7,6 @@ import '../../../notes/data/models/note_model.dart';
 import '../../../notes/data/services/note_service.dart';
 import '../../../notes/presentation/pages/notes_main_page.dart';
 import '../../../profile/presentation/pages/profile.dart';
-
 class TaskItem {
   String title;
   String time;
@@ -63,19 +62,24 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
+  // === Event Handlers (Scroll & Navigation) ===
+
   void _onScroll() {
-    if (_scrollController.position.userScrollDirection == ScrollDirection.reverse) {
-      if (_isNavBarVisible) {
-        setState(() {
-          _isNavBarVisible = false;
-        });
-      }
-    } else if (_scrollController.position.userScrollDirection == ScrollDirection.forward) {
-      if (!_isNavBarVisible) {
-        setState(() {
-          _isNavBarVisible = true;
-        });
-      }
+    if (_scrollController.position.userScrollDirection ==
+        ScrollDirection.reverse) {
+      if (_isNavBarVisible) setState(() => _isNavBarVisible = false);
+    } else if (_scrollController.position.userScrollDirection ==
+        ScrollDirection.forward) {
+      if (!_isNavBarVisible) setState(() => _isNavBarVisible = true);
+    }
+  }
+
+  // ✅ FIX: Logic Navigasi disamakan dengan NotesMainPage
+  void _handleNavigation(int index) {
+    final routes = ['/home', '/notes', '/todo', '/calendar'];
+    // Index 0 adalah Home, jadi jika bukan 0, pindah halaman
+    if (index != 0) {
+      Navigator.pushReplacementNamed(context, routes[index]);
     }
   }
 
@@ -86,18 +90,17 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  // Fungsi untuk clear all completed tasks
   void _clearAllCompletedTasks() {
     setState(() {
       _tasks.removeWhere((task) => task.isCompleted);
     });
   }
 
-  // Fungsi untuk mendapatkan tasks yang belum selesai
-  List<TaskItem> get _pendingTasks => _tasks.where((task) => !task.isCompleted).toList();
+  List<TaskItem> get _pendingTasks =>
+      _tasks.where((task) => !task.isCompleted).toList();
 
-  // Fungsi untuk mendapatkan tasks yang sudah selesai
-  List<TaskItem> get _completedTasks => _tasks.where((task) => task.isCompleted).toList();
+  List<TaskItem> get _completedTasks =>
+      _tasks.where((task) => task.isCompleted).toList();
 
   List<EventModel> _getEvents() {
     return [
@@ -122,26 +125,26 @@ class _HomePageState extends State<HomePage> {
     ];
   }
 
-  // ✅ Updated: Menggunakan NoteService untuk mendapatkan notes terbaru
   List<NoteModel> _getRecentNotes() {
-    // Ambil semua notes dan buat salinan list untuk di-sort
     final allNotes = List<NoteModel>.from(_noteService.allNotes);
     allNotes.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
-
-    // Ambil hanya 2 notes terbaru
     return allNotes.take(2).toList();
   }
+
+  // === Build Methods ===
 
   @override
   Widget build(BuildContext context) {
     final events = _getEvents();
-    final notes = _getRecentNotes(); // ✅ Updated
+    final notes = _getRecentNotes();
     final completedTasksCount = _completedTasks.length;
     final totalTasks = _tasks.length;
     final progress = totalTasks > 0 ? completedTasksCount / totalTasks : 0.0;
 
     return Scaffold(
       backgroundColor: Colors.white,
+      // ✅ FIX: Menambahkan Bottom Navigation Bar ke Scaffold
+      bottomNavigationBar: _buildBottomNavBar(),
       body: SafeArea(
         child: Column(
           children: [
@@ -150,7 +153,8 @@ class _HomePageState extends State<HomePage> {
               onProfileTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const AccountProfilePage()),
+                  MaterialPageRoute(
+                      builder: (context) => const AccountProfilePage()),
                 );
               },
               onNotificationTap: () {},
@@ -253,7 +257,8 @@ class _HomePageState extends State<HomePage> {
                       if (_pendingTasks.isNotEmpty) ...[
                         Row(
                           children: const [
-                            Icon(Icons.error_outline, color: Color(0xFFFF6B6B), size: 20),
+                            Icon(Icons.error_outline,
+                                color: Color(0xFFFF6B6B), size: 20),
                             SizedBox(width: 8),
                             Text(
                               'Needs Attention',
@@ -275,7 +280,8 @@ class _HomePageState extends State<HomePage> {
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: const Color(0xFFE0E0E0)),
+                              border: Border.all(
+                                  color: const Color(0xFFE0E0E0)),
                             ),
                             child: Row(
                               children: [
@@ -324,7 +330,8 @@ class _HomePageState extends State<HomePage> {
                                               ),
                                               decoration: BoxDecoration(
                                                 color: const Color(0xFFFFF3E0),
-                                                borderRadius: BorderRadius.circular(4),
+                                                borderRadius:
+                                                BorderRadius.circular(4),
                                               ),
                                               child: const Text(
                                                 'urgent',
@@ -364,7 +371,8 @@ class _HomePageState extends State<HomePage> {
                           children: [
                             Row(
                               children: const [
-                                Icon(Icons.check_circle, color: Color(0xFF4CAF50), size: 20),
+                                Icon(Icons.check_circle,
+                                    color: Color(0xFF4CAF50), size: 20),
                                 SizedBox(width: 8),
                                 Text(
                                   'Completed',
@@ -380,7 +388,8 @@ class _HomePageState extends State<HomePage> {
                               onPressed: _clearAllCompletedTasks,
                               style: TextButton.styleFrom(
                                 backgroundColor: Colors.transparent,
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 6),
                               ),
                               child: const Text(
                                 'Clear All',
@@ -403,7 +412,8 @@ class _HomePageState extends State<HomePage> {
                             decoration: BoxDecoration(
                               color: const Color(0xFFF5F5F5),
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: const Color(0xFFE0E0E0)),
+                              border: Border.all(
+                                  color: const Color(0xFFE0E0E0)),
                             ),
                             child: Row(
                               children: [
@@ -447,7 +457,8 @@ class _HomePageState extends State<HomePage> {
                                           fontSize: 14,
                                           fontWeight: FontWeight.w500,
                                           color: Color(0xFF9E9E9E),
-                                          decoration: TextDecoration.lineThrough,
+                                          decoration:
+                                          TextDecoration.lineThrough,
                                         ),
                                       ),
                                     ],
@@ -466,7 +477,8 @@ class _HomePageState extends State<HomePage> {
                         children: [
                           Row(
                             children: const [
-                              Icon(Icons.calendar_today, color: Color(0xFF0D5F5F), size: 20),
+                              Icon(Icons.calendar_today,
+                                  color: Color(0xFF0D5F5F), size: 20),
                               SizedBox(width: 8),
                               Text(
                                 "Today's Event",
@@ -479,7 +491,10 @@ class _HomePageState extends State<HomePage> {
                             ],
                           ),
                           TextButton(
-                            onPressed: () {},
+                            onPressed: () {
+                              // ✅ FIX: Gunakan named route agar konsisten dengan navbar
+                              Navigator.pushReplacementNamed(context, '/calendar');
+                            },
                             child: const Text(
                               'View All →',
                               style: TextStyle(
@@ -493,13 +508,15 @@ class _HomePageState extends State<HomePage> {
                       const SizedBox(height: 12),
 
                       // Event Cards
-                      ...events.map((event) => Container(
+                      ...events
+                          .map((event) => Container(
                         margin: const EdgeInsets.only(bottom: 12),
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFE0E0E0)),
+                          border: Border.all(
+                              color: const Color(0xFFE0E0E0)),
                         ),
                         child: Row(
                           children: [
@@ -514,7 +531,8 @@ class _HomePageState extends State<HomePage> {
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                                crossAxisAlignment:
+                                CrossAxisAlignment.start,
                                 children: [
                                   Text(
                                     event.title,
@@ -554,7 +572,8 @@ class _HomePageState extends State<HomePage> {
                                             fontSize: 12,
                                             color: Color(0xFF6B6B6B),
                                           ),
-                                          overflow: TextOverflow.ellipsis,
+                                          overflow:
+                                          TextOverflow.ellipsis,
                                         ),
                                       ),
                                     ],
@@ -564,7 +583,8 @@ class _HomePageState extends State<HomePage> {
                             ),
                           ],
                         ),
-                      )).toList(),
+                      ))
+                          .toList(),
                       const SizedBox(height: 24),
 
                       // ========== TODAY'S NOTES SECTION ==========
@@ -573,7 +593,8 @@ class _HomePageState extends State<HomePage> {
                         children: [
                           Row(
                             children: const [
-                              Icon(Icons.note_outlined, color: Color(0xFFFF9800), size: 20),
+                              Icon(Icons.note_outlined,
+                                  color: Color(0xFFFF9800), size: 20),
                               SizedBox(width: 8),
                               Text(
                                 "Today's Notes",
@@ -587,11 +608,8 @@ class _HomePageState extends State<HomePage> {
                           ),
                           TextButton(
                             onPressed: () {
-                              // ✅ Navigate ke Notes Page
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => const NotesMainPage()),
-                              );
+                              // ✅ FIX: Gunakan replacement named route agar bottom nav aktif di tab 'Notes'
+                              Navigator.pushReplacementNamed(context, '/notes');
                             },
                             child: const Text(
                               'View All →',
@@ -605,7 +623,7 @@ class _HomePageState extends State<HomePage> {
                       ),
                       const SizedBox(height: 12),
 
-                      // ✅ Updated: Note Cards dengan data dari NoteService
+                      // Note Cards
                       if (notes.isEmpty)
                         Container(
                           padding: const EdgeInsets.all(32),
@@ -634,15 +652,14 @@ class _HomePageState extends State<HomePage> {
                           ),
                         )
                       else
-                        ...notes.map((note) => GestureDetector(
+                        ...notes
+                            .map((note) => GestureDetector(
                           onTap: () {
-                            // ✅ Navigate ke Edit Note Page
                             Navigator.pushNamed(
                               context,
                               '/edit-note',
                               arguments: note.id,
                             ).then((_) {
-                              // Refresh halaman setelah kembali dari edit
                               setState(() {});
                             });
                           },
@@ -654,10 +671,12 @@ class _HomePageState extends State<HomePage> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                              crossAxisAlignment:
+                              CrossAxisAlignment.start,
                               children: [
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                  MainAxisAlignment.spaceBetween,
                                   children: [
                                     Expanded(
                                       child: Text(
@@ -675,7 +694,8 @@ class _HomePageState extends State<HomePage> {
                                       children: [
                                         if (note.isFavorite)
                                           const Padding(
-                                            padding: EdgeInsets.only(right: 8),
+                                            padding: EdgeInsets.only(
+                                                right: 8),
                                             child: Icon(
                                               Icons.favorite,
                                               color: Color(0xFFFF6B6B),
@@ -707,7 +727,8 @@ class _HomePageState extends State<HomePage> {
                               ],
                             ),
                           ),
-                        )).toList(),
+                        ))
+                            .toList(),
                       const SizedBox(height: 20),
                     ],
                   ),
@@ -717,39 +738,21 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
       ),
-      bottomNavigationBar: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        height: _isNavBarVisible ? null : 0,
-        child: AnimatedOpacity(
-          duration: const Duration(milliseconds: 300),
-          opacity: _isNavBarVisible ? 1.0 : 0.0,
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.1),
-                  blurRadius: 8,
-                  offset: const Offset(0, -2),
-                ),
-              ],
-            ),
-            child: SafeArea(
-              child: CustomNavBar(
-                selectedIndex: 0,
-                onItemTapped: (index) {
-                  if (index == 1) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const NotesMainPage()),
-                    ).then((_) {
-                      // Refresh halaman setelah kembali dari Notes
-                      setState(() {});
-                    });
-                  }
-                },
-              ),
-            ),
+    );
+  }
+
+  // agar bisa mengakses context dan variable navigasi
+  Widget _buildBottomNavBar() {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
+      height: _isNavBarVisible ? null : 0,
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 250),
+        opacity: _isNavBarVisible ? 1.0 : 0.0,
+        child: SafeArea(
+          child: CustomNavBar(
+            selectedIndex: 0, // Index 0 untuk HOME
+            onItemTapped: _handleNavigation,
           ),
         ),
       ),
