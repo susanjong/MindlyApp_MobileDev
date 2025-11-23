@@ -10,7 +10,8 @@ class NoteTabBar extends StatelessWidget {
     super.key,
     required this.selectedIndex,
     required this.onTabSelected,
-    this.tabs = const ['All Notes', 'Categories', 'Favorite'],
+    // UBAH "Favorite" MENJADI "Favorites"
+    this.tabs = const ['All Notes', 'Categories', 'Favorites'],
   });
 
   @override
@@ -43,7 +44,6 @@ class _TabItem extends StatelessWidget {
   final bool isSelected;
   final VoidCallback onTap;
 
-  // Warna sesuai request: 5784EB
   static const Color _selectedColor = Color(0xFF5784EB);
 
   const _TabItem({
@@ -64,7 +64,6 @@ class _TabItem extends StatelessWidget {
           curve: Curves.easeInOut,
           height: 32,
           decoration: BoxDecoration(
-            // 1. Warna background jadi 5784EB jika selected
             color: isSelected ? _selectedColor : Colors.white,
             border: Border.all(
               color: isSelected

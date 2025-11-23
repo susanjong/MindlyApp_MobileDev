@@ -179,8 +179,6 @@ class _NotesMainPageState extends State<NotesMainPage> {
   }
 
   Widget _buildTabContent() {
-    // Menggunakan IndexedStack agar state setiap tab tetap terjaga
-    // dan perpindahan tab menjadi instant tanpa rebuild
     return IndexedStack(
       index: _selectedTabIndex,
       children: [
@@ -199,11 +197,19 @@ class _NotesMainPageState extends State<NotesMainPage> {
           onRefresh: _refreshData,
         ),
 
-        // Tab 2: Favorites
+        // Tab 2: Favorites (UPDATED)
         FavoritesTab(
+          // Kirim Notes Favorit
           notes: _getFilteredNotes(_noteService.favoriteNotes),
+          // Kirim Categories Favorit (Ambil dari service, filter isFavorite)
+          favoriteCategories: _noteService.categories.where((c) => c.isFavorite).toList(),
           scrollController: _scrollController,
           onNoteSelected: _handleNoteSelected,
+          // Callback untuk unfavorite kategori langsung dari tab Favorites
+          onCategoryToggleFavorite: (categoryId) {
+            _noteService.toggleCategoryFavorite(categoryId);
+            _refreshData();
+          },
           searchQuery: _searchQuery,
         ),
       ],
