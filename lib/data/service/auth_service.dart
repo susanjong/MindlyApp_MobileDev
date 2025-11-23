@@ -9,164 +9,112 @@ class AuthService {
     scopes: ['email', 'profile'],
   );
 
-  // Get current user
+  // getters
   static User? get currentUser => _auth.currentUser;
-
-  // Stream untuk mendengarkan perubahan auth state
   static Stream<User?> get authStateChanges => _auth.authStateChanges();
 
-  // ==================== CORE FUNCTION ====================
-  // FUNGSI INI YANG MEMBUAT TABEL USERS DI FIRESTORE
-  static Future<void> _createOrUpdateUserInFirestore(User user, {String? displayName}) async {
+  static bool isSignedIn() => _auth.currentUser != null;
+  static bool isEmailVerified() => _auth.currentUser?.emailVerified ?? false;
+  static String? getUserDisplayName() => _auth.currentUser?.displayName;
+  static String? getUserEmail() => _auth.currentUser?.email;
+  static String? getUserPhotoURL() => _auth.currentUser?.photoURL;
+
+  static String? getAuthProvider() {
+    final user = _auth.currentUser;
+    if (user == null || user.providerData.isEmpty) return null;
+    return user.providerData.first.providerId;
+  }
+
+  //  FIRESTORE: Create / Update Use
+  static Future<void> _createOrUpdateUserInFirestore(
+      User user, {
+        String? displayName,
+      }) async {
     try {
-      print('🔄 Starting to create/update user in Firestore...');
-      print('👤 User ID: ${user.uid}');
-      print('📧 Email: ${user.email}');
+      final userRef = _firestore.collection('users').doc(user.uid);
 
-      final userDoc = _firestore.collection('users').doc(user.uid);
-      final docSnapshot = await userDoc.get();
-
-      final userData = {
+      final data = {
         'uid': user.uid,
         'email': user.email ?? '',
         'displayName': displayName ?? user.displayName ?? '',
         'photoURL': user.photoURL ?? '',
-        'updatedAt': FieldValue.serverTimestamp(),
         'emailVerified': user.emailVerified,
+        'updatedAt': FieldValue.serverTimestamp(),
       };
 
-      if (!docSnapshot.exists) {
-        // User baru - buat dokumen baru
-        userData['createdAt'] = FieldValue.serverTimestamp();
-        userData['provider'] = user.providerData.isNotEmpty
+      final doc = await userRef.get();
+
+      if (!doc.exists) {
+        data['createdAt'] = FieldValue.serverTimestamp();
+        data['provider'] = user.providerData.isNotEmpty
             ? user.providerData.first.providerId
             : 'password';
 
-        await userDoc.set(userData);
-        print('✅ NEW USER CREATED in Firestore successfully!');
+        await userRef.set(data);
       } else {
-        // User sudah ada - update data
-        await userDoc.update(userData);
-        print('✅ USER UPDATED in Firestore successfully!');
+        await userRef.update(data);
       }
-
-      print('🎉 Firestore operation completed!');
-    } catch (e) {
-      print('❌ ERROR creating/updating user in Firestore: $e');
-      print('📝 Stack trace: ${StackTrace.current}');
-      // JANGAN throw error, biarkan proses login tetap lanjut
-      // User tetap bisa login meskipun gagal save ke Firestore
+    } catch (_) {
     }
   }
 
-  // ==================== GOOGLE SIGN IN ====================
+  // for google sign in
   static Future<UserCredential?> signInWithGoogle() async {
-    UserCredential? userCredential;
-
     try {
-      print('🚀 Starting Google Sign-In process...');
+      await _googleSignIn.signOut(); // Clear cache
 
-      // PENTING: Sign out dulu untuk clear cache
-      await _googleSignIn.signOut();
-      print('🔓 Previous session cleared');
+      final googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) return null;
 
-      // Trigger Google Sign-In
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      final googleAuth = await googleUser.authentication;
 
-      if (googleUser == null) {
-        print('❌ User cancelled Google Sign-In');
-        return null;
-      }
-
-      print('✅ Google account selected: ${googleUser.email}');
-
-      // Get authentication details
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-
-      print('🔑 Access Token: ${googleAuth.accessToken != null ? "AVAILABLE" : "NULL"}');
-      print('🔑 ID Token: ${googleAuth.idToken != null ? "AVAILABLE" : "NULL"}');
-
-      if (googleAuth.accessToken == null && googleAuth.idToken == null) {
-        throw Exception('Failed to get authentication tokens from Google');
-      }
-
-      // PENTING: Gunakan idToken untuk accessToken dan sebaliknya
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
-      print('🔐 Firebase credential created');
+      final userCredential = await _auth.signInWithCredential(credential);
 
-      // Sign in to Firebase
-      userCredential = await _auth.signInWithCredential(credential);
-
-      print('🎉 Firebase authentication successful!');
-      print('👤 User: ${userCredential.user?.email}');
-
-      // OTOMATIS BUAT/UPDATE USER DI FIRESTORE - INI YANG BIKIN TABEL
       if (userCredential.user != null) {
-        print('💾 Saving user to Firestore...');
         await _createOrUpdateUserInFirestore(userCredential.user!);
       }
 
       return userCredential;
-
     } on FirebaseAuthException catch (e) {
-      print('🔥 FirebaseAuthException: ${e.code}');
-      print('📝 Message: ${e.message}');
-
       switch (e.code) {
         case 'account-exists-with-different-credential':
           throw Exception('Account already exists with different login method');
         case 'invalid-credential':
           throw Exception('Invalid credentials. Please try again');
         case 'operation-not-allowed':
-          throw Exception('Google Sign-In is not enabled. Contact support');
+          throw Exception('Google Sign-In is not enabled');
         case 'user-disabled':
           throw Exception('This account has been disabled');
-        case 'user-not-found':
-          throw Exception('No account found');
-        case 'wrong-password':
-          throw Exception('Wrong password');
         default:
-          throw Exception('Sign-in failed: ${e.message}');
+          throw Exception(e.message ?? 'Google Sign-In failed');
       }
-    } catch (e) {
-      print('💥 Unexpected error: $e');
-      print('📝 Stack: ${StackTrace.current}');
-
-      if (e.toString().contains('network')) {
-        throw Exception('No internet connection');
-      }
+    } catch (_) {
       throw Exception('Google Sign-In failed. Please try again');
     }
   }
 
-  // ==================== EMAIL/PASSWORD SIGN IN ====================
-  static Future<UserCredential?> signInWithEmailPassword(String email, String password) async {
+  //  email dan password sign in
+  static Future<UserCredential?> signInWithEmailPassword(
+      String email,
+      String password,
+      ) async {
     try {
-      print('🚀 Starting email sign-in...');
-      print('📧 Email: $email');
-
-      final UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+      final credential = await _auth.signInWithEmailAndPassword(
         email: email.trim(),
         password: password,
       );
 
-      print('✅ Email sign-in successful!');
-
-      // OTOMATIS UPDATE USER DI FIRESTORE
-      if (userCredential.user != null) {
-        print('💾 Updating user in Firestore...');
-        await _createOrUpdateUserInFirestore(userCredential.user!);
+      if (credential.user != null) {
+        await _createOrUpdateUserInFirestore(credential.user!);
       }
 
-      return userCredential;
-
+      return credential;
     } on FirebaseAuthException catch (e) {
-      print('🔥 FirebaseAuthException: ${e.code}');
-
       switch (e.code) {
         case 'user-not-found':
           throw Exception('No account found with this email');
@@ -176,67 +124,45 @@ class AuthService {
           throw Exception('Invalid email format');
         case 'user-disabled':
           throw Exception('This account has been disabled');
-        case 'too-many-requests':
-          throw Exception('Too many attempts. Try again later');
         case 'invalid-credential':
           throw Exception('Invalid email or password');
         default:
-          throw Exception('Sign-in failed: ${e.message}');
+          throw Exception(e.message ?? 'Sign-in failed');
       }
-    } catch (e) {
-      print('💥 Error: $e');
-      throw Exception('Sign-in failed. Please try again');
     }
   }
 
-  // ==================== CREATE ACCOUNT ====================
+  //  create account
   static Future<UserCredential?> createAccountWithEmailPassword(
       String email,
-      String password,
-      {String? displayName}
-      ) async {
+      String password, {
+        String? displayName,
+      }) async {
     try {
-      print('🚀 Starting account creation...');
-      print('📧 Email: $email');
-      print('👤 Name: ${displayName ?? "Not provided"}');
-
-      final UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+      final credential = await _auth.createUserWithEmailAndPassword(
         email: email.trim(),
         password: password,
       );
 
-      print('✅ Account created in Firebase Auth!');
-
-      // Update display name jika ada
       if (displayName != null && displayName.isNotEmpty) {
-        await userCredential.user?.updateDisplayName(displayName);
-        await userCredential.user?.reload();
-        print('✅ Display name updated: $displayName');
+        await credential.user?.updateDisplayName(displayName);
+        await credential.user?.reload();
       }
 
-      // Send verification email
+      // send verification email
       try {
-        await userCredential.user?.sendEmailVerification();
-        print('📧 Verification email sent');
-      } catch (e) {
-        print('⚠️ Could not send verification email: $e');
-      }
+        await credential.user?.sendEmailVerification();
+      } catch (_) {}
 
-      // OTOMATIS BUAT USER DI FIRESTORE - INI YANG BIKIN TABEL
-      if (userCredential.user != null) {
-        print('💾 Creating user in Firestore...');
+      if (credential.user != null) {
         await _createOrUpdateUserInFirestore(
-            userCredential.user!,
-            displayName: displayName
+          credential.user!,
+          displayName: displayName,
         );
       }
 
-      print('🎉 Account creation complete!');
-      return userCredential;
-
+      return credential;
     } on FirebaseAuthException catch (e) {
-      print('🔥 FirebaseAuthException: ${e.code}');
-
       switch (e.code) {
         case 'weak-password':
           throw Exception('Password is too weak. Use 6+ characters');
@@ -244,104 +170,42 @@ class AuthService {
           throw Exception('Email already registered. Try signing in');
         case 'invalid-email':
           throw Exception('Invalid email format');
-        case 'operation-not-allowed':
-          throw Exception('Email/password accounts not enabled');
         default:
-          throw Exception('Account creation failed: ${e.message}');
+          throw Exception(e.message ?? 'Failed to create account');
       }
-    } catch (e) {
-      print('💥 Error: $e');
-      throw Exception('Account creation failed. Please try again');
     }
   }
 
-  // ==================== DELETE ACCOUNT ====================
-  /// Menghapus akun user secara permanen dari Firebase Auth dan Firestore
-  /// PERINGATAN: Aksi ini tidak dapat dibatalkan!
-  static Future<void> deleteAccount() async {
+  //  reset password using email and password reset link
+  static Future<void> sendPasswordResetEmail(String email) async {
     try {
-      print('🚀 Starting account deletion process...');
-
-      final user = _auth.currentUser;
-      if (user == null) {
-        throw Exception('No user is currently signed in');
-      }
-
-      final userId = user.uid;
-      final userEmail = user.email;
-      print('👤 Deleting account for: $userEmail (ID: $userId)');
-
-      // STEP 1: Hapus data user dari Firestore
-      print('🗑️ Step 1: Deleting user data from Firestore...');
-      try {
-        await _firestore.collection('users').doc(userId).delete();
-        print('✅ User data deleted from Firestore');
-      } catch (e) {
-        print('⚠️ Warning: Could not delete Firestore data: $e');
-        // Lanjutkan proses meskipun gagal hapus Firestore
-      }
-
-      // STEP 2: Sign out dari Google jika login via Google
-      print('🔓 Step 2: Signing out from Google (if applicable)...');
-      try {
-        if (await _googleSignIn.isSignedIn()) {
-          await _googleSignIn.signOut();
-          print('✅ Signed out from Google');
-        }
-      } catch (e) {
-        print('⚠️ Warning: Could not sign out from Google: $e');
-      }
-
-      // STEP 3: Hapus akun dari Firebase Authentication
-      print('🔥 Step 3: Deleting account from Firebase Authentication...');
-      await user.delete();
-      print('✅ Account deleted from Firebase Auth');
-
-      print('🎉 ACCOUNT DELETION COMPLETE!');
-      print('📧 Deleted email: $userEmail');
-
+      await _auth.sendPasswordResetEmail(email: email.trim());
     } on FirebaseAuthException catch (e) {
-      print('🔥 FirebaseAuthException: ${e.code}');
-      print('📝 Message: ${e.message}');
-
       switch (e.code) {
-        case 'requires-recent-login':
-        // User harus login ulang sebelum hapus akun
-          throw Exception(
-              'For security reasons, please log in again before deleting your account'
-          );
-        case 'no-current-user':
-          throw Exception('No user is currently signed in');
+        case 'invalid-email':
+          throw Exception('Invalid email format');
+        case 'user-not-found':
+          throw Exception('Email not registered. Please sign up first.');
         default:
-          throw Exception('Failed to delete account: ${e.message}');
+          throw Exception(e.message ?? 'Failed to send reset password email');
       }
-    } catch (e) {
-      print('💥 Unexpected error during account deletion: $e');
-      print('📝 Stack trace: ${StackTrace.current}');
-
-      if (e.toString().contains('network')) {
-        throw Exception('No internet connection. Please check your network');
-      }
-      throw Exception('Failed to delete account. Please try again');
     }
   }
 
-  /// Re-authenticate user sebelum hapus akun (untuk keamanan)
-  /// Dipanggil jika user mendapat error 'requires-recent-login'
+  //  RE-AUTHENTICATE USER
   static Future<void> reauthenticateUser(String password) async {
-    try {
-      final user = _auth.currentUser;
-      if (user == null || user.email == null) {
-        throw Exception('No user signed in');
-      }
+    final user = _auth.currentUser;
+    if (user == null || user.email == null) {
+      throw Exception('No user signed in');
+    }
 
+    try {
       final credential = EmailAuthProvider.credential(
         email: user.email!,
         password: password,
       );
 
       await user.reauthenticateWithCredential(credential);
-      print('✅ User re-authenticated successfully');
     } on FirebaseAuthException catch (e) {
       switch (e.code) {
         case 'wrong-password':
@@ -351,59 +215,88 @@ class AuthService {
         case 'invalid-credential':
           throw Exception('Invalid password');
         default:
-          throw Exception('Re-authentication failed: ${e.message}');
+          throw Exception(e.message ?? 'Re-authentication failed');
       }
     }
   }
 
-  /// Re-authenticate untuk Google Sign-In users
   static Future<void> reauthenticateWithGoogle() async {
     try {
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      final googleUser = await _googleSignIn.signIn();
       if (googleUser == null) return;
 
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final googleAuth = await googleUser.authentication;
+
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
       await _auth.currentUser?.reauthenticateWithCredential(credential);
-      print('✅ User re-authenticated with Google successfully');
-    } catch (e) {
+    } catch (_) {
       throw Exception('Google re-authentication failed');
     }
   }
 
-  // ==================== UPDATE PROFILE ====================
-  static Future<void> updateUserProfile({String? displayName, String? photoURL}) async {
+  //  delete account
+  static Future<void> deleteAccount() async {
     try {
       final user = _auth.currentUser;
-      if (user == null) {
-        throw Exception('No user signed in');
+      if (user == null) throw Exception('No user signed in');
+
+      final uid = user.uid;
+
+      // Delete Firestore data
+      try {
+        await _firestore.collection('users').doc(uid).delete();
+      } catch (_) {}
+
+      try {
+        if (await _googleSignIn.isSignedIn()) {
+          await _googleSignIn.signOut();
+        }
+      } catch (_) {}
+
+      // delete firebase auth account
+      await user.delete();
+    } on FirebaseAuthException catch (e) {
+      switch (e.code) {
+        case 'requires-recent-login':
+          throw Exception(
+            'For security reasons, please log in again before deleting your account',
+          );
+        default:
+          throw Exception(e.message ?? 'Failed to delete account');
       }
+    }
+  }
+
+  //  update profile
+  static Future<void> updateUserProfile({
+    String? displayName,
+    String? photoURL,
+  }) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) throw Exception('No user signed in');
 
       if (displayName != null) {
         await user.updateDisplayName(displayName);
       }
-
       if (photoURL != null) {
         await user.updatePhotoURL(photoURL);
       }
 
       await user.reload();
 
-      // Update di Firestore juga
+      // update in Firestore
       await _createOrUpdateUserInFirestore(user, displayName: displayName);
-
-      print('✅ Profile updated successfully');
-    } catch (e) {
-      print('❌ Error updating profile: $e');
+    } catch (_) {
       throw Exception('Failed to update profile');
     }
   }
 
-  // ==================== GET USER DATA ====================
+  //  get user data
   static Future<Map<String, dynamic>?> getUserData() async {
     try {
       final user = _auth.currentUser;
@@ -415,42 +308,33 @@ class AuthService {
         return docSnapshot.data();
       }
       return null;
-    } catch (e) {
-      print('Error getting user data: $e');
+    } catch (_) {
       return null;
     }
   }
 
-  // Stream user data from Firestore
   static Stream<DocumentSnapshot<Map<String, dynamic>>>? getUserDataStream() {
     final user = _auth.currentUser;
     if (user == null) return null;
     return _firestore.collection('users').doc(user.uid).snapshots();
   }
 
-  // ==================== OTHER FUNCTIONS ====================
+  // other function
   static Future<void> sendEmailVerification() async {
     try {
       final user = _auth.currentUser;
       if (user != null && !user.emailVerified) {
         await user.sendEmailVerification();
       }
-    } catch (e) {
-      print('Error sending email verification: $e');
+    } catch (_) {
       throw Exception('Failed to send verification email');
     }
-  }
-
-  static bool isEmailVerified() {
-    return _auth.currentUser?.emailVerified ?? false;
   }
 
   static Future<void> reloadUser() async {
     try {
       await _auth.currentUser?.reload();
-    } catch (e) {
-      print('Error reloading user: $e');
-    }
+    } catch (_) {}
   }
 
   static Future<void> signOut() async {
@@ -459,33 +343,8 @@ class AuthService {
         await _googleSignIn.signOut();
       }
       await _auth.signOut();
-      print('✅ User signed out successfully');
-    } catch (e) {
-      print('❌ Error signing out: $e');
+    } catch (_) {
       throw Exception('Sign-out failed');
     }
-  }
-
-  static bool isSignedIn() {
-    return _auth.currentUser != null;
-  }
-
-  static String? getUserDisplayName() {
-    return _auth.currentUser?.displayName;
-  }
-
-  static String? getUserEmail() {
-    return _auth.currentUser?.email;
-  }
-
-  static String? getUserPhotoURL() {
-    return _auth.currentUser?.photoURL;
-  }
-
-  /// Mendapatkan provider yang digunakan user untuk login
-  static String? getAuthProvider() {
-    final user = _auth.currentUser;
-    if (user == null || user.providerData.isEmpty) return null;
-    return user.providerData.first.providerId;
   }
 }
