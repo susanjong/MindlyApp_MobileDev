@@ -6,15 +6,25 @@ import 'note_card.dart';
 class AllNotesTab extends StatelessWidget {
   final List<NoteModel> notes;
   final ScrollController? scrollController;
-  final Function(String) onNoteSelected;
   final String searchQuery;
+
+  // Properti Selection Mode
+  final bool isSelectionMode;
+  final Set<String> selectedNoteIds;
+  final Function(String) onNoteTap; // Navigasi atau Toggle Selection
+  final Function(String) onNoteLongPress; // Mulai Selection
+  final Function(String) onToggleFavorite; // Toggle Favorite
 
   const AllNotesTab({
     super.key,
     required this.notes,
     this.scrollController,
-    required this.onNoteSelected,
     this.searchQuery = '',
+    required this.isSelectionMode,
+    required this.selectedNoteIds,
+    required this.onNoteTap,
+    required this.onNoteLongPress,
+    required this.onToggleFavorite,
   });
 
   @override
@@ -26,7 +36,7 @@ class AllNotesTab extends StatelessWidget {
     return GridView.builder(
       controller: scrollController,
       physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(22, 8, 22, 100),
+      padding: const EdgeInsets.fromLTRB(22, 8, 22, 120), // Padding bawah untuk navbar
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
         crossAxisSpacing: 12,
@@ -36,21 +46,29 @@ class AllNotesTab extends StatelessWidget {
       itemCount: notes.length,
       itemBuilder: (context, index) {
         final note = notes[index];
+        final isSelected = selectedNoteIds.contains(note.id);
+
         return NoteCard(
           title: note.title,
           content: note.content,
           date: note.formattedDate,
           color: Color(note.color),
           isFavorite: note.isFavorite,
-          onTap: () => onNoteSelected(note.id),
+          // State selection
+          isSelected: isSelectionMode && isSelected,
+
+          // Interaction
+          onTap: () => onNoteTap(note.id),
+          onLongPress: () => onNoteLongPress(note.id),
+          onFavoriteTap: () => onToggleFavorite(note.id),
         );
       },
     );
   }
 
   Widget _buildEmptyState() {
+    // ... (Kode Empty State tetap sama)
     final isSearching = searchQuery.isNotEmpty;
-
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -64,25 +82,12 @@ class AllNotesTab extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              isSearching
-                  ? 'No notes found'
-                  : 'No notes yet',
+              isSearching ? 'No notes found' : 'No notes yet',
               style: GoogleFonts.poppins(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
                 color: Colors.grey.shade600,
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              isSearching
-                  ? 'Try a different search term'
-                  : 'Tap the + button to create your first note',
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: Colors.grey.shade500,
-              ),
-              textAlign: TextAlign.center,
             ),
           ],
         ),

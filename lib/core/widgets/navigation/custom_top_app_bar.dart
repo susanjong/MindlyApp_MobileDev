@@ -6,10 +6,16 @@ class CustomTopAppBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback? onProfileTap;
   final VoidCallback? onNotificationTap;
 
+  // [4] Properti baru untuk Selection Mode
+  final bool isSelectionMode;
+  final VoidCallback? onSelectAllTap;
+
   const CustomTopAppBar({
     super.key,
     this.onProfileTap,
     this.onNotificationTap,
+    this.isSelectionMode = false,
+    this.onSelectAllTap,
   });
 
   @override
@@ -25,7 +31,7 @@ class CustomTopAppBar extends StatelessWidget implements PreferredSizeWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            // Mindly logo in here
+            // Logo Mindly
             Row(
               children: [
                 SizedBox(
@@ -57,27 +63,39 @@ class CustomTopAppBar extends StatelessWidget implements PreferredSizeWidget {
               ],
             ),
 
-            // right: icon profile + notification
-            Row(
-              children: [
-                IconButton(
-                  icon: const Icon(
-                    Icons.person_outline,
-                    color: Color(0xFF1A1A1A),
-                    size: 26,
-                  ),
-                  onPressed: onProfileTap ?? () {},
+            // [4] Icons Kanan: Berubah sesuai mode
+            if (isSelectionMode)
+            // Mode Seleksi: Icon Expand (4 arah) untuk Select All
+              IconButton(
+                icon: const Icon(
+                  Icons.open_with_rounded, // Icon expand 4 arah
+                  color: Color(0xFF1A1A1A),
+                  size: 28,
                 ),
-                IconButton(
-                  icon: const Icon(
-                    Icons.notifications_none_outlined,
-                    color: Color(0xFF1A1A1A),
-                    size: 26,
+                onPressed: onSelectAllTap,
+              )
+            else
+            // Mode Normal: Profile & Notif
+              Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(
+                      Icons.person_outline,
+                      color: Color(0xFF1A1A1A),
+                      size: 26,
+                    ),
+                    onPressed: onProfileTap ?? () {},
                   ),
-                  onPressed: onNotificationTap ?? () {},
-                ),
-              ],
-            ),
+                  IconButton(
+                    icon: const Icon(
+                      Icons.notifications_none_outlined,
+                      color: Color(0xFF1A1A1A),
+                      size: 26,
+                    ),
+                    onPressed: onNotificationTap ?? () {},
+                  ),
+                ],
+              ),
           ],
         ),
       ),
