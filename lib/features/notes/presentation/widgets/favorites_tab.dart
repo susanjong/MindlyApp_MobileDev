@@ -6,11 +6,18 @@ import 'note_card.dart';
 
 class FavoritesTab extends StatefulWidget {
   final List<NoteModel> notes;
-  final List<CategoryModel> favoriteCategories; // Data Kategori Favorit
+  final List<CategoryModel> favoriteCategories;
   final ScrollController? scrollController;
   final Function(String) onNoteSelected;
-  final Function(String) onCategoryToggleFavorite; // Callback saat love ditekan
+  final Function(String) onCategoryToggleFavorite;
   final String searchQuery;
+
+  // Selection Mode Props
+  final bool isSelectionMode;
+  final Set<String> selectedNoteIds;
+  final Function(String) onNoteTap;
+  final Function(String) onNoteLongPress;
+  final Function(String) onToggleFavorite;
 
   const FavoritesTab({
     super.key,
@@ -20,6 +27,11 @@ class FavoritesTab extends StatefulWidget {
     required this.onNoteSelected,
     required this.onCategoryToggleFavorite,
     this.searchQuery = '',
+    required this.isSelectionMode,
+    required this.selectedNoteIds,
+    required this.onNoteTap,
+    required this.onNoteLongPress,
+    required this.onToggleFavorite,
   });
 
   @override
@@ -27,13 +39,11 @@ class FavoritesTab extends StatefulWidget {
 }
 
 class _FavoritesTabState extends State<FavoritesTab> {
-  // State untuk dropdown
   bool _isCategoriesExpanded = true;
   bool _isAllNotesExpanded = true;
 
   @override
   Widget build(BuildContext context) {
-    // Jika kosong sama sekali (tidak ada note fav DAN tidak ada kategori fav)
     if (widget.notes.isEmpty && widget.favoriteCategories.isEmpty) {
       return _buildEmptyState();
     }
@@ -41,31 +51,26 @@ class _FavoritesTabState extends State<FavoritesTab> {
     return ListView(
       controller: widget.scrollController,
       physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.only(bottom: 100),
+      padding: const EdgeInsets.only(bottom: 120),
       children: [
-        // === SECTION 1: CATEGORIES ===
+        // === Categories Section ===
         if (widget.favoriteCategories.isNotEmpty) ...[
           _buildSectionHeader(
             title: 'Categories',
             isExpanded: _isCategoriesExpanded,
             onTap: () => setState(() => _isCategoriesExpanded = !_isCategoriesExpanded),
           ),
-
-          // Isi Dropdown Categories
           AnimatedCrossFade(
             firstChild: const SizedBox.shrink(),
             secondChild: ListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: widget.favoriteCategories.length,
-              padding: const EdgeInsets.only(top: 8, bottom: 16),
+              padding: const EdgeInsets.only(bottom: 16),
               itemBuilder: (context, index) {
                 final category = widget.favoriteCategories[index];
                 return _FavoriteCategoryItem(
                   category: category,
-                  onTap: () {
-                    // Aksi jika kategori ditekan (misal: filter notes di masa depan)
-                  },
                   onFavoriteTap: () => widget.onCategoryToggleFavorite(category.id),
                 );
               },
@@ -77,19 +82,17 @@ class _FavoritesTabState extends State<FavoritesTab> {
           ),
         ],
 
-        // === SECTION 2: ALL NOTES ===
+        // === Notes Section ===
         if (widget.notes.isNotEmpty) ...[
           _buildSectionHeader(
-            title: 'All Notes',
+            title: 'Notes',
             isExpanded: _isAllNotesExpanded,
             onTap: () => setState(() => _isAllNotesExpanded = !_isAllNotesExpanded),
           ),
-
-          // Isi Dropdown Notes (GridView)
           AnimatedCrossFade(
             firstChild: const SizedBox.shrink(),
             secondChild: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
               child: GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -102,13 +105,18 @@ class _FavoritesTabState extends State<FavoritesTab> {
                 itemCount: widget.notes.length,
                 itemBuilder: (context, index) {
                   final note = widget.notes[index];
+                  final isSelected = widget.selectedNoteIds.contains(note.id);
+
                   return NoteCard(
                     title: note.title,
                     content: note.content,
                     date: note.formattedDate,
                     color: Color(note.color),
                     isFavorite: note.isFavorite,
-                    onTap: () => widget.onNoteSelected(note.id),
+                    isSelected: widget.isSelectionMode && isSelected,
+                    onTap: () => widget.onNoteTap(note.id),
+                    onLongPress: () => widget.onNoteLongPress(note.id),
+                    onFavoriteTap: () => widget.onToggleFavorite(note.id),
                   );
                 },
               ),
@@ -123,12 +131,7 @@ class _FavoritesTabState extends State<FavoritesTab> {
     );
   }
 
-  // Widget Header Dropdown (Teks + Icon Arrow)
-  Widget _buildSectionHeader({
-    required String title,
-    required bool isExpanded,
-    required VoidCallback onTap,
-  }) {
+  Widget _buildSectionHeader({required String title, required bool isExpanded, required VoidCallback onTap}) {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
@@ -141,18 +144,14 @@ class _FavoritesTabState extends State<FavoritesTab> {
               title,
               style: GoogleFonts.poppins(
                 fontSize: 16,
-                fontWeight: FontWeight.w700, // Bold sesuai desain
+                fontWeight: FontWeight.w700,
                 color: const Color(0xFF131313),
               ),
             ),
             AnimatedRotation(
-              turns: isExpanded ? 0.5 : 0, // Putar arrow saat expand
+              turns: isExpanded ? 0.5 : 0,
               duration: const Duration(milliseconds: 200),
-              child: const Icon(
-                Icons.keyboard_arrow_down,
-                color: Color(0xFF131313), // Warna hitam
-                size: 24,
-              ),
+              child: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF131313)),
             ),
           ],
         ),
@@ -161,100 +160,50 @@ class _FavoritesTabState extends State<FavoritesTab> {
   }
 
   Widget _buildEmptyState() {
-    final isSearching = widget.searchQuery.isNotEmpty;
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              isSearching ? Icons.search_off_rounded : Icons.favorite_outline,
-              size: 80,
-              color: Colors.grey.shade300,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              isSearching ? 'No favorites found' : 'No favorites yet',
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey.shade600,
-              ),
-            ),
-          ],
-        ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.favorite_outline, size: 80, color: Colors.grey.shade300),
+          const SizedBox(height: 16),
+          Text('No favorites yet', style: GoogleFonts.poppins(color: Colors.grey)),
+        ],
       ),
     );
   }
 }
 
-// Widget Item Kategori Khusus Favorit (Border Pink + Red Heart)
 class _FavoriteCategoryItem extends StatelessWidget {
   final CategoryModel category;
-  final VoidCallback onTap;
   final VoidCallback onFavoriteTap;
 
-  const _FavoriteCategoryItem({
-    required this.category,
-    required this.onTap,
-    required this.onFavoriteTap,
-  });
+  const _FavoriteCategoryItem({required this.category, required this.onFavoriteTap});
 
   @override
   Widget build(BuildContext context) {
-    // Warna sesuai desain (Button Pink)
-    const Color borderPink = Color(0xFFD732A8);
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 25, vertical: 6),
-        height: 50,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: borderPink, // Border Pink
-            width: 1,
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 25, vertical: 6),
+      height: 50,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFD732A8)),
+        boxShadow: const [BoxShadow(color: Color(0x3F000000), blurRadius: 4, offset: Offset(0, 4))],
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              category.name,
+              style: GoogleFonts.poppins(fontSize: 14, color: Colors.black),
+            ),
           ),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x3F000000),
-              blurRadius: 4,
-              offset: Offset(0, 4),
-              spreadRadius: 0,
-            )
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            children: [
-              // Nama Kategori
-              Expanded(
-                child: Text(
-                  category.name,
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w400,
-                    color: Colors.black,
-                  ),
-                ),
-              ),
-
-              // Icon Love Merah (Karena masuk tab Favorites, pasti merah)
-              GestureDetector(
-                onTap: onFavoriteTap,
-                child: const Icon(
-                  Icons.favorite,
-                  color: Colors.red, // Merah Filled
-                  size: 22,
-                ),
-              ),
-            ],
+          GestureDetector(
+            onTap: onFavoriteTap,
+            child: const Icon(Icons.favorite, color: Colors.red, size: 22),
           ),
-        ),
+        ],
       ),
     );
   }

@@ -6,8 +6,8 @@ import '../../features/auth/presentation/pages/resetpass.dart';
 import '../../features/auth/presentation/pages/signup.dart';
 import '../../features/auth/presentation/pages/splash_screen.dart';
 import '../../features/home/presentation/pages/home.dart';
-import '../../features/notes/presentation/pages/notes_main_page.dart';
 import '../../features/notes/presentation/pages/note_editor_page.dart';
+import '../../features/notes/presentation/pages/notes_main_page.dart';
 import '../../features/to_do_list/presentation/pages/mainTodo.dart';
 import '../../features/calendar/presentation/pages/awalcalendar.dart';
 import '../../features/profile/presentation/pages/about_info.dart';
@@ -42,16 +42,17 @@ class AppRoutes {
         return _buildRoute(const SignUpScreen());
       case signIn:
         return _buildRoute(const LoginAccountScreen());
+      case home:
+        return _buildRoute(const HomePage());
       case resetPassword:
         return _buildRoute(const ResetPasswordScreen());
       case forgotPassword:
         return _buildRoute(const ForgotPasswordScreen());
       case profile:
         return _buildRoute(const AccountProfilePage());
-      case resetPassword:
-        return MaterialPageRoute(builder: (_) => ResetPasswordScreen());
       case notes:
         return _buildRoute(const NotesMainPage());
+
       case noteEditor:
         final noteId = settings.arguments as String?;
         return _buildRoute(NoteEditorPage(noteId: noteId));
@@ -73,27 +74,8 @@ class AppRoutes {
   static MaterialPageRoute _buildRoute(Widget page) {
     return MaterialPageRoute(builder: (_) => page);
   }
-
-  static Map<String, WidgetBuilder> get routes {
-    return {
-      splash: (context) => LogoSplash(),
-      introApp: (context) => WelcomeScreen(),
-      signUp: (context) => SignUpScreen(),
-      signIn: (context) => LoginAccountScreen(),
-      home: (context) => HomePage(),
-      resetPassword: (context) => ResetPasswordScreen(),
-      forgotPassword: (context) => ForgotPasswordScreen(),
-      profile: (context) => AccountProfilePage(),
-      resetPassword: (context) => ResetPasswordScreen(),
-      notes: (_) => const NotesMainPage(),
-      noteEditor: (_) => const NoteEditorPage(),
-      todo: (context) => MainTodoScreen(),
-      calendar: (context) => CalendarPage(),
-      helpFaq: (context) => HelpFaqScreen(),
-      aboutUs: (context) => AboutPage(),
-    };
-  }
 }
+
 /// 404 Not Found Page
 class _NotFoundPage extends StatelessWidget {
   final String? routeName;

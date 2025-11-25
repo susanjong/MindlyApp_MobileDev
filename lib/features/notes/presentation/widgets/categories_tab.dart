@@ -7,12 +7,16 @@ import 'note_card.dart';
 
 class CategoriesTab extends StatefulWidget {
   final NoteService noteService;
+  final List<CategoryModel> categories;
+  final List<NoteModel> allNotes;
   final Function(String) onNoteSelected;
   final VoidCallback? onRefresh;
 
   const CategoriesTab({
     super.key,
     required this.noteService,
+    required this.categories,
+    required this.allNotes,
     required this.onNoteSelected,
     this.onRefresh,
   });
@@ -23,11 +27,6 @@ class CategoriesTab extends StatefulWidget {
 
 class _CategoriesTabState extends State<CategoriesTab> {
   final Set<String> _expandedCategories = {};
-  // Kita hapus logic selection mode yang lama karena sekarang interaksi langsung di item
-  // Namun jika ingin fitur edit/delete kategori tetap ada, bisa diakses lewat long press atau button lain.
-  // Untuk saat ini saya fokus ke tampilan list sesuai request.
-
-  // === Event Handlers ===
 
   void _toggleExpand(String categoryId) {
     setState(() {
@@ -39,19 +38,15 @@ class _CategoriesTabState extends State<CategoriesTab> {
     });
   }
 
-  // Fungsi langsung untuk toggle favorite dari icon love
   void _toggleCategoryFavorite(CategoryModel category) {
-    widget.noteService.toggleCategoryFavorite(category.id);
-    setState(() {}); // Refresh UI lokal
-    widget.onRefresh?.call(); // Refresh UI parent jika perlu
+    widget.noteService.toggleCategoryFavorite(category.id, category.isFavorite);
+    widget.onRefresh?.call();
   }
-
-  // === Build ===
 
   @override
   Widget build(BuildContext context) {
-    final categories = widget.noteService.categories;
-    final allNotes = widget.noteService.allNotes;
+    final categories = widget.categories;
+    final allNotes = widget.allNotes;
 
     return ListView.builder(
       physics: const BouncingScrollPhysics(),
@@ -59,9 +54,11 @@ class _CategoriesTabState extends State<CategoriesTab> {
       itemCount: categories.length,
       itemBuilder: (context, index) {
         final category = categories[index];
+
+        // [FIX] Filter notes secara lokal
         final notes = category.id == 'all'
             ? allNotes
-            : widget.noteService.getNotesByCategory(category.id);
+            : allNotes.where((n) => n.categoryId == category.id).toList();
 
         return _CategoryItem(
           category: category,
@@ -98,32 +95,25 @@ class _CategoryItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Warna sesuai request
     const Color borderPink = Color(0xFFD732A8);
     const Color outlineGrey = Color(0xFF777777);
 
     return Column(
       children: [
-        // Category Container (Tap to expand)
         GestureDetector(
-          onTap: onTap, // [3] Tap container untuk expand
+          onTap: onTap,
           child: Container(
             margin: const EdgeInsets.symmetric(horizontal: 25, vertical: 8),
-            height: 50, // Sesuaikan tinggi seperti desain
+            height: 50,
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(10),
-              // [1] Border pink D732A8
-              border: Border.all(
-                color: borderPink,
-                width: 1,
-              ),
+              border: Border.all(color: borderPink, width: 1),
               boxShadow: const [
                 BoxShadow(
                   color: Color(0x3F000000),
                   blurRadius: 4,
                   offset: Offset(0, 4),
-                  spreadRadius: 0,
                 )
               ],
             ),
@@ -131,7 +121,6 @@ class _CategoryItem extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 children: [
-                  // Nama Kategori
                   Expanded(
                     child: Text(
                       category.name,
@@ -142,9 +131,6 @@ class _CategoryItem extends StatelessWidget {
                       ),
                     ),
                   ),
-
-                  // Note Count Badge (Saya pertahankan style sebelumnya agar rapi)
-                  // Bisa diubah transparan jika ingin hanya angka
                   if (noteCount > 0)
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -157,31 +143,20 @@ class _CategoryItem extends StatelessWidget {
                         ),
                       ),
                     ),
-
                   const SizedBox(width: 12),
-
-                  // [4] & [5] Icon Love (Favorite)
-                  // Menggunakan GestureDetector agar tap love tidak mentrigger expand
                   GestureDetector(
-                    onTap: () {
-                      // Feedback visual kecil saat ditekan (opsional)
-                      onFavoriteTap();
-                    },
+                    onTap: onFavoriteTap,
                     child: Icon(
                       category.isFavorite ? Icons.favorite : Icons.favorite_border,
                       color: category.isFavorite ? Colors.red : outlineGrey,
                       size: 22,
                     ),
                   ),
-
-                  // [2] Tidak ada icon arrow down di sini
                 ],
               ),
             ),
           ),
         ),
-
-        // Expanded Notes Grid (Isi Kategori)
         AnimatedCrossFade(
           firstChild: const SizedBox.shrink(),
           secondChild: notes.isNotEmpty
@@ -214,15 +189,10 @@ class _CategoryItem extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 16),
             child: Text(
               "No notes in this category",
-              style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  color: Colors.grey
-              ),
+              style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey),
             ),
           ),
-          crossFadeState: isExpanded
-              ? CrossFadeState.showSecond
-              : CrossFadeState.showFirst,
+          crossFadeState: isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
           duration: const Duration(milliseconds: 200),
         ),
       ],
