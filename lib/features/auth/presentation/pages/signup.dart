@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:notesapp/core/widgets/buttons/primary_button.dart';
-import 'package:notesapp/core/widgets/navigation/loading_overlay.dart';
-import 'package:notesapp/config/routes/routes.dart';
-import 'package:notesapp/core/services/auth_service.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../../../../config/routes/routes.dart';
+import '../../../../core/services/auth_service.dart';
+import '../../../../core/widgets/buttons/primary_button.dart';
+import '../../../../core/widgets/navigation/loading_overlay.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -205,6 +205,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   Future<void> _createAccountWithEmail() async {
     if (_isLoading) return;
 
+    // validate all fields
     if (mounted) {
       setState(() {
         if (_nameController.text.trim().isEmpty) {
@@ -457,6 +458,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                                   const SizedBox(height: 15),
 
+                                  // NAME Field (BARU)
                                   _buildTextField(
                                     label: 'Full Name',
                                     controller: _nameController,
