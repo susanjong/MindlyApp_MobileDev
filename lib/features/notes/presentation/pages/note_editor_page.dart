@@ -97,10 +97,14 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
     final formattedDate = DateFormat('EEEE, d MMM y').format(_currentDate);
     final formattedTime = DateFormat('HH:mm').format(_currentDate);
 
-    return WillPopScope(
-      onWillPop: () async {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (bool didPop, dynamic result) async {
+        if (didPop) return;
         await _saveNote();
-        return true;
+        if (context.mounted) {
+          Navigator.of(context).pop();
+        }
       },
       child: Scaffold(
         backgroundColor: Colors.white,

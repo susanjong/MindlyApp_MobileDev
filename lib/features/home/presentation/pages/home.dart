@@ -6,7 +6,6 @@ import '../../../../config/routes/routes.dart';
 import '../../../calendar/data/model/event_model.dart';
 import '../../../notes/data/models/note_model.dart';
 import '../../../notes/data/services/note_service.dart';
-import '../../../profile/presentation/pages/profile.dart';
 
 class TaskItem {
   String title;
