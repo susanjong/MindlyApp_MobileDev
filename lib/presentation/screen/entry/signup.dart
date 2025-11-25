@@ -380,7 +380,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  // google Sign In Button
+                                  // google Signup Button
                                   Container(
                                     width: double.infinity,
                                     height: 38,
@@ -407,7 +407,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                             ),
                                             const SizedBox(width: 10),
                                             Text(
-                                              'Sign In with Google',
+                                              'Sign up with Google',
                                               style: GoogleFonts.poppins(
                                                 color: Colors.black,
                                                 fontSize: 15,
