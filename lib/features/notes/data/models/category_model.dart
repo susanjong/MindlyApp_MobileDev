@@ -9,6 +9,22 @@ class CategoryModel {
     this.isFavorite = false,
   });
 
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'isFavorite': isFavorite,
+    };
+  }
+
+  factory CategoryModel.fromMap(Map<String, dynamic> map, String id) {
+    return CategoryModel(
+      id: id,
+      name: map['name'] ?? '',
+      isFavorite: map['isFavorite'] ?? false,
+    );
+  }
+
   CategoryModel copyWith({
     String? id,
     String? name,

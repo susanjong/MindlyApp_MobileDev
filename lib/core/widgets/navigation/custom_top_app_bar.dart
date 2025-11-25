@@ -5,8 +5,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 class CustomTopAppBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback? onProfileTap;
   final VoidCallback? onNotificationTap;
-
-  // [4] Properti baru untuk Selection Mode
   final bool isSelectionMode;
   final VoidCallback? onSelectAllTap;
 
@@ -31,7 +29,6 @@ class CustomTopAppBar extends StatelessWidget implements PreferredSizeWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            // Logo Mindly
             Row(
               children: [
                 SizedBox(
@@ -62,20 +59,19 @@ class CustomTopAppBar extends StatelessWidget implements PreferredSizeWidget {
                 ),
               ],
             ),
-
-            // [4] Icons Kanan: Berubah sesuai mode
+            // Toggle Icons based on mode
             if (isSelectionMode)
-            // Mode Seleksi: Icon Expand (4 arah) untuk Select All
               IconButton(
+                // Simple expand icon (4 arrows outwards)
                 icon: const Icon(
-                  Icons.open_with_rounded, // Icon expand 4 arah
+                  Icons.open_in_full_rounded,
                   color: Color(0xFF1A1A1A),
-                  size: 28,
+                  size: 26,
                 ),
+                tooltip: 'Select All',
                 onPressed: onSelectAllTap,
               )
             else
-            // Mode Normal: Profile & Notif
               Row(
                 children: [
                   IconButton(

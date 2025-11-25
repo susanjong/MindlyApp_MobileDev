@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class NoteModel {
   final String id;
   final String title;
@@ -16,26 +18,33 @@ class NoteModel {
     required this.updatedAt,
     required this.categoryId,
     this.isFavorite = false,
-    this.color = 0xFFFFE4B5,
+    this.color = 0xFFE6C4DE, // Default ke warna pertama
   });
 
-  String get timeAgo {
-    final now = DateTime.now();
-    final difference = now.difference(updatedAt);
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'title': title,
+      'content': content,
+      'createdAt': createdAt,
+      'updatedAt': updatedAt,
+      'categoryId': categoryId,
+      'isFavorite': isFavorite,
+      'color': color,
+    };
+  }
 
-    if (difference.inDays > 365) {
-      return '${(difference.inDays / 365).floor()} year${(difference.inDays / 365).floor() > 1 ? 's' : ''} ago';
-    } else if (difference.inDays > 30) {
-      return '${(difference.inDays / 30).floor()} month${(difference.inDays / 30).floor() > 1 ? 's' : ''} ago';
-    } else if (difference.inDays > 0) {
-      return '${difference.inDays} day${difference.inDays > 1 ? 's' : ''} ago';
-    } else if (difference.inHours > 0) {
-      return '${difference.inHours} hour${difference.inHours > 1 ? 's' : ''} ago';
-    } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes} minute${difference.inMinutes > 1 ? 's' : ''} ago';
-    } else {
-      return 'Just now';
-    }
+  factory NoteModel.fromMap(Map<String, dynamic> map, String id) {
+    return NoteModel(
+      id: id,
+      title: map['title'] ?? '',
+      content: map['content'] ?? '',
+      createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      updatedAt: (map['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      categoryId: map['categoryId'] ?? 'all',
+      isFavorite: map['isFavorite'] ?? false,
+      color: map['color'] ?? 0xFFE6C4DE,
+    );
   }
 
   String get formattedDate {
@@ -44,6 +53,25 @@ class NoteModel {
       'July', 'August', 'September', 'October', 'November', 'December'
     ];
     return '${months[updatedAt.month - 1]} ${updatedAt.day}, ${updatedAt.year}';
+  }
+
+  String get timeAgo {
+    final now = DateTime.now();
+    final difference = now.difference(updatedAt);
+
+    if (difference.inDays > 365) {
+      return '${(difference.inDays / 365).floor()} year${(difference.inDays / 365).floor() == 1 ? '' : 's'} ago';
+    } else if (difference.inDays > 30) {
+      return '${(difference.inDays / 30).floor()} month${(difference.inDays / 30).floor() == 1 ? '' : 's'} ago';
+    } else if (difference.inDays > 0) {
+      return '${difference.inDays} day${difference.inDays == 1 ? '' : 's'} ago';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours} hour${difference.inHours == 1 ? '' : 's'} ago';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes} minute${difference.inMinutes == 1 ? '' : 's'} ago';
+    } else {
+      return 'Just now';
+    }
   }
 
   NoteModel copyWith({
