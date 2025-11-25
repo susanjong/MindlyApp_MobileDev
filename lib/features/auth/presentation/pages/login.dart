@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-
 import '../../../../config/routes/routes.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../../core/widgets/buttons/primary_button.dart';
-import '../../../../core/widgets/navigation/loading_overlay.dart';
+import 'package:notesapp/core/widgets/navigation/loading_overlay.dart';
 
 class LoginAccountScreen extends StatefulWidget {
   const LoginAccountScreen({super.key});
@@ -34,15 +33,19 @@ class _LoginAccountScreenState extends State<LoginAccountScreen> {
     super.initState();
 
     _emailFocusNode.addListener(() {
-      setState(() {
-        _isEmailFocused = _emailFocusNode.hasFocus;
-      });
+      if (mounted) {
+        setState(() {
+          _isEmailFocused = _emailFocusNode.hasFocus;
+        });
+      }
     });
 
     _passwordFocusNode.addListener(() {
-      setState(() {
-        _isPasswordFocused = _passwordFocusNode.hasFocus;
-      });
+      if (mounted) {
+        setState(() {
+          _isPasswordFocused = _passwordFocusNode.hasFocus;
+        });
+      }
     });
 
     // real-time validation
@@ -51,48 +54,108 @@ class _LoginAccountScreenState extends State<LoginAccountScreen> {
   }
 
   void _validateEmail() {
-    setState(() {
-      final value = _emailController.text.trim();
-      if (value.isEmpty) {
-        _emailError = null;
-      } else if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-        _emailError = 'Please enter a valid email';
-      } else {
-        _emailError = null;
-      }
-    });
+    if (mounted) {
+      setState(() {
+        final value = _emailController.text.trim();
+        if (value.isEmpty) {
+          _emailError = null;
+        } else if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+          _emailError = 'Please enter a valid email';
+        } else {
+          _emailError = null;
+        }
+      });
+    }
   }
 
   void _validatePassword() {
-    setState(() {
-      final value = _passwordController.text;
-      if (value.isEmpty) {
-        _passwordError = null;
-      } else if (value.length < 6) {
-        _passwordError = 'Password must be at least 6 characters';
-      } else {
-        _passwordError = null;
+    if (mounted) {
+      setState(() {
+        final value = _passwordController.text;
+        if (value.isEmpty) {
+          _passwordError = null;
+        } else if (value.length < 6) {
+          _passwordError = 'Password must be at least 6 characters';
+        } else {
+          _passwordError = null;
+        }
+      });
+    }
+  }
+
+  Future<void> _signInWithGoogle() async {
+    if (_isLoading) return;
+
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+      });
+    }
+
+    try {
+      final userCredential = await AuthService.signInWithGoogle();
+
+      if (userCredential == null) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+        return;
       }
-    });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Welcome back ${userCredential.user?.displayName ?? "User"}!'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+
+        await Future.delayed(const Duration(milliseconds: 500));
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, AppRoutes.home);
+        }
+      }
+    } catch (e) {
+      debugPrint('Google Sign-In error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll('Exception: ', '')),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   Future<void> _handleLogin() async {
     if (_isLoading) return;
 
-    // validate on button press
-    setState(() {
-      if (_emailController.text.trim().isEmpty) {
-        _emailError = 'Please enter your email';
-      } else {
-        _validateEmail();
-      }
+    if (mounted) {
+      setState(() {
+        if (_emailController.text.trim().isEmpty) {
+          _emailError = 'Please enter your email';
+        } else {
+          _validateEmail();
+        }
 
-      if (_passwordController.text.isEmpty) {
-        _passwordError = 'Please enter your password';
-      } else {
-        _validatePassword();
-      }
-    });
+        if (_passwordController.text.isEmpty) {
+          _passwordError = 'Please enter your password';
+        } else {
+          _validatePassword();
+        }
+      });
+    }
 
     if (_emailError != null || _passwordError != null) {
       return;
@@ -102,12 +165,14 @@ class _LoginAccountScreenState extends State<LoginAccountScreen> {
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+      });
+    }
 
     try {
-      // Login menggunakan AuthService
+      // login using authService
       final userCredential = await AuthService.signInWithEmailPassword(
         _emailController.text.trim(),
         _passwordController.text,
@@ -264,16 +329,94 @@ class _LoginAccountScreenState extends State<LoginAccountScreen> {
                                       fontSize: 15,
                                       color: Colors.black,
                                       fontWeight: FontWeight.w400,
+                                      letterSpacing: -0.30,
                                     ),
                                     textAlign: TextAlign.center,
                                   ),
-                                  const SizedBox(height: 40),
+                                  const SizedBox(height: 20),
 
                                   Form(
                                     key: _formKey,
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
+                                        // Google Sign In Button
+                                        Container(
+                                          width: double.infinity,
+                                          height: 38,
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius: BorderRadius.circular(10),
+                                            border: Border.all(width: 1, color: Colors.black),
+                                          ),
+                                          child: Material(
+                                            color: Colors.transparent,
+                                            child: InkWell(
+                                              onTap: _isLoading ? null : _signInWithGoogle,
+                                              borderRadius: BorderRadius.circular(10),
+                                              child: Row(
+                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                children: [
+                                                  Image.asset(
+                                                    'assets/images/google.png',
+                                                    width: 18,
+                                                    height: 18,
+                                                    errorBuilder: (context, error, stackTrace) {
+                                                      return const Icon(Icons.g_mobiledata, color: Colors.blue, size: 18);
+                                                    },
+                                                  ),
+                                                  const SizedBox(width: 10),
+                                                  Text(
+                                                    'Sign in with Google',
+                                                    style: GoogleFonts.poppins(
+                                                      color: Colors.black,
+                                                      fontSize: 15,
+                                                      fontWeight: FontWeight.w500,
+                                                      letterSpacing: -0.30,
+                                                      height: 1,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+
+                                        const SizedBox(height: 20),
+
+                                        // OR Divider
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: Container(
+                                                height: 1,
+                                                color: Colors.black.withValues(alpha: 0.5),
+                                              ),
+                                            ),
+                                            Padding(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                                              child: Text(
+                                                'OR',
+                                                style: GoogleFonts.poppins(
+                                                  color: Colors.black,
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w200,
+                                                  letterSpacing: -0.24,
+                                                  height: 1,
+                                                ),
+                                              ),
+                                            ),
+                                            Expanded(
+                                              child: Container(
+                                                height: 1,
+                                                color: Colors.black.withValues(alpha: 0.5),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+
+                                        const SizedBox(height: 20),
+
                                         // email Field with error
                                         _buildEmailField(),
 
@@ -310,16 +453,12 @@ class _LoginAccountScreenState extends State<LoginAccountScreen> {
 
                                         // login button
                                         Center(
-                                          child: LayoutBuilder(
-                                            builder: (context, constraints) {
-                                              return PrimaryButton(
-                                                label: 'Login Account',
-                                                onPressed: _isLoading ? null : _handleLogin,
-                                                enabled: !_isLoading,
-                                                width: constraints.maxWidth,
-                                                height: 38,
-                                              );
-                                            },
+                                          child: PrimaryButton(
+                                            label: 'Login Account',
+                                            onPressed: _isLoading ? null : _handleLogin,
+                                            enabled: !_isLoading,
+                                            width: double.infinity,
+                                            height: 38,
                                           ),
                                         ),
 
