@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/task_item.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class AllCategoryScreen extends StatefulWidget {
   const AllCategoryScreen({Key? key}) : super(key: key);
@@ -9,6 +10,7 @@ class AllCategoryScreen extends StatefulWidget {
 }
 
 class _AllCategoryScreenState extends State<AllCategoryScreen> {
+  // 1. Definisi gradients untuk Screen Utama
   final List<List<Color>> availableGradients = [
     [const Color(0xFFBEE973), const Color(0xFFD9D9D9)], // Hijau
     [const Color(0xFF93B7D9), const Color(0xFFD9D9D9)], // Biru
@@ -85,8 +87,6 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Category Cards Section
-            // Tinggi dikurangi sedikit agar pas dengan rasio gambar (sebelumnya 120)
             SizedBox(
               height: 110,
               child: ListView.builder(
@@ -102,10 +102,7 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
                 },
               ),
             ),
-
             const SizedBox(height: 30),
-
-            // Uncategorized Task Section
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -123,10 +120,7 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
                 ),
               ],
             ),
-
             const SizedBox(height: 16),
-
-            // Task List
             ListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -169,6 +163,7 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
   }
 
   Widget _buildCategoryCard(String name, int taskCount, int completedCount, int gradientIndex) {
+    // Menggunakan availableGradients milik class ini
     final gradient = availableGradients[gradientIndex % availableGradients.length];
 
     return Container(
@@ -181,22 +176,21 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
           end: Alignment.bottomRight,
           colors: gradient,
         ),
-        borderRadius: BorderRadius.circular(24), // Sudut lebih membulat
+        borderRadius: BorderRadius.circular(24),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween, // Memisahkan bagian atas dan bawah
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Nama Category
               Expanded(
                 child: Text(
                   name,
                   style: const TextStyle(
-                    fontSize: 16, // Font sedikit lebih besar
+                    fontSize: 16,
                     fontWeight: FontWeight.w700,
                     color: Colors.black,
                   ),
@@ -205,11 +199,10 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
                 ),
               ),
               const SizedBox(width: 8),
-              // Badge Completed (Pill Shape)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.4), // Transparan putih
+                  color: Colors.white.withOpacity(0.4),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -235,7 +228,6 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
                   fontWeight: FontWeight.w500,
                 ),
               ),
-              // Menu Icon (Titik tiga)
               const Icon(
                 Icons.more_horiz,
                 size: 24,
@@ -249,75 +241,203 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
   }
 
   void _showAddCategoryDialog() {
-    final TextEditingController nameController = TextEditingController();
-    int selectedGradientIndex = 0;
-
     showDialog(
       context: context,
+      barrierDismissible: true,
       builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(70)),
-              title: const Text('Add New Category', style: TextStyle(fontWeight: FontWeight.w600)),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: nameController,
-                    decoration: InputDecoration(
-                      hintText: 'Category name',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text('Choose color:', style: TextStyle(fontWeight: FontWeight.w500)),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [0, 1, 2].map((idx) => _buildGradientOption(idx, selectedGradientIndex, (val) => setState(() => selectedGradientIndex = val))).toList(),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-                ElevatedButton(
-                  onPressed: () {
-                    if (nameController.text.trim().isNotEmpty) {
-                      this.setState(() {
-                        categories.add({
-                          'name': nameController.text.trim(),
-                          'gradientIndex': selectedGradientIndex,
-                          'taskCount': 0,
-                          'completedCount': 0,
-                        });
-                      });
-                      Navigator.pop(context);
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD732A8)),
-                  child: const Text('Add'),
-                ),
-              ],
-            );
-          },
-        );
+        return const _IOSAddCategoryDialogContent();
       },
-    );
+    ).then((result) {
+      if (result != null && result is Map<String, dynamic>) {
+        setState(() {
+          categories.add({
+            'name': result['name'],
+            'gradientIndex': result['gradientIndex'],
+            'taskCount': 0,
+            'completedCount': 0,
+          });
+        });
+      }
+    });
+  }
+}
+
+// Letakkan class ini di bagian paling bawah file
+class _IOSAddCategoryDialogContent extends StatefulWidget {
+  const _IOSAddCategoryDialogContent({Key? key}) : super(key: key);
+
+  @override
+  State<_IOSAddCategoryDialogContent> createState() => _IOSAddCategoryDialogContentState();
+}
+
+class _IOSAddCategoryDialogContentState extends State<_IOSAddCategoryDialogContent> {
+  final TextEditingController _nameController = TextEditingController();
+  int _selectedGradientIndex = 0;
+
+  final List<List<Color>> availableGradients = [
+    [const Color(0xFFBEE973), const Color(0xFFD9D9D9)], // Hijau
+    [const Color(0xFF93B7D9), const Color(0xFFD9D9D9)], // Biru
+    [const Color(0xFFE2A8D3), const Color(0xFFFFF4FD)], // Pink
+  ];
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
   }
 
-  Widget _buildGradientOption(int index, int selectedIndex, Function(int) onTap) {
-    final isSelected = index == selectedIndex;
-    return GestureDetector(
-      onTap: () => onTap(index),
-      child: Container(
-        width: 50, height: 50,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(colors: availableGradients[index]),
-          shape: BoxShape.circle,
-          border: isSelected ? Border.all(color: Colors.black, width: 2) : null,
+  @override
+  Widget build(BuildContext context) {
+    const dividerColor = Color(0xA5545458);
+
+    return Dialog(
+      backgroundColor: Colors.transparent, // Transparan agar ClipRRect yang mengatur bentuk
+      insetPadding: const EdgeInsets.symmetric(horizontal: 40),
+      child: ClipRRect( // <--- KUNCI: Membuat semua sudut (atas & bawah) membulat
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          width: 270,
+          color: Colors.white, // <--- Mengubah background utama (termasuk atas) jadi PUTIH
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // --- BAGIAN ATAS (PUTIH & ROUNDED) ---
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Add New Category',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.poppins(
+                        color: Colors.black,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w600,
+                        height: 1.29,
+                        letterSpacing: -0.41,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: const Color(0xFF0A84FF)),
+                      ),
+                      child: TextField(
+                        controller: _nameController,
+                        style: GoogleFonts.poppins(fontSize: 13),
+                        decoration: const InputDecoration(
+                          hintText: 'Category Name',
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding: EdgeInsets.symmetric(vertical: 8),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    // Logic pemilihan warna
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [0, 1, 2].map((index) {
+                        final isSelected = _selectedGradientIndex == index;
+                        return GestureDetector(
+                          onTap: () => setState(() => _selectedGradientIndex = index),
+                          child: Container(
+                            width: 36,
+                            height: 36,
+                            margin: const EdgeInsets.symmetric(horizontal: 6),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: availableGradients[index],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              shape: BoxShape.circle,
+                              border: isSelected
+                                  ? Border.all(color: Colors.black54, width: 2)
+                                  : Border.all(color: Colors.black12, width: 1),
+                            ),
+                            child: isSelected
+                                ? const Icon(Icons.check, size: 20, color: Colors.black54)
+                                : null,
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Garis Pembatas
+              Container(
+                width: double.infinity,
+                height: 0.5,
+                color: dividerColor,
+              ),
+
+              // --- BAGIAN BAWAH (TOMBOL ROUNDED) ---
+              SizedBox(
+                height: 44,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Material(
+                        color: Colors.white, // Warna background tombol
+                        child: InkWell(
+                          onTap: () => Navigator.pop(context),
+                          // Tidak perlu borderRadius disini karena sudah dipotong oleh ClipRRect induk
+                          child: Center(
+                            child: Text(
+                              'Cancel',
+                              style: GoogleFonts.poppins(
+                                color: const Color(0xFF0A84FF),
+                                fontSize: 16,
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Container(
+                      width: 0.5,
+                      height: double.infinity,
+                      color: dividerColor,
+                    ),
+                    Expanded(
+                      child: Material(
+                        color: Colors.white,
+                        child: InkWell(
+                          onTap: () {
+                            if (_nameController.text.trim().isNotEmpty) {
+                              Navigator.pop(context, {
+                                'name': _nameController.text.trim(),
+                                'gradientIndex': _selectedGradientIndex,
+                              });
+                            }
+                          },
+                          child: Center(
+                            child: Text(
+                              'Add',
+                              style: GoogleFonts.poppins(
+                                color: const Color(0xFF0A84FF),
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
-        child: isSelected ? const Icon(Icons.check, color: Colors.black) : null,
       ),
     );
   }
