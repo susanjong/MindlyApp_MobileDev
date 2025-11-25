@@ -768,7 +768,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildNoteCard(NoteModel note) {
+  /*Widget _buildNoteCard(NoteModel note) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -813,7 +813,7 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
     );
-  }
+  }*/
 
   Widget _buildBottomNavigationBar() {
     return AnimatedContainer(
