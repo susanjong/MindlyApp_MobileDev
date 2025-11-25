@@ -134,7 +134,7 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
                   leading: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF5784EB).withOpacity(0.1),
+                      color: const Color(0xFF5784EB).withValues(alpha:0.1),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
@@ -158,7 +158,7 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
                   leading: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF4CAF50).withOpacity(0.1),
+                      color: const Color(0xFF4CAF50).withValues(alpha:0.1),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
@@ -183,7 +183,7 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
                     leading: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.1),
+                        color: Colors.red.withValues(alpha:0.1),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
