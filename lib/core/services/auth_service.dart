@@ -1,7 +1,6 @@
-// File: lib/data/service/auth_service.dart
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AuthService {
   static final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -13,14 +12,11 @@ class AuthService {
   // getters
   static User? get currentUser => _auth.currentUser;
   static Stream<User?> get authStateChanges => _auth.authStateChanges();
-
   static bool isSignedIn() => _auth.currentUser != null;
   static bool isEmailVerified() => _auth.currentUser?.emailVerified ?? false;
   static String? getUserDisplayName() => _auth.currentUser?.displayName;
   static String? getUserEmail() => _auth.currentUser?.email;
   static String? getUserPhotoURL() => _auth.currentUser?.photoURL;
-
-  // Method untuk mendapatkan email current user
   static String? getCurrentUserEmail() => _auth.currentUser?.email;
 
   static String? getAuthProvider() {
@@ -29,7 +25,7 @@ class AuthService {
     return user.providerData.first.providerId;
   }
 
-  //  FIRESTORE: Create / Update User
+  // create or update (firestore)
   static Future<void> _createOrUpdateUserInFirestore(
       User user, {
         String? displayName,
@@ -56,26 +52,21 @@ class AuthService {
       final doc = await userRef.get();
 
       if (!doc.exists) {
-        // NEW USER: Set default bio and notification setting
+        //for new user, set default bio and notification setting
         data['createdAt'] = FieldValue.serverTimestamp();
         data['provider'] = user.providerData.isNotEmpty
             ? user.providerData.first.providerId
             : 'password';
-
-        // Set default bio for new users
         if (!data.containsKey('bio')) {
           data['bio'] = 'Update bio in here';
         }
-
-        // Set default notification setting to true for new users
         data['notificationsEnabled'] = true;
 
         await userRef.set(data);
       } else {
         await userRef.update(data);
       }
-    } catch (_) {
-      // Silent fail
+    } catch (_) { //silent
     }
   }
 
@@ -119,7 +110,7 @@ class AuthService {
     }
   }
 
-  //  email dan password sign in
+  //  input field with email dan password sign in manually
   static Future<UserCredential?> signInWithEmailPassword(
       String email,
       String password,
@@ -153,7 +144,6 @@ class AuthService {
     }
   }
 
-  //  create account
   static Future<UserCredential?> createAccountWithEmailPassword(
       String email,
       String password, {
@@ -179,7 +169,6 @@ class AuthService {
         await _createOrUpdateUserInFirestore(
           credential.user!,
           displayName: displayName,
-          // NEW: Set default bio for new account
           bio: 'Update bio in here',
         );
       }
@@ -215,7 +204,7 @@ class AuthService {
     }
   }
 
-  //  RE-AUTHENTICATE USER
+  //  re-authen for user
   static Future<void> reauthenticateUser(String password) async {
     final user = _auth.currentUser;
     if (user == null || user.email == null) {
@@ -268,8 +257,6 @@ class AuthService {
       if (user == null) throw Exception('No user signed in');
 
       final uid = user.uid;
-
-      // Delete Firestore data
       try {
         await _firestore.collection('users').doc(uid).delete();
       } catch (_) {}
@@ -280,7 +267,6 @@ class AuthService {
         }
       } catch (_) {}
 
-      // delete firebase auth account
       await user.delete();
     } on FirebaseAuthException catch (e) {
       switch (e.code) {
@@ -314,7 +300,6 @@ class AuthService {
 
       await user.reload();
 
-      // Update Firestore with all fields including bio
       await _createOrUpdateUserInFirestore(
         user,
         displayName: displayName,
@@ -326,7 +311,6 @@ class AuthService {
     }
   }
 
-  // update only bio in firestore
   static Future<void> updateUserBio(String bio) async {
     try {
       final user = _auth.currentUser;
@@ -360,7 +344,7 @@ class AuthService {
     }
   }
 
-  // NEW: Update user data (general purpose for settings like notifications)
+  // update user data (general purpose for settings like notifications)
   static Future<void> updateUserData(Map<String, dynamic> data) async {
     try {
       final user = _auth.currentUser;
@@ -401,7 +385,7 @@ class AuthService {
     return _firestore.collection('users').doc(user.uid).snapshots();
   }
 
-  // other function
+
   static Future<void> sendEmailVerification() async {
     try {
       final user = _auth.currentUser;
