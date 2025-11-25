@@ -221,7 +221,6 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
           ),
         ],
       ),
-      // PERBAIKAN: Tambahkan bottomNavigationBar seperti di NotesMainPage
       bottomNavigationBar: SafeArea(
         child: CustomNavBar(
           selectedIndex: 2, // Todo tab (index 2)

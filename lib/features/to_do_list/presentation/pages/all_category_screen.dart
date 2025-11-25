@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/task_item.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'folder_screen.dart';
 
 class AllCategoryScreen extends StatefulWidget {
   const AllCategoryScreen({Key? key}) : super(key: key);
@@ -10,57 +11,100 @@ class AllCategoryScreen extends StatefulWidget {
 }
 
 class _AllCategoryScreenState extends State<AllCategoryScreen> {
-  // 1. Definisi gradients untuk Screen Utama
   final List<List<Color>> availableGradients = [
     [const Color(0xFFBEE973), const Color(0xFFD9D9D9)], // Hijau
     [const Color(0xFF93B7D9), const Color(0xFFD9D9D9)], // Biru
     [const Color(0xFFE2A8D3), const Color(0xFFFFF4FD)], // Pink
   ];
 
-  final List<Map<String, dynamic>> categories = [
-    {
-      'name': 'PKM 2025',
-      'gradientIndex': 0,
-      'taskCount': 3,
-      'completedCount': 1,
-    },
-    {
-      'name': 'semester 5',
-      'gradientIndex': 1,
-      'taskCount': 3,
-      'completedCount': 1,
-    },
-    {
-      'name': 'Internship',
-      'gradientIndex': 2,
-      'taskCount': 2,
-      'completedCount': 0,
-    },
-  ];
+  late List<Map<String, dynamic>> categories;
+  late List<Map<String, dynamic>> uncategorizedTasks;
 
-  final List<Map<String, dynamic>> uncategorizedTasks = [
-    {
-      'time': '9:50 PM',
-      'title': 'Projek Pemmob',
-      'date': '01',
-      'month': 'NOV',
-      'completed': false,
-    },
-    {
-      'time': '4:50 PM',
-      'title': 'Diskusi project',
-      'date': '01',
-      'month': 'JAN',
-      'completed': false,
-    },
-    {
-      'time': '4:50 PM',
-      'title': 'Beli sayur',
-      'date': '01',
-      'month': 'JAN',
-      'completed': true,
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    categories = [
+      {
+        'name': 'PKM 2025',
+        'gradientIndex': 0,
+        'taskCount': 2,
+        'completedCount': 0,
+        'tasks': [
+          {
+            'time': '4:50 PM',
+            'title': 'Diskusi project',
+            'completed': false,
+          },
+          {
+            'time': '4:50 PM',
+            'title': 'Meeting persiapan',
+            'completed': false,
+          },
+        ],
+      },
+      {
+        'name': 'semester 5',
+        'gradientIndex': 1,
+        'taskCount': 3,
+        'completedCount': 1,
+        'tasks': [
+          {
+            'time': '2:00 PM',
+            'title': 'Belajar Flutter',
+            'completed': true,
+          },
+          {
+            'time': '3:30 PM',
+            'title': 'Tugas Pemrograman',
+            'completed': false,
+          },
+          {
+            'time': '5:00 PM',
+            'title': 'Review materi',
+            'completed': false,
+          },
+        ],
+      },
+      {
+        'name': 'Internship',
+        'gradientIndex': 2,
+        'taskCount': 2,
+        'completedCount': 0,
+        'tasks': [
+          {
+            'time': '9:00 AM',
+            'title': 'Desain mockup',
+            'completed': false,
+          },
+          {
+            'time': '11:00 AM',
+            'title': 'Presentasi progress',
+            'completed': false,
+          },
+        ],
+      },
+    ];
+
+    uncategorizedTasks = [
+      {
+        'time': '9:50 PM',
+        'title': 'Projek Pemmob',
+        'date': '01',
+        'month': 'NOV',
+        'completed': false,
+      },
+      {
+        'time': '4:50 PM',
+        'title': 'Diskusi project',
+        'completed': false,
+      },
+      {
+        'time': '4:50 PM',
+        'title': 'Beli sayur',
+        'completed': true,
+      },
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -98,6 +142,7 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
                     categories[index]['taskCount'],
                     categories[index]['completedCount'],
                     categories[index]['gradientIndex'],
+                    categories[index]['tasks'] ?? [],
                   );
                 },
               ),
@@ -162,80 +207,100 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
     );
   }
 
-  Widget _buildCategoryCard(String name, int taskCount, int completedCount, int gradientIndex) {
-    // Menggunakan availableGradients milik class ini
+  Widget _buildCategoryCard(
+      String name,
+      int taskCount,
+      int completedCount,
+      int gradientIndex,
+      List<Map<String, dynamic>> tasks,
+      ) {
     final gradient = availableGradients[gradientIndex % availableGradients.length];
 
-    return Container(
-      width: 200,
-      margin: const EdgeInsets.only(right: 16),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: gradient,
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => FolderScreen(
+              folderName: name,
+              gradientIndex: gradientIndex,
+              gradients: availableGradients,
+              folderTasks: tasks,
+            ),
+          ),
+        );
+      },
+      child: Container(
+        width: 200,
+        margin: const EdgeInsets.only(right: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: gradient,
+          ),
+          borderRadius: BorderRadius.circular(24),
         ),
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Text(
-                  name,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.black,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    name,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.4),
-                  borderRadius: BorderRadius.circular(12),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.4),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '$completedCount Completed',
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: Colors.black87,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                 ),
-                child: Text(
-                  '$completedCount Completed',
+              ],
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  '$taskCount Tasks',
                   style: const TextStyle(
-                    fontSize: 10,
+                    fontSize: 13,
                     color: Colors.black87,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-              ),
-            ],
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                '$taskCount Tasks',
-                style: const TextStyle(
-                  fontSize: 13,
+                const Icon(
+                  Icons.more_horiz,
+                  size: 24,
                   color: Colors.black87,
-                  fontWeight: FontWeight.w500,
                 ),
-              ),
-              const Icon(
-                Icons.more_horiz,
-                size: 24,
-                color: Colors.black87,
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -255,6 +320,7 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
             'gradientIndex': result['gradientIndex'],
             'taskCount': 0,
             'completedCount': 0,
+            'tasks': [],
           });
         });
       }
@@ -262,15 +328,16 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
   }
 }
 
-// Letakkan class ini di bagian paling bawah file
 class _IOSAddCategoryDialogContent extends StatefulWidget {
   const _IOSAddCategoryDialogContent({Key? key}) : super(key: key);
 
   @override
-  State<_IOSAddCategoryDialogContent> createState() => _IOSAddCategoryDialogContentState();
+  State<_IOSAddCategoryDialogContent> createState() =>
+      _IOSAddCategoryDialogContentState();
 }
 
-class _IOSAddCategoryDialogContentState extends State<_IOSAddCategoryDialogContent> {
+class _IOSAddCategoryDialogContentState
+    extends State<_IOSAddCategoryDialogContent> {
   final TextEditingController _nameController = TextEditingController();
   int _selectedGradientIndex = 0;
 
@@ -291,17 +358,16 @@ class _IOSAddCategoryDialogContentState extends State<_IOSAddCategoryDialogConte
     const dividerColor = Color(0xA5545458);
 
     return Dialog(
-      backgroundColor: Colors.transparent, // Transparan agar ClipRRect yang mengatur bentuk
+      backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 40),
-      child: ClipRRect( // <--- KUNCI: Membuat semua sudut (atas & bawah) membulat
+      child: ClipRRect(
         borderRadius: BorderRadius.circular(14),
         child: Container(
           width: 270,
-          color: Colors.white, // <--- Mengubah background utama (termasuk atas) jadi PUTIH
+          color: Colors.white,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // --- BAGIAN ATAS (PUTIH & ROUNDED) ---
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
                 child: Column(
@@ -344,7 +410,8 @@ class _IOSAddCategoryDialogContentState extends State<_IOSAddCategoryDialogConte
                       children: [0, 1, 2].map((index) {
                         final isSelected = _selectedGradientIndex == index;
                         return GestureDetector(
-                          onTap: () => setState(() => _selectedGradientIndex = index),
+                          onTap: () =>
+                              setState(() => _selectedGradientIndex = index),
                           child: Container(
                             width: 36,
                             height: 36,
@@ -357,11 +424,14 @@ class _IOSAddCategoryDialogContentState extends State<_IOSAddCategoryDialogConte
                               ),
                               shape: BoxShape.circle,
                               border: isSelected
-                                  ? Border.all(color: Colors.black54, width: 2)
-                                  : Border.all(color: Colors.black12, width: 1),
+                                  ? Border.all(
+                                  color: Colors.black54, width: 2)
+                                  : Border.all(
+                                  color: Colors.black12, width: 1),
                             ),
                             child: isSelected
-                                ? const Icon(Icons.check, size: 20, color: Colors.black54)
+                                ? const Icon(Icons.check,
+                                size: 20, color: Colors.black54)
                                 : null,
                           ),
                         );
@@ -378,17 +448,15 @@ class _IOSAddCategoryDialogContentState extends State<_IOSAddCategoryDialogConte
                 color: dividerColor,
               ),
 
-              // --- BAGIAN BAWAH (TOMBOL ROUNDED) ---
               SizedBox(
                 height: 44,
                 child: Row(
                   children: [
                     Expanded(
                       child: Material(
-                        color: Colors.white, // Warna background tombol
+                        color: Colors.white,
                         child: InkWell(
                           onTap: () => Navigator.pop(context),
-                          // Tidak perlu borderRadius disini karena sudah dipotong oleh ClipRRect induk
                           child: Center(
                             child: Text(
                               'Cancel',
