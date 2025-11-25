@@ -1,6 +1,7 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+// File: lib/data/service/auth_service.dart
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AuthService {
   static final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -19,16 +20,21 @@ class AuthService {
   static String? getUserEmail() => _auth.currentUser?.email;
   static String? getUserPhotoURL() => _auth.currentUser?.photoURL;
 
+  // Method untuk mendapatkan email current user
+  static String? getCurrentUserEmail() => _auth.currentUser?.email;
+
   static String? getAuthProvider() {
     final user = _auth.currentUser;
     if (user == null || user.providerData.isEmpty) return null;
     return user.providerData.first.providerId;
   }
 
-  //  FIRESTORE: Create / Update Use
+  //  FIRESTORE: Create / Update User
   static Future<void> _createOrUpdateUserInFirestore(
       User user, {
         String? displayName,
+        String? bio,
+        String? photoURL,
       }) async {
     try {
       final userRef = _firestore.collection('users').doc(user.uid);
@@ -37,24 +43,39 @@ class AuthService {
         'uid': user.uid,
         'email': user.email ?? '',
         'displayName': displayName ?? user.displayName ?? '',
-        'photoURL': user.photoURL ?? '',
+        'photoURL': photoURL ?? user.photoURL ?? '',
         'emailVerified': user.emailVerified,
         'updatedAt': FieldValue.serverTimestamp(),
       };
 
+      // Add bio if provided
+      if (bio != null) {
+        data['bio'] = bio;
+      }
+
       final doc = await userRef.get();
 
       if (!doc.exists) {
+        // NEW USER: Set default bio and notification setting
         data['createdAt'] = FieldValue.serverTimestamp();
         data['provider'] = user.providerData.isNotEmpty
             ? user.providerData.first.providerId
             : 'password';
+
+        // Set default bio for new users
+        if (!data.containsKey('bio')) {
+          data['bio'] = 'Update bio in here';
+        }
+
+        // Set default notification setting to true for new users
+        data['notificationsEnabled'] = true;
 
         await userRef.set(data);
       } else {
         await userRef.update(data);
       }
     } catch (_) {
+      // Silent fail
     }
   }
 
@@ -158,6 +179,8 @@ class AuthService {
         await _createOrUpdateUserInFirestore(
           credential.user!,
           displayName: displayName,
+          // NEW: Set default bio for new account
+          bio: 'Update bio in here',
         );
       }
 
@@ -275,11 +298,13 @@ class AuthService {
   static Future<void> updateUserProfile({
     String? displayName,
     String? photoURL,
+    String? bio,
   }) async {
     try {
       final user = _auth.currentUser;
       if (user == null) throw Exception('No user signed in');
 
+      // Update Firebase Auth profile
       if (displayName != null) {
         await user.updateDisplayName(displayName);
       }
@@ -289,10 +314,67 @@ class AuthService {
 
       await user.reload();
 
-      // update in Firestore
-      await _createOrUpdateUserInFirestore(user, displayName: displayName);
+      // Update Firestore with all fields including bio
+      await _createOrUpdateUserInFirestore(
+        user,
+        displayName: displayName,
+        photoURL: photoURL,
+        bio: bio,
+      );
     } catch (_) {
       throw Exception('Failed to update profile');
+    }
+  }
+
+  // update only bio in firestore
+  static Future<void> updateUserBio(String bio) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) throw Exception('No user signed in');
+
+      await _firestore.collection('users').doc(user.uid).update({
+        'bio': bio,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (_) {
+      throw Exception('Failed to update bio');
+    }
+  }
+
+  // update only photo URL in Firestore
+  static Future<void> updateUserPhotoURL(String photoURL) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) throw Exception('No user signed in');
+
+      // update both Firebase Auth and Firestore
+      await user.updatePhotoURL(photoURL);
+      await user.reload();
+
+      await _firestore.collection('users').doc(user.uid).update({
+        'photoURL': photoURL,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (_) {
+      throw Exception('Failed to update photo');
+    }
+  }
+
+  // NEW: Update user data (general purpose for settings like notifications)
+  static Future<void> updateUserData(Map<String, dynamic> data) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) throw Exception('No user signed in');
+
+      // Add timestamp to track when data was updated
+      data['updatedAt'] = FieldValue.serverTimestamp();
+
+      await _firestore.collection('users').doc(user.uid).set(
+        data,
+        SetOptions(merge: true),
+      );
+    } catch (e) {
+      throw Exception('Failed to update user data: ${e.toString()}');
     }
   }
 
