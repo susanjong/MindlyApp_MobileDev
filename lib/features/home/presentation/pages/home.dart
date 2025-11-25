@@ -7,7 +7,6 @@ import '../../../../core/services/auth_service.dart';
 import '../../../../core/widgets/navigation/custom_navbar_widget.dart';
 import '../../../../core/widgets/navigation/custom_top_app_bar.dart';
 import '../../../calendar/data/model/event_model.dart';
-import '../../../notes/data/models/note_model.dart';
 import '../../../profile/presentation/pages/profile.dart';
 
 //TODO: Task item ini masukkin ke modelnya bgian file task ya
