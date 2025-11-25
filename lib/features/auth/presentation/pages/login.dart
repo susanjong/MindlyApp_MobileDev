@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:notesapp/core/widgets/buttons/primary_button.dart';
-import 'package:notesapp/config/routes/routes.dart';
-import 'package:notesapp/core/widgets/navigation/loading_overlay.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:notesapp/core/services/auth_service.dart';
+
+import '../../../../config/routes/routes.dart';
+import '../../../../core/services/auth_service.dart';
+import '../../../../core/widgets/buttons/primary_button.dart';
+import '../../../../core/widgets/navigation/loading_overlay.dart';
 
 class LoginAccountScreen extends StatefulWidget {
   const LoginAccountScreen({super.key});
@@ -106,7 +107,7 @@ class _LoginAccountScreenState extends State<LoginAccountScreen> {
     });
 
     try {
-      // login using auth service
+      // Login menggunakan AuthService
       final userCredential = await AuthService.signInWithEmailPassword(
         _emailController.text.trim(),
         _passwordController.text,
@@ -339,6 +340,7 @@ class _LoginAccountScreenState extends State<LoginAccountScreen> {
             ),
           ),
 
+          // Loading overlay
           if (_isLoading) const LoadingOverlay(),
         ],
       ),

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:notesapp/core/widgets/buttons/primary_button.dart';
-import 'package:notesapp/config/routes/routes.dart';
-import 'package:notesapp/core/services/auth_service.dart';
+import '../../../../config/routes/routes.dart';
+import '../../../../core/services/auth_service.dart';
+import '../../../../core/widgets/buttons/primary_button.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
   const ResetPasswordScreen({super.key});
@@ -121,8 +121,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     height: 44,
                     child: ElevatedButton(
                       onPressed: () {
-                        Navigator.of(context).pop();
-                        Navigator.pushReplacementNamed(context, AppRoutes.signIn);
+                        Navigator.of(context).pop(); // Close dialog
+                        Navigator.pushReplacementNamed(context, AppRoutes.signIn); // Navigate to Login
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF5784EB),

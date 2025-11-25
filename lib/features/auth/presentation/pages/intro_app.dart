@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:notesapp/config/routes/routes.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+
+import '../../../../config/routes/routes.dart';
 
 // app colors
 class AppColors {
