@@ -1,14 +1,13 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:notesapp/presentation/screen/main_home/profile.dart';
-import 'package:notesapp/widgets/custom_navbar_widget.dart';
-import 'package:notesapp/widgets/custom_top_app_bar.dart';
-import 'package:notesapp/models/event_model.dart';
-import 'package:notesapp/models/note_model.dart';
-import 'package:notesapp/presentation/screen/notes/awalnotes.dart';
-import 'package:notesapp/data/service/auth_service.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:notesapp/features/notes/presentation/pages/notes_main_page.dart';
+import '../../../../core/services/auth_service.dart';
+import '../../../../core/widgets/navigation/custom_navbar_widget.dart';
+import '../../../../core/widgets/navigation/custom_top_app_bar.dart';
+import 'package:notesapp/features/calendar/data/model/event_model.dart';
+import 'package:notesapp/features/profile/presentation/pages/profile.dart';
 
 //TODO: Task item ini masukkin ke modelnya bgian file task ya
 class TaskItem {
@@ -165,21 +164,6 @@ class _HomePageState extends State<HomePage> {
     ];
   }
 
-  List<NoteModel> _getNotes() { // TODO: ubah ini ke data dari firestore
-    return [
-      NoteModel(
-        title: 'Meeting Insights',
-        content: 'Key takeaways from client meeting: focus on user experience improvements...',
-        timeAgo: '2 hours ago',
-      ),
-      NoteModel(
-        title: 'Project Ideas',
-        content: 'Brainstorming new features for mobile app development...',
-        timeAgo: '3 hours ago',
-      ),
-    ];
-  }
-
   String _getGreeting() {
     final hour = DateTime.now().hour;
 
@@ -197,7 +181,7 @@ class _HomePageState extends State<HomePage> {
   void _navigateToNotesPage() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => NotesPage()),
+      MaterialPageRoute(builder: (context) => NotesMainPage()),
     );
   }
 
@@ -218,7 +202,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final events = _getEvents();
-    final notes = _getNotes();
+    /*final notes = _getNotes();*/
     final completedTasksCount = _completedTasks.length;
     final totalTasks = _tasks.length;
     final progress = totalTasks > 0 ? completedTasksCount / totalTasks : 0.0;
@@ -312,7 +296,7 @@ class _HomePageState extends State<HomePage> {
                           onActionTap: _navigateToNotesPage,
                         ),
                         const SizedBox(height: 12),
-                        ...notes.map((note) => _buildNoteCard(note)).toList(),
+                        /*...notes.map((note) => _buildNoteCard(note)).toList(),*/
                         const SizedBox(height: 20),
                       ],
                     ),
@@ -783,7 +767,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildNoteCard(NoteModel note) {
+  /*Widget _buildNoteCard(NoteModel note) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -828,7 +812,7 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
     );
-  }
+  }*/
 
   Widget _buildBottomNavigationBar() {
     return AnimatedContainer(
