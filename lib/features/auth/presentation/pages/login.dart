@@ -296,7 +296,7 @@ class LoginAccountScreenState extends State<LoginAccountScreen> {
                                 child: Padding(
                                   padding: const EdgeInsets.only(bottom: 30),
                                   child: Text(
-                                    'Login Account',
+                                    'Sign In Account',
                                     textAlign: TextAlign.center,
                                     style: GoogleFonts.poppins(
                                       fontSize: 20,
@@ -454,7 +454,7 @@ class LoginAccountScreenState extends State<LoginAccountScreen> {
                                         // login button
                                         Center(
                                           child: PrimaryButton(
-                                            label: 'Login Account',
+                                            label: ' Sign In Account',
                                             onPressed: _isLoading ? null : _handleLogin,
                                             enabled: !_isLoading,
                                             width: double.infinity,
