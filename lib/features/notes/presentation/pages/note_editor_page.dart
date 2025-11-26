@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../data/models/note_model.dart';
+import 'package:intl/intl.dart';
 import '../../data/services/note_service.dart';
 
 class NoteEditorPage extends StatefulWidget {
@@ -13,450 +14,305 @@ class NoteEditorPage extends StatefulWidget {
 }
 
 class _NoteEditorPageState extends State<NoteEditorPage> {
-  // Services & Controllers
+  final _titleController = TextEditingController();
+  final _contentController = TextEditingController();
   final NoteService _noteService = NoteService();
-  final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _contentController = TextEditingController();
-  final FocusNode _contentFocusNode = FocusNode();
 
-  // State
-  NoteModel? _note;
-  bool _hasChanges = false;
-
-  // Computed
-  bool get _isEditMode => widget.noteId != null;
-  String get _pageTitle => _isEditMode ? _getCategoryName() : 'New Note';
+  bool _isLoading = false;
+  bool _isEditing = false;
+  late DateTime _currentDate;
 
   @override
   void initState() {
     super.initState();
-    _loadNote();
-    _titleController.addListener(_markAsChanged);
-    _contentController.addListener(_markAsChanged);
-  }
+    _currentDate = DateTime.now();
+    _isEditing = widget.noteId != null;
 
-  @override
-  void dispose() {
-    _titleController.removeListener(_markAsChanged);
-    _contentController.removeListener(_markAsChanged);
-    _titleController.dispose();
-    _contentController.dispose();
-    _contentFocusNode.dispose();
-    super.dispose();
-  }
-
-  void _loadNote() {
-    if (_isEditMode) {
-      _note = _noteService.getNoteById(widget.noteId!);
-      if (_note != null) {
-        _titleController.text = _note!.title;
-        _contentController.text = _note!.content;
-      }
+    if (_isEditing) {
+      _fetchNoteData();
     }
   }
 
-  void _markAsChanged() {
-    if (!_hasChanges) {
-      setState(() => _hasChanges = true);
+  Future<void> _fetchNoteData() async {
+    setState(() => _isLoading = true);
+    final note = await _noteService.getNoteById(widget.noteId!);
+    if (note != null) {
+      _titleController.text = note.title;
+      _contentController.text = note.content;
+      setState(() {
+        _currentDate = note.updatedAt;
+      });
     }
+    setState(() => _isLoading = false);
   }
-
-  String _getCategoryName() {
-    if (_note == null) return 'All Notes';
-    return _noteService.getCategoryById(_note!.categoryId)?.name ?? 'All Notes';
-  }
-
-  // === Actions ===
 
   Future<void> _saveNote() async {
     final title = _titleController.text.trim();
     final content = _contentController.text.trim();
 
-    if (title.isEmpty && content.isEmpty) {
-      _showMessage('Note cannot be empty', isError: true);
-      return;
-    }
+    if (title.isEmpty && content.isEmpty) return;
 
-    final finalTitle = title.isEmpty ? 'Untitled' : title;
-
-    if (_isEditMode && _note != null) {
-      // Update existing note
-      _noteService.updateNote(_note!.copyWith(
-        title: finalTitle,
+    if (_isEditing) {
+      // Logic Edit (Update ke Firestore)
+      final updatedNote = NoteModel(
+        id: widget.noteId!,
+        title: title,
         content: content,
+        createdAt: _currentDate, // Gunakan _currentDate agar tgl create tidak berubah
         updatedAt: DateTime.now(),
-      ));
+        categoryId: 'all', // Sesuaikan jika ada logic kategori
+        isFavorite: false, // Sesuaikan jika perlu mempertahankan status favorit
+      );
+      await _noteService.updateNote(updatedNote);
     } else {
-      // Create new note
-      _noteService.addNote(NoteModel(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        title: finalTitle,
+      // Logic Add (Create ke Firestore)
+      final newNote = NoteModel(
+        id: '',
+        title: title,
         content: content,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
         categoryId: 'all',
-        color: _generateRandomColor(),
-      ));
-    }
-
-    Navigator.pop(context, true);
-  }
-
-  void _toggleFavorite() {
-    if (_note != null) {
-      _noteService.toggleFavorite(_note!.id);
-      setState(() {
-        _note = _note!.copyWith(isFavorite: !_note!.isFavorite);
-      });
+        isFavorite: false,
+      );
+      await _noteService.addNote(newNote);
     }
   }
 
-  void _deleteNote() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Delete Note?', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
-        content: Text('This action cannot be undone.', style: GoogleFonts.poppins()),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () {
-              _noteService.deleteNote(widget.noteId!);
-              Navigator.pop(ctx);
-              Navigator.pop(context, true);
-            },
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
+  void _handleBack() async {
+    await _saveNote();
+    if (mounted) Navigator.pop(context);
   }
 
-  void _showMoveDialog() {
-    final categories = _noteService.categories.where((c) => c.id != 'all').toList();
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildSheetHandle(),
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  'Move to Category',
-                  style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600),
-                ),
-              ),
-              ...categories.map((cat) => ListTile(
-                title: Text(cat.name, style: GoogleFonts.poppins()),
-                trailing: _note?.categoryId == cat.id
-                    ? const Icon(Icons.check, color: Color(0xFF5784EB))
-                    : null,
-                onTap: () {
-                  _noteService.moveNoteToCategory(_note!.id, cat.id);
-                  setState(() {
-                    _note = _note!.copyWith(categoryId: cat.id);
-                  });
-                  Navigator.pop(ctx);
-                },
-              )),
-              const SizedBox(height: 16),
-            ],
-          ),
-        ),
-      ),
-    );
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _contentController.dispose();
+    super.dispose();
   }
-
-  void _showOptionsMenu() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildSheetHandle(),
-              ListTile(
-                leading: Icon(
-                  _note?.isFavorite == true ? Icons.favorite : Icons.favorite_border,
-                  color: _note?.isFavorite == true ? Colors.red : null,
-                ),
-                title: Text(
-                  _note?.isFavorite == true ? 'Remove from Favorites' : 'Add to Favorites',
-                  style: GoogleFonts.poppins(),
-                ),
-                onTap: () {
-                  _toggleFavorite();
-                  Navigator.pop(ctx);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.drive_file_move_outlined),
-                title: Text('Move to Category', style: GoogleFonts.poppins()),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _showMoveDialog();
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.delete_outline, color: Colors.red),
-                title: Text('Delete Note', style: GoogleFonts.poppins(color: Colors.red)),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _deleteNote();
-                },
-              ),
-              const SizedBox(height: 16),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<bool> _onWillPop() async {
-    if (!_hasChanges) return true;
-
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Discard changes?', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
-        content: Text('You have unsaved changes.', style: GoogleFonts.poppins()),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Keep Editing'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Discard'),
-          ),
-        ],
-      ),
-    );
-
-    return result ?? false;
-  }
-
-  void _showMessage(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? Colors.orange : Colors.green,
-      ),
-    );
-  }
-
-  int _generateRandomColor() {
-    const colors = [
-      0xFFE6C4DD, 0xFFCFE6AF, 0xFFB4D7F8, 0xFFE4BA9B,
-      0xFFFFBEBE, 0xFFF4FFBE, 0xFFFFE4B5, 0xFFE0BBE4,
-      0xFFB5E7A0, 0xFFFFDAB9, 0xFFAEC6CF, 0xFFFDFD96,
-    ];
-    return colors[DateTime.now().millisecondsSinceEpoch % colors.length];
-  }
-
-  String _getCurrentDate() {
-    final now = DateTime.now();
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return '${days[now.weekday - 1]}, ${now.day} ${months[now.month - 1]} ${now.year}';
-  }
-
-  Widget _buildSheetHandle() {
-    return Container(
-      margin: const EdgeInsets.only(top: 12, bottom: 8),
-      width: 40,
-      height: 4,
-      decoration: BoxDecoration(
-        color: Colors.grey.shade300,
-        borderRadius: BorderRadius.circular(2),
-      ),
-    );
-  }
-
-  // === Build ===
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: _onWillPop,
+    // Format Date sesuai Figma: "Monday, 15 Sept 2025"
+    final formattedDate = DateFormat('EEEE, d MMM y').format(_currentDate);
+    final formattedTime = DateFormat('HH:mm').format(_currentDate);
+
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (bool didPop, dynamic result) async {
+        if (didPop) return;
+        await _saveNote();
+        if (context.mounted) {
+          Navigator.of(context).pop();
+        }
+      },
       child: Scaffold(
         backgroundColor: Colors.white,
-        appBar: _buildAppBar(),
-        body: Column(
-          children: [
-            _buildTitleSection(),
-            const Divider(height: 1, color: Color(0xFFE8E8E8)),
-            _buildContentSection(),
-            _buildToolbar(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      backgroundColor: Colors.white,
-      elevation: 0,
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: Colors.black),
-        onPressed: () async {
-          if (await _onWillPop()) Navigator.pop(context);
-        },
-      ),
-      title: Text(
-        _pageTitle,
-        style: GoogleFonts.poppins(
-          color: Colors.black,
-          fontSize: 16,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-      actions: [
-        if (_isEditMode)
-          IconButton(
-            icon: const Icon(Icons.more_vert, color: Colors.black),
-            onPressed: _showOptionsMenu,
-          ),
-      ],
-    );
-  }
-
-  Widget _buildTitleSection() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          TextField(
-            controller: _titleController,
-            style: GoogleFonts.poppins(
-              fontSize: 24,
-              fontWeight: FontWeight.w600,
-              color: Colors.black,
-            ),
-            decoration: InputDecoration(
-              hintText: 'Note title',
-              hintStyle: GoogleFonts.poppins(
-                color: Colors.grey.shade400,
-                fontSize: 24,
-                fontWeight: FontWeight.w600,
+        body: SafeArea(
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : Column(
+            children: [
+              // === Custom App Bar (Sesuai Figma) ===
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.chevron_left, size: 32, color: Colors.black),
+                          onPressed: _handleBack,
+                        ),
+                        Text(
+                          'All Notes',
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w400,
+                            color: Colors.black,
+                            letterSpacing: -0.32,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        // Time Display (Figma element)
+                        Text(
+                          formattedTime,
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        // Bookmark Icon (Figma element)
+                        const Icon(Icons.bookmark_border, size: 24, color: Colors.black),
+                        const SizedBox(width: 16),
+                      ],
+                    )
+                  ],
+                ),
               ),
-              border: InputBorder.none,
-              isDense: true,
-              contentPadding: EdgeInsets.zero,
-            ),
-            textInputAction: TextInputAction.next,
-            onSubmitted: (_) => _contentFocusNode.requestFocus(),
+
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 25),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 20),
+                      // === Title Input ===
+                      TextField(
+                        controller: _titleController,
+                        style: GoogleFonts.poppins(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black,
+                          height: 1.2,
+                          letterSpacing: -0.48,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: 'Title',
+                          hintStyle: GoogleFonts.poppins(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey.shade400,
+                          ),
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                        maxLines: null,
+                      ),
+
+                      // === Date Display ===
+                      const SizedBox(height: 8),
+                      Text(
+                        formattedDate,
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w400,
+                          color: const Color(0xFF7C7B7B),
+                          letterSpacing: -0.24,
+                        ),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // === Content Input ===
+                      TextField(
+                        controller: _contentController,
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w400,
+                          color: Colors.black,
+                          height: 1.5,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: 'Start typing...',
+                          hintStyle: GoogleFonts.poppins(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w400,
+                            color: Colors.grey.shade400,
+                          ),
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                        maxLines: null, // Expandable
+                      ),
+                      const SizedBox(height: 100), // Space for bottom bar
+                    ],
+                  ),
+                ),
+              ),
+
+              // === Bottom Formatting Toolbar (Visual Only based on Figma) ===
+              _buildBottomToolbar(),
+            ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            _note?.formattedDate ?? _getCurrentDate(),
-            style: GoogleFonts.poppins(
-              color: const Color(0xFF9E9E9E),
-              fontSize: 12,
-            ),
-          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBottomToolbar() {
+    return Container(
+      height: 50,
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        color: Color(0xEACDCFD3), // Background color from Figma
+        border: Border(top: BorderSide(color: Color(0xFFE0E0E0))),
+      ),
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        children: [
+          _ToolButton(label: 'B', isBold: true),
+          _ToolButton(label: 'I', isItalic: true),
+          _ToolButton(label: 'U', isUnderline: true),
+          _ToolButton(label: 'S', isStrikethrough: true),
+          const VerticalDivider(indent: 10, endIndent: 10),
+          _ToolButton(label: 'H1', fontSize: 14),
+          _ToolButton(label: 'H2', fontSize: 12),
+          const VerticalDivider(indent: 10, endIndent: 10),
+          _ToolButton(icon: Icons.format_list_bulleted),
+          _ToolButton(icon: Icons.check_box_outlined),
         ],
       ),
     );
   }
+}
 
-  Widget _buildContentSection() {
-    return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
-        child: TextField(
-          controller: _contentController,
-          focusNode: _contentFocusNode,
-          style: GoogleFonts.poppins(
-            fontSize: 16,
-            color: Colors.black87,
-            height: 1.6,
-          ),
-          decoration: InputDecoration(
-            hintText: 'Start typing your note...',
-            hintStyle: GoogleFonts.poppins(
-              color: Colors.grey.shade400,
-              fontSize: 16,
-            ),
-            border: InputBorder.none,
-            isDense: true,
-            contentPadding: EdgeInsets.zero,
-          ),
-          maxLines: null,
-          expands: true,
-          textAlignVertical: TextAlignVertical.top,
-          keyboardType: TextInputType.multiline,
-        ),
-      ),
-    );
-  }
+class _ToolButton extends StatelessWidget {
+  final String? label;
+  final IconData? icon;
+  final bool isBold;
+  final bool isItalic;
+  final bool isUnderline;
+  final bool isStrikethrough;
+  final double fontSize;
 
-  Widget _buildToolbar() {
+  const _ToolButton({
+    this.label,
+    this.icon,
+    this.isBold = false,
+    this.isItalic = false,
+    this.isUnderline = false,
+    this.isStrikethrough = false,
+    this.fontSize = 16,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
+      width: 40,
+      margin: const EdgeInsets.symmetric(horizontal: 4),
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey.shade200)),
+        color: const Color(0xFFFCFCFE), // Button color from Figma
+        borderRadius: BorderRadius.circular(4.6),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0xFF898A8D),
+            blurRadius: 0,
+            offset: Offset(0, 1),
+          )
+        ],
       ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Row(
-            children: [
-              // Left side: additional actions
-              IconButton(
-                icon: Icon(Icons.image_outlined, color: Colors.grey.shade600),
-                onPressed: () => _showMessage('Image feature coming soon'),
-              ),
-              IconButton(
-                icon: Icon(Icons.mic_outlined, color: Colors.grey.shade600),
-                onPressed: () => _showMessage('Voice feature coming soon'),
-              ),
-
-              const Spacer(),
-
-              // Right side: Save button
-              FilledButton.icon(
-                onPressed: _saveNote,
-                icon: const Icon(Icons.check, size: 18),
-                label: Text(
-                  _isEditMode ? 'Update' : 'Save',
-                  style: GoogleFonts.poppins(fontWeight: FontWeight.w500),
-                ),
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFFD732A8),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-            ],
+      child: Center(
+        child: icon != null
+            ? Icon(icon, size: 20, color: Colors.black)
+            : Text(
+          label ?? '',
+          style: GoogleFonts.poppins(
+            fontSize: fontSize,
+            fontWeight: isBold ? FontWeight.bold : FontWeight.w400,
+            fontStyle: isItalic ? FontStyle.italic : FontStyle.normal,
+            decoration: isUnderline
+                ? TextDecoration.underline
+                : (isStrikethrough ? TextDecoration.lineThrough : null),
+            color: Colors.black,
           ),
         ),
       ),

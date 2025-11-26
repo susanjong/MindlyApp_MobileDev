@@ -62,7 +62,7 @@ class _FolderScreenState extends State<FolderScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.more_vert, color: Colors.black),
+            icon: const Icon(Icons.more_horiz, color: Colors.black),
             onPressed: () {},
           ),
         ],

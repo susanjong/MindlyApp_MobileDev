@@ -7,8 +7,10 @@ class NoteCard extends StatelessWidget {
   final String date;
   final Color color;
   final bool isFavorite;
+  final bool isSelected;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
+  final VoidCallback? onFavoriteTap;
 
   const NoteCard({
     super.key,
@@ -17,8 +19,10 @@ class NoteCard extends StatelessWidget {
     required this.date,
     required this.color,
     this.isFavorite = false,
+    this.isSelected = false,
     this.onTap,
     this.onLongPress,
+    this.onFavoriteTap,
   });
 
   @override
@@ -26,14 +30,16 @@ class NoteCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       onLongPress: onLongPress,
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: color,
+          // Gray background when selected, original color when not
+          color: isSelected ? const Color(0xFFBABABA) : color,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
+              color: Colors.black.withValues(alpha:0.05),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -42,7 +48,7 @@ class NoteCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header with title and favorite icon
+            // Header: Title & Heart Icon
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -58,19 +64,23 @@ class NoteCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                if (isFavorite)
-                  const Padding(
-                    padding: EdgeInsets.only(left: 4),
+                // Heart Icon
+                GestureDetector(
+                  onTap: onFavoriteTap,
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 8, bottom: 4),
                     child: Icon(
-                      Icons.favorite,
-                      color: Color(0xFFFF6B6B),
-                      size: 16,
+                      isFavorite ? Icons.favorite : Icons.favorite_border,
+                      // Red filled if favorite, Gray outline if not
+                      color: isFavorite ? const Color(0xFFFF6B6B) : const Color(0xFF777777),
+                      size: 20,
                     ),
                   ),
+                ),
               ],
             ),
             const SizedBox(height: 8),
-            // Content preview
+            // Content Preview
             Expanded(
               child: Text(
                 content.isEmpty ? 'No content' : content,

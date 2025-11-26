@@ -10,7 +10,8 @@ class NoteTabBar extends StatelessWidget {
     super.key,
     required this.selectedIndex,
     required this.onTabSelected,
-    this.tabs = const ['All Notes', 'Categories', 'Favorite'],
+    // UBAH "Favorite" MENJADI "Favorites"
+    this.tabs = const ['All Notes', 'Categories', 'Favorites'],
   });
 
   @override
@@ -43,6 +44,8 @@ class _TabItem extends StatelessWidget {
   final bool isSelected;
   final VoidCallback onTap;
 
+  static const Color _selectedColor = Color(0xFF5784EB);
+
   const _TabItem({
     required this.label,
     required this.isSelected,
@@ -61,10 +64,10 @@ class _TabItem extends StatelessWidget {
           curve: Curves.easeInOut,
           height: 32,
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFF004455) : Colors.white,
+            color: isSelected ? _selectedColor : Colors.white,
             border: Border.all(
               color: isSelected
-                  ? const Color(0xFF004455)
+                  ? _selectedColor
                   : const Color(0xFFD9D9D9),
               width: 1,
             ),

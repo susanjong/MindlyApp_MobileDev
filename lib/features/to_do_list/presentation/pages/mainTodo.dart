@@ -32,19 +32,16 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
     _username = widget.username ?? 'User';
   }
 
-  // PERBAIKAN: Handler navigation yang konsisten
   void _handleNavigation(int index) {
-    print('📝 Todo - Navigation tapped: index=$index');
+    print(' Todo - Navigation tapped: index=$index');
 
-    // Routes sesuai urutan navbar: Home(0), Notes(1), Todo(2), Calendar(3)
     final routes = ['/home', '/notes', '/todo', '/calendar'];
 
-    // Jangan navigate jika sudah di halaman yang sama (Todo = index 2)
     if (index != 2) {
-      print('📝 Todo - Navigating to: ${routes[index]}');
+      print(' Todo - Navigating to: ${routes[index]}');
       Navigator.pushReplacementNamed(context, routes[index]);
     } else {
-      print('📝 Todo - Already on Todo page');
+      print(' Todo - Already on Todo page');
     }
   }
 

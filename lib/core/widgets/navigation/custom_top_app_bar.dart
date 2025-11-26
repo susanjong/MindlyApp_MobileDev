@@ -5,11 +5,15 @@ import 'package:flutter_svg/flutter_svg.dart';
 class CustomTopAppBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback? onProfileTap;
   final VoidCallback? onNotificationTap;
+  final bool isSelectionMode;
+  final VoidCallback? onSelectAllTap;
 
   const CustomTopAppBar({
     super.key,
     this.onProfileTap,
     this.onNotificationTap,
+    this.isSelectionMode = false,
+    this.onSelectAllTap,
   });
 
   @override
@@ -25,7 +29,6 @@ class CustomTopAppBar extends StatelessWidget implements PreferredSizeWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            // Mindly logo in here
             Row(
               children: [
                 SizedBox(
@@ -56,28 +59,39 @@ class CustomTopAppBar extends StatelessWidget implements PreferredSizeWidget {
                 ),
               ],
             ),
-
-            // right: icon profile + notification
-            Row(
-              children: [
-                IconButton(
-                  icon: const Icon(
-                    Icons.person_outline,
-                    color: Color(0xFF1A1A1A),
-                    size: 26,
-                  ),
-                  onPressed: onProfileTap ?? () {},
+            // Toggle Icons based on mode
+            if (isSelectionMode)
+              IconButton(
+                // Simple expand icon (4 arrows outwards)
+                icon: const Icon(
+                  Icons.open_in_full_rounded,
+                  color: Color(0xFF1A1A1A),
+                  size: 26,
                 ),
-                IconButton(
-                  icon: const Icon(
-                    Icons.notifications_none_outlined,
-                    color: Color(0xFF1A1A1A),
-                    size: 26,
+                tooltip: 'Select All',
+                onPressed: onSelectAllTap,
+              )
+            else
+              Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(
+                      Icons.person_outline,
+                      color: Color(0xFF1A1A1A),
+                      size: 26,
+                    ),
+                    onPressed: onProfileTap ?? () {},
                   ),
-                  onPressed: onNotificationTap ?? () {},
-                ),
-              ],
-            ),
+                  IconButton(
+                    icon: const Icon(
+                      Icons.notifications_none_outlined,
+                      color: Color(0xFF1A1A1A),
+                      size: 26,
+                    ),
+                    onPressed: onNotificationTap ?? () {},
+                  ),
+                ],
+              ),
           ],
         ),
       ),

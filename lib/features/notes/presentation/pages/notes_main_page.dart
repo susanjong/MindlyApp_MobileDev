@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import '../../../../config/routes/routes.dart';
+import '../../../../core/widgets/dialog/alert_dialog.dart';
 import '../../../../core/widgets/navigation/custom_navbar_widget.dart';
 import '../../../../core/widgets/navigation/custom_top_app_bar.dart';
+import '../widgets/selection_action_bar.dart';
 import '../../data/models/note_model.dart';
 import '../../data/models/category_model.dart';
 import '../../data/services/note_service.dart';
@@ -11,6 +14,7 @@ import '../widgets/favorites_tab.dart';
 import '../widgets/note_search_bar.dart';
 import '../widgets/note_tab_bar.dart';
 import '../widgets/notes_expandable_fab.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class NotesMainPage extends StatefulWidget {
   const NotesMainPage({super.key});
@@ -20,222 +24,330 @@ class NotesMainPage extends StatefulWidget {
 }
 
 class _NotesMainPageState extends State<NotesMainPage> {
-  // Controllers
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
-
-  // Service
   final NoteService _noteService = NoteService();
 
-  // State
   bool _isNavBarVisible = true;
   int _selectedTabIndex = 0;
   String _searchQuery = '';
+
+  // Selection Mode State
+  bool _isSelectionMode = false;
+  final Set<String> _selectedNoteIds = {};
+  List<NoteModel> _currentNotesList = [];
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_handleScroll);
-    _searchController.addListener(_handleSearchChange);
+    _searchController.addListener(() {
+      setState(() => _searchQuery = _searchController.text.trim());
+    });
   }
 
   @override
   void dispose() {
-    _scrollController.removeListener(_handleScroll);
     _scrollController.dispose();
-    _searchController.removeListener(_handleSearchChange);
     _searchController.dispose();
     super.dispose();
   }
 
-  // === Event Handlers ===
-
   void _handleScroll() {
-    final direction = _scrollController.position.userScrollDirection;
-    if (direction == ScrollDirection.reverse && _isNavBarVisible) {
-      setState(() => _isNavBarVisible = false);
-    } else if (direction == ScrollDirection.forward && !_isNavBarVisible) {
-      setState(() => _isNavBarVisible = true);
+    if (_scrollController.position.userScrollDirection == ScrollDirection.reverse) {
+      if (_isNavBarVisible) setState(() => _isNavBarVisible = false);
+    } else if (_scrollController.position.userScrollDirection == ScrollDirection.forward) {
+      if (!_isNavBarVisible) setState(() => _isNavBarVisible = true);
     }
-  }
-
-  void _handleSearchChange() {
-    setState(() => _searchQuery = _searchController.text.trim());
-  }
-
-  void _handleTabChange(int index) {
-    setState(() => _selectedTabIndex = index);
   }
 
   void _handleNavigation(int index) {
-    final routes = ['/home', '/notes', '/todo', '/calendar'];
-    if (index != 1) {
-      Navigator.pushReplacementNamed(context, routes[index]);
+    final routes = [
+      AppRoutes.home,
+      AppRoutes.notes,
+      AppRoutes.todo,
+      AppRoutes.calendar,
+    ];
+    if (index != 1) Navigator.pushReplacementNamed(context, routes[index]);
+  }
+
+  void _enterSelectionMode(String noteId) {
+    setState(() {
+      _isSelectionMode = true;
+      _selectedNoteIds.add(noteId);
+      _isNavBarVisible = true;
+    });
+  }
+
+  void _exitSelectionMode() {
+    setState(() {
+      _isSelectionMode = false;
+      _selectedNoteIds.clear();
+    });
+  }
+
+  void _toggleSelection(String noteId) {
+    if (!_isSelectionMode) {
+      Navigator.pushNamed(context, AppRoutes.noteEditor, arguments: noteId);
+      return;
     }
+    setState(() {
+      if (_selectedNoteIds.contains(noteId)) {
+        _selectedNoteIds.remove(noteId);
+        if (_selectedNoteIds.isEmpty) _isSelectionMode = false;
+      } else {
+        _selectedNoteIds.add(noteId);
+      }
+    });
   }
 
+  void _selectAll() {
+    setState(() {
+      if (_selectedNoteIds.length == _currentNotesList.length) {
+        _selectedNoteIds.clear();
+      } else {
+        _selectedNoteIds.addAll(_currentNotesList.map((e) => e.id));
+      }
+    });
+  }
+
+  void _deleteSelected() {
+    showIOSDialog(
+      context: context,
+      title: 'Delete Notes',
+      message: 'Are you sure you want to\ndelete these ${_selectedNoteIds.length} notes?',
+      confirmText: 'Delete',
+      confirmTextColor: const Color(0xFFFF453A),
+      onConfirm: () async {
+        await _noteService.deleteNotesBatch(_selectedNoteIds.toList());
+        _exitSelectionMode();
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Notes deleted')));
+      },
+    );
+  }
+
+  void _toggleFavoriteSelected(List<NoteModel> allNotes) async {
+    final selectedNotes = allNotes.where((n) => _selectedNoteIds.contains(n.id)).toList();
+    final allAreFavorites = selectedNotes.every((n) => n.isFavorite);
+    await _noteService.setFavoriteBatch(_selectedNoteIds.toList(), !allAreFavorites);
+    _exitSelectionMode();
+  }
+
+  void _moveSelected() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => StreamBuilder<List<CategoryModel>>(
+          stream: _noteService.getCategoriesStream(),
+          builder: (context, snapshot) {
+            final categories = snapshot.data ?? [];
+            return SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(height: 16),
+                  Text('Move to...', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 16),
+                  if(categories.isEmpty) const Padding(padding: EdgeInsets.all(16), child: Text("No categories")),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: categories.length,
+                      itemBuilder: (context, index) => ListTile(
+                        title: Text(categories[index].name, style: GoogleFonts.poppins()),
+                        onTap: () async {
+                          await _noteService.moveNotesBatch(_selectedNoteIds.toList(), categories[index].id);
+                          Navigator.pop(ctx);
+                          _exitSelectionMode();
+                          if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Notes moved')));
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+      ),
+    );
+  }
+
+  // ✅ FIXED: Add Note Function - Navigasi ke NoteEditorPage tanpa noteId
   void _handleAddNote() {
-    Navigator.pushNamed(context, '/note-editor').then((_) {
-      if (mounted) setState(() {});
-    });
+    // Navigasi ke editor tanpa noteId = mode create new note
+    Navigator.pushNamed(context, AppRoutes.noteEditor);
   }
 
-  void _handleAddCategory() {
-    _showCategoryDialog();
-  }
-
-  void _handleNoteSelected(String noteId) {
-    Navigator.pushNamed(context, '/note-editor', arguments: noteId).then((_) {
-      if (mounted) setState(() {});
-    });
-  }
-
-  void _refreshData() {
-    setState(() {});
-  }
-
-  // === Dialogs ===
-
-  void _showCategoryDialog() {
+  // ✅ Dialog untuk Add Category
+  void _showAddCategoryDialog() {
     final controller = TextEditingController();
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('New Category'),
+        title: Text('New Category', style: GoogleFonts.poppins()),
         content: TextField(
           controller: controller,
+          decoration: const InputDecoration(hintText: 'Category name'),
           autofocus: true,
-          decoration: InputDecoration(
-            hintText: 'Enter category name',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: const Text('Cancel'),
           ),
-          FilledButton(
-            onPressed: () {
-              final name = controller.text.trim();
-              if (name.isNotEmpty) {
-                _noteService.addCategory(CategoryModel(
-                  id: DateTime.now().millisecondsSinceEpoch.toString(),
-                  name: name,
-                ));
-                setState(() {});
+          TextButton(
+            onPressed: () async {
+              if (controller.text.trim().isNotEmpty) {
+                await _noteService.addCategory(
+                  CategoryModel(
+                    id: '',
+                    name: controller.text.trim(),
+                  ),
+                );
+                Navigator.pop(ctx);
               }
-              Navigator.pop(ctx);
             },
-            child: const Text('Create'),
+            child: const Text('Add'),
           ),
         ],
       ),
     );
   }
-
-  // === Build Methods ===
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: CustomTopAppBar(
-        onProfileTap: () => Navigator.pushNamed(context, '/profile'),
-        onNotificationTap: () {},
-      ),
-      body: Column(
-        children: [
-          // Search Bar with Greeting
-          NoteSearchBar(
-            controller: _searchController,
-            greetingText: 'Hello Susan Jong. How are you today!',
-            hintText: 'Search notes...',
-            onClear: () => setState(() {}),
-          ),
+    return StreamBuilder<List<NoteModel>>(
+      stream: _noteService.getNotesStream(),
+      builder: (context, snapshotNotes) {
+        final allNotes = snapshotNotes.data ?? [];
+        final filteredNotes = _getFilteredNotes(allNotes);
+        _currentNotesList = filteredNotes;
 
-          // Tab Bar
-          NoteTabBar(
-            selectedIndex: _selectedTabIndex,
-            onTabSelected: _handleTabChange,
-          ),
+        final selectedModels = allNotes.where((n) => _selectedNoteIds.contains(n.id)).toList();
+        final isAllFavorites = selectedModels.isNotEmpty && selectedModels.every((n) => n.isFavorite);
 
-          // Tab Content
-          Expanded(
-            child: _buildTabContent(),
-          ),
-        ],
-      ),
-      floatingActionButton: NotesExpandableFab(
-        onAddNoteTap: _handleAddNote,
-        onAddCategoryTap: _handleAddCategory,
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      bottomNavigationBar: _buildBottomNavBar(),
+        return StreamBuilder<List<CategoryModel>>(
+          stream: _noteService.getCategoriesStream(),
+          builder: (context, snapshotCategories) {
+            final allCategories = snapshotCategories.data ?? [];
+
+            return Scaffold(
+              backgroundColor: Colors.white,
+              appBar: CustomTopAppBar(
+                isSelectionMode: _isSelectionMode,
+                onSelectAllTap: _selectAll,
+                onProfileTap: () => Navigator.pushNamed(context, AppRoutes.profile),
+                onNotificationTap: () {},
+              ),
+              body: Column(
+                children: [
+                  NoteSearchBar(
+                    controller: _searchController,
+                    onClear: () => setState(() => _searchController.clear()),
+                  ),
+                  NoteTabBar(
+                    selectedIndex: _selectedTabIndex,
+                    onTabSelected: (index) {
+                      if (_isSelectionMode) _exitSelectionMode();
+                      setState(() => _selectedTabIndex = index);
+                    },
+                  ),
+                  Expanded(
+                    child: IndexedStack(
+                      index: _selectedTabIndex,
+                      children: [
+                        // ✅ Tab 0: All Notes - Sudah Fixed, hanya dari Firestore
+                        AllNotesTab(
+                          notes: filteredNotes,
+                          scrollController: _scrollController,
+                          isSelectionMode: _isSelectionMode,
+                          selectedNoteIds: _selectedNoteIds,
+                          onNoteTap: _toggleSelection,
+                          onNoteLongPress: _enterSelectionMode,
+                          onToggleFavorite: (id) {
+                            final note = allNotes.firstWhere((n) => n.id == id);
+                            _noteService.toggleFavorite(id, note.isFavorite);
+                          },
+                          searchQuery: _searchQuery,
+                        ),
+
+                        // Tab 1: Categories
+                        CategoriesTab(
+                          noteService: _noteService,
+                          categories: allCategories,
+                          allNotes: allNotes,
+                          onNoteSelected: (id) => Navigator.pushNamed(context, AppRoutes.noteEditor, arguments: id),
+                        ),
+
+                        // Tab 2: Favorites
+                        FavoritesTab(
+                          notes: filteredNotes.where((n) => n.isFavorite).toList(),
+                          favoriteCategories: allCategories.where((c) => c.isFavorite).toList(),
+                          scrollController: _scrollController,
+                          onNoteSelected: (id) => Navigator.pushNamed(context, AppRoutes.noteEditor, arguments: id),
+                          onCategoryToggleFavorite: (id) async {
+                            final cat = allCategories.firstWhere((c) => c.id == id);
+                            await _noteService.toggleCategoryFavorite(id, cat.isFavorite);
+                          },
+                          isSelectionMode: _isSelectionMode,
+                          selectedNoteIds: _selectedNoteIds,
+                          onNoteTap: _toggleSelection,
+                          onNoteLongPress: _enterSelectionMode,
+                          onToggleFavorite: (id) {
+                            final note = allNotes.firstWhere((n) => n.id == id);
+                            _noteService.toggleFavorite(id, note.isFavorite);
+                          },
+                          searchQuery: _searchQuery,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              // ✅ FIXED: FAB sekarang terhubung dengan fungsi add note
+              floatingActionButton: _isSelectionMode
+                  ? null
+                  : NotesExpandableFab(
+                onAddNoteTap: _handleAddNote, // ✅ Fungsi add note
+                onAddCategoryTap: _showAddCategoryDialog, // ✅ Fungsi add category
+              ),
+              floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+              bottomNavigationBar: _buildBottomNavBar(isAllFavorites, allNotes),
+            );
+          },
+        );
+      },
     );
   }
 
-  Widget _buildTabContent() {
-    // Menggunakan IndexedStack agar state setiap tab tetap terjaga
-    // dan perpindahan tab menjadi instant tanpa rebuild
-    return IndexedStack(
-      index: _selectedTabIndex,
-      children: [
-        // Tab 0: All Notes
-        AllNotesTab(
-          notes: _getFilteredNotes(_noteService.allNotes),
-          scrollController: _scrollController,
-          onNoteSelected: _handleNoteSelected,
-          searchQuery: _searchQuery,
-        ),
-
-        // Tab 1: Categories
-        CategoriesTab(
-          noteService: _noteService,
-          onNoteSelected: _handleNoteSelected,
-          onRefresh: _refreshData,
-        ),
-
-        // Tab 2: Favorites
-        FavoritesTab(
-          notes: _getFilteredNotes(_noteService.favoriteNotes),
-          scrollController: _scrollController,
-          onNoteSelected: _handleNoteSelected,
-          searchQuery: _searchQuery,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBottomNavBar() {
+  Widget _buildBottomNavBar(bool isAllFavorites, List<NoteModel> allNotes) {
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 250),
-      height: _isNavBarVisible ? null : 0,
-      child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 250),
-        opacity: _isNavBarVisible ? 1.0 : 0.0,
-        child: SafeArea(
-          child: CustomNavBar(
-            selectedIndex: 1, // Notes tab
-            onItemTapped: _handleNavigation,
-          ),
+      duration: const Duration(milliseconds: 200),
+      height: _isNavBarVisible ? (_isSelectionMode ? 75 : 64) + MediaQuery.of(context).padding.bottom : 0,
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 200),
+        child: _isSelectionMode
+            ? SelectionActionBar(
+          key: const ValueKey('SelectionBar'),
+          onMove: _moveSelected,
+          onFavorite: () => _toggleFavoriteSelected(allNotes),
+          onDelete: _deleteSelected,
+          isAllSelectedFavorite: isAllFavorites,
+        )
+            : CustomNavBar(
+          key: const ValueKey('NavBar'),
+          selectedIndex: 1,
+          onItemTapped: _handleNavigation,
         ),
       ),
     );
   }
-
-  // === Helper Methods ===
 
   List<NoteModel> _getFilteredNotes(List<NoteModel> notes) {
     if (_searchQuery.isEmpty) return notes;
-
     final query = _searchQuery.toLowerCase();
-    return notes.where((note) {
-      return note.title.toLowerCase().contains(query) ||
-          note.content.toLowerCase().contains(query);
-    }).toList();
+    return notes.where((note) =>
+    note.title.toLowerCase().contains(query) ||
+        note.content.toLowerCase().contains(query)).toList();
   }
 }
