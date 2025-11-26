@@ -1,39 +1,59 @@
-
 import 'package:flutter/material.dart';
+import '../../../config/routes/routes.dart';
 
-// Models navbar item dibuat isinya disini
 class NavBarItem {
   final IconData icon;
   final String label;
+  final String route;
 
   const NavBarItem({
     required this.icon,
     required this.label,
+    required this.route,
   });
 }
 
 const List<NavBarItem> _navItems = [
-  NavBarItem(icon: Icons.home, label: 'Home'),
-  NavBarItem(icon: Icons.note, label: 'Notes'),
-  NavBarItem(icon: Icons.list, label: 'Todo'),
-  NavBarItem(icon: Icons.calendar_today, label: 'Calendar'),
+  NavBarItem(
+    icon: Icons.home,
+    label: 'Home',
+    route: AppRoutes.home,
+  ),
+  NavBarItem(
+    icon: Icons.note,
+    label: 'Notes',
+    route: AppRoutes.notes,
+  ),
+  NavBarItem(
+    icon: Icons.list,
+    label: 'Todo',
+    route: AppRoutes.todo,
+  ),
+  NavBarItem(
+    icon: Icons.calendar_today,
+    label: 'Calendar',
+    route: AppRoutes.calendar,
+  ),
 ];
 
-
-// Isi utama dari navbar
 class CustomNavBar extends StatelessWidget {
   final int selectedIndex;
   final Function(int)? onItemTapped;
-  final bool autoNavigate;
 
   const CustomNavBar({
     super.key,
     required this.selectedIndex,
     this.onItemTapped,
-    this.autoNavigate = true,
   });
 
-  // Logic untuk perpindahan isi navbar berdasarkan indexnya dibuat permisalan
+  void _handleNavigation(BuildContext context, int index) {
+    if (index == selectedIndex) return;
+    onItemTapped?.call(index);
+
+    final route = _navItems[index].route;
+    Navigator.pushReplacementNamed(context, route);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -60,7 +80,7 @@ class CustomNavBar extends StatelessWidget {
                 child: Center(
                   child: InkWell(
                     borderRadius: BorderRadius.circular(14),
-                    onTap: () => onItemTapped?.call(index),
+                    onTap: () => _handleNavigation(context, index),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 180),
                       padding: EdgeInsets.symmetric(
@@ -68,7 +88,9 @@ class CustomNavBar extends StatelessWidget {
                         vertical: isSelected ? 8 : 6,
                       ),
                       decoration: BoxDecoration(
-                        color: isSelected ? const Color(0xFFD4F1A8) : Colors.transparent,
+                        color: isSelected
+                            ? const Color(0xFFD4F1A8)
+                            : Colors.transparent,
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: Row(

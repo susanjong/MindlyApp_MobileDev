@@ -8,7 +8,6 @@ import '../../../../core/widgets/navigation/custom_top_app_bar.dart';
 import '../../../calendar/data/model/event_model.dart';
 import '../../../../config/routes/routes.dart';
 
-//TODO: Task item ini masukkin ke modelnya bgian file task ya
 class TaskItem {
   String title;
   String time;
@@ -35,7 +34,6 @@ class _HomePageState extends State<HomePage> {
   final ScrollController _scrollController = ScrollController();
   String _userName = 'User';
 
-  // TODO: ubah data dummy ini berdasarkan firestore
   final List<TaskItem> _tasks = [
     TaskItem(
       title: 'Meeting with marketing team',
@@ -65,7 +63,6 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
-  // Load user data from Firestore with real-time updates
   Future<void> _loadUserData() async {
     try {
       final userData = await AuthService.getUserData();
@@ -138,7 +135,7 @@ class _HomePageState extends State<HomePage> {
   List<TaskItem> get _pendingTasks => _tasks.where((task) => !task.isCompleted).toList();
   List<TaskItem> get _completedTasks => _tasks.where((task) => task.isCompleted).toList();
 
-  List<EventModel> _getEvents() { //TODO: ubah ini ke data dari firestore
+  List<EventModel> _getEvents() {
     return [
       EventModel(
         title: 'Team meeting preparation',
@@ -186,7 +183,6 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final events = _getEvents();
-    /*final notes = _getNotes();*/
     final completedTasksCount = _completedTasks.length;
     final totalTasks = _tasks.length;
     final progress = totalTasks > 0 ? completedTasksCount / totalTasks : 0.0;
@@ -271,7 +267,6 @@ class _HomePageState extends State<HomePage> {
                           onActionTap: _navigateToNotesPage,
                         ),
                         const SizedBox(height: 12),
-                        /*...notes.map((note) => _buildNoteCard(note)).toList(),*/
                         const SizedBox(height: 20),
                       ],
                     ),
@@ -286,7 +281,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // widget builders for better code organization
   Widget _buildGreetingSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -311,7 +305,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // NEW: Greeting section with real-time updates using StreamBuilder
   Widget _buildGreetingSectionWithStream() {
     final userDataStream = AuthService.getUserDataStream();
 
@@ -749,27 +742,8 @@ class _HomePageState extends State<HomePage> {
       child: AnimatedOpacity(
         duration: const Duration(milliseconds: 300),
         opacity: _isNavBarVisible ? 1.0 : 0.0,
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
-                blurRadius: 8,
-                offset: const Offset(0, -2),
-              ),
-            ],
-          ),
-          child: SafeArea(
-            child: CustomNavBar(
-              selectedIndex: 0,
-              onItemTapped: (index) {
-                if (index == 1) {
-                  Navigator.pushNamed(context, AppRoutes.notes);
-                }
-              },
-            ),
-          ),
+        child: const CustomNavBar(
+          selectedIndex: 0, // Home selected
         ),
       ),
     );
