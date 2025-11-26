@@ -3,6 +3,8 @@ import '../../../../config/routes/routes.dart';
 import '../../../../core/widgets/navigation/custom_navbar_widget.dart';
 import '../../../../core/widgets/navigation/custom_top_app_bar.dart';
 import '../widgets/task_item.dart';
+import 'package:notesapp/core/services/auth_service.dart';
+
 class MainTodoScreen extends StatefulWidget {
   final String? username;
 
@@ -16,6 +18,7 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
   int selectedDay = 16; // Tuesday selected
   String _username = 'User';
   int _selectedNavIndex = 2; // Todo tab selected
+  bool _isLoading = true;
 
   final List<Map<String, dynamic>> tasks = [
     {'time': '4:50 PM', 'title': 'Diskusi project', 'completed': false},
@@ -24,10 +27,55 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
     {'time': '4:50 PM', 'title': 'Diskusi project', 'completed': false},
   ];
 
+  // Susan added for get full name and copy into hello 'user' from firestore
   @override
   void initState() {
     super.initState();
-    _username = widget.username ?? 'User';
+    _loadUserData();
+  }
+
+  // get data user from firestore
+  Future<void> _loadUserData() async {
+    try {
+      if (widget.username != null && widget.username!.isNotEmpty) {
+        setState(() {
+          _username = widget.username!;
+          _isLoading = false;
+        });
+        return;
+      }
+
+      final userData = await AuthService.getUserData();
+
+      if (userData != null) {
+        setState(() {
+          // priority: displayName > email > 'user'
+          _username = userData['displayName'] ??
+              userData['email']?.split('@')[0] ??
+              'User';
+          _isLoading = false;
+        });
+      } else {
+        // Fall back into firebase auth if error get data
+        final displayName = AuthService.getUserDisplayName();
+        final email = AuthService.getUserEmail();
+
+        setState(() {
+          _username = displayName ??
+              email?.split('@')[0] ??
+              'User';
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      // if error, use fallback
+      setState(() {
+        _username = AuthService.getUserDisplayName() ??
+            AuthService.getUserEmail()?.split('@')[0] ??
+            'User';
+        _isLoading = false;
+      });
+    }
   }
 
   void _onNavItemTapped(int index) {
@@ -63,7 +111,11 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
           // Navigator.pushNamed(context, '/notifications');
         },
       ),
-      body: Column(
+      body: _isLoading
+          ? const Center(
+        child: CircularProgressIndicator(),
+      )
+          : Column(
         children: [
           // Fixed Content Section
           Padding(
