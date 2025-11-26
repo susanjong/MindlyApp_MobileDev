@@ -10,7 +10,6 @@ class CategoriesTab extends StatefulWidget {
   final List<CategoryModel> categories;
   final List<NoteModel> allNotes;
   final Function(String) onNoteSelected;
-  final VoidCallback? onRefresh;
 
   const CategoriesTab({
     super.key,
@@ -18,7 +17,6 @@ class CategoriesTab extends StatefulWidget {
     required this.categories,
     required this.allNotes,
     required this.onNoteSelected,
-    this.onRefresh,
   });
 
   @override
@@ -38,27 +36,43 @@ class _CategoriesTabState extends State<CategoriesTab> {
     });
   }
 
-  void _toggleCategoryFavorite(CategoryModel category) {
-    widget.noteService.toggleCategoryFavorite(category.id, category.isFavorite);
-    widget.onRefresh?.call();
+  void _toggleCategoryFavorite(CategoryModel category) async {
+    // ✅ FIX: Langsung toggle tanpa refresh callback
+    await widget.noteService.toggleCategoryFavorite(category.id, category.isFavorite);
+    // Stream akan auto-update UI tanpa perlu setState
   }
 
   @override
   Widget build(BuildContext context) {
-    final categories = widget.categories;
-    final allNotes = widget.allNotes;
+    // ✅ FIX 1: Filter & Sort Categories
+    final allCategories = widget.categories;
+
+    // Pisahkan categories
+    final bookmarksCategory = allCategories.firstWhere(
+          (c) => c.id == 'bookmarks',
+      orElse: () => CategoryModel(id: 'bookmarks', name: 'Bookmarks'),
+    );
+
+    // Custom categories (bukan 'all' dan 'bookmarks'), diurutkan A-Z
+    final customCategories = allCategories
+        .where((c) => c.id != 'all' && c.id != 'bookmarks')
+        .toList()
+      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+
+    // Urutan final: Bookmarks → Custom Categories (A-Z)
+    final sortedCategories = [bookmarksCategory, ...customCategories];
 
     return ListView.builder(
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(0, 10, 0, 120),
-      itemCount: categories.length,
+      itemCount: sortedCategories.length,
       itemBuilder: (context, index) {
-        final category = categories[index];
+        final category = sortedCategories[index];
 
-        // [FIX] Filter notes secara lokal
-        final notes = category.id == 'all'
-            ? allNotes
-            : allNotes.where((n) => n.categoryId == category.id).toList();
+        // Filter notes by category
+        final notes = category.id == 'bookmarks'
+            ? widget.allNotes.where((n) => n.categoryId == 'bookmarks').toList()
+            : widget.allNotes.where((n) => n.categoryId == category.id).toList();
 
         return _CategoryItem(
           category: category,
@@ -100,60 +114,73 @@ class _CategoryItem extends StatelessWidget {
 
     return Column(
       children: [
-        GestureDetector(
-          onTap: onTap,
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 25, vertical: 8),
-            height: 50,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: borderPink, width: 1),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x3F000000),
-                  blurRadius: 4,
-                  offset: Offset(0, 4),
-                )
-              ],
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      category.name,
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w400,
-                        color: Colors.black,
-                      ),
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 25, vertical: 8),
+          height: 50,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: borderPink, width: 1),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x3F000000),
+                blurRadius: 4,
+                offset: Offset(0, 4),
+              )
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                // ✅ FIX 2: Category name clickable untuk expand/collapse
+                Expanded(
+                  child: GestureDetector(
+                    onTap: onTap,
+                    behavior: HitTestBehavior.opaque,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            category.name,
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w400,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ),
+                        if (noteCount > 0)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            child: Text(
+                              noteCount.toString(),
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black54,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
-                  if (noteCount > 0)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      child: Text(
-                        noteCount.toString(),
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black54,
-                        ),
-                      ),
-                    ),
-                  const SizedBox(width: 12),
-                  GestureDetector(
-                    onTap: onFavoriteTap,
+                ),
+                const SizedBox(width: 12),
+                // ✅ FIX 3: Heart icon clickable terpisah
+                GestureDetector(
+                  onTap: onFavoriteTap,
+                  behavior: HitTestBehavior.opaque,
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
                     child: Icon(
                       category.isFavorite ? Icons.favorite : Icons.favorite_border,
                       color: category.isFavorite ? Colors.red : outlineGrey,
                       size: 22,
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
