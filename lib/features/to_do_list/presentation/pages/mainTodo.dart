@@ -1,4 +1,6 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import '../../../../core/services/auth_service.dart';
 import '../../../../config/routes/routes.dart';
 import '../../../../core/widgets/navigation/custom_top_app_bar.dart';
 import '../../../../core/widgets/navigation/custom_navbar_widget.dart';
@@ -16,8 +18,8 @@ class MainTodoScreen extends StatefulWidget {
 }
 
 class _MainTodoScreenState extends State<MainTodoScreen> {
-  int selectedDay = 16; // Tuesday selected
-  String _username = 'User';
+  int selectedDay = 16;
+  String _username = 'User'; // Default value
 
   final List<Map<String, dynamic>> tasks = [
     {'time': '4:50 PM', 'title': 'Diskusi project', 'completed': false},
@@ -30,18 +32,41 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
   void initState() {
     super.initState();
     _username = widget.username ?? 'User';
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final userData = await AuthService.getUserData();
+
+      if (userData != null && userData['displayName'] != null) {
+        if (mounted) {
+          setState(() {
+            _username = userData['displayName'];
+          });
+        }
+      } else {
+        final displayName = AuthService.getUserDisplayName();
+        if (mounted) {
+          setState(() {
+            _username = displayName ?? 'User';
+          });
+        }
+      }
+    } catch (e) {
+      final displayName = AuthService.getUserDisplayName();
+      if (mounted) {
+        setState(() {
+          _username = displayName ?? 'User';
+        });
+      }
+    }
   }
 
   void _handleNavigation(int index) {
-    print(' Todo - Navigation tapped: index=$index');
-
     final routes = ['/home', '/notes', '/todo', '/calendar'];
-
     if (index != 2) {
-      print(' Todo - Navigating to: ${routes[index]}');
       Navigator.pushReplacementNamed(context, routes[index]);
-    } else {
-      print(' Todo - Already on Todo page');
     }
   }
 
@@ -53,9 +78,7 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
         onProfileTap: () {
           Navigator.pushNamed(context, AppRoutes.profile);
         },
-        onNotificationTap: () {
-          // Navigator.pushNamed(context, '/notifications');
-        },
+        onNotificationTap: () {},
       ),
       body: Column(
         children: [
@@ -65,14 +88,8 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Greeting
-                Text(
-                  'Hello, $_username!',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: Colors.black87,
-                  ),
-                ),
+                _buildGreetingStream(),
+
                 const SizedBox(height: 12),
 
                 // Task Summary
@@ -134,7 +151,7 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
                 // Add Task Button
                 Container(
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFCE4EC),
+                    color: const Color(0xFFFFD8E4),
                     borderRadius: BorderRadius.circular(30),
                     border: Border.all(color: Colors.black, width: 1.5),
                   ),
@@ -227,10 +244,33 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
     );
   }
 
+  Widget _buildGreetingStream() {
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: AuthService.getUserDataStream(),
+      builder: (context, snapshot) {
+        String displayName = _username;
+
+        if (snapshot.hasData && snapshot.data != null) {
+          final userData = snapshot.data!.data();
+          if (userData != null && userData['displayName'] != null) {
+            displayName = userData['displayName'];
+          }
+        }
+
+        return Text(
+          'Hello, $displayName!',
+          style: const TextStyle(
+            fontSize: 17,
+            color: Colors.black87,
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildStatusCard(String count, String label, Color topColor, Color bottomColor) {
     return GestureDetector(
       onTap: () {
-        // Navigasi ke All Category Screen saat tap card "All"
         if (label == 'All') {
           Navigator.push(
             context,
@@ -254,9 +294,10 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 12,
+              color: Colors.black.withValues(alpha: 0.25),
               offset: const Offset(0, 4),
+              blurRadius: 4,
+              spreadRadius: 0,
             ),
           ],
         ),
@@ -266,7 +307,6 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Arrow icon di pojok kanan atas
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
@@ -278,7 +318,6 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
                 ],
               ),
               const Spacer(),
-              // Number
               Text(
                 count,
                 style: const TextStyle(
@@ -289,7 +328,6 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
                 ),
               ),
               const SizedBox(height: 6),
-              // Label
               Text(
                 label,
                 style: const TextStyle(
@@ -343,7 +381,6 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
       context,
       onSave: (taskData) {
         setState(() {
-          // Tambahkan task baru ke list
           tasks.add({
             'time': '${taskData['day']} ${taskData['month']} ${taskData['year']}',
             'title': taskData['name'],

@@ -353,14 +353,6 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
             colors: gradient,
           ),
           borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.25),
-              offset: const Offset(0, 4),
-              blurRadius: 4,
-              spreadRadius: 0,
-            ),
-          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -425,7 +417,6 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
     );
   }
 
-  // ... Widget _buildSelectableTaskItem (Sama) ...
   Widget _buildSelectableTaskItem(int index) {
     final isSelected = uncategorizedTasks[index]['selected'] == true;
 
