@@ -20,6 +20,7 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
 
   bool _isLoading = false;
   bool _isEditing = false;
+  bool _isBookmarked = false; // ✅ Track bookmark status
   late DateTime _currentDate;
 
   @override
@@ -41,6 +42,8 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
       _contentController.text = note.content;
       setState(() {
         _currentDate = note.updatedAt;
+        // ✅ Set bookmark status berdasarkan categoryId
+        _isBookmarked = note.categoryId == 'bookmarks';
       });
     }
     setState(() => _isLoading = false);
@@ -58,10 +61,11 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
         id: widget.noteId!,
         title: title,
         content: content,
-        createdAt: _currentDate, // Gunakan _currentDate agar tgl create tidak berubah
+        createdAt: _currentDate,
         updatedAt: DateTime.now(),
-        categoryId: 'all', // Sesuaikan jika ada logic kategori
-        isFavorite: false, // Sesuaikan jika perlu mempertahankan status favorit
+        // ✅ Simpan categoryId berdasarkan bookmark status
+        categoryId: _isBookmarked ? 'bookmarks' : 'all',
+        isFavorite: false,
       );
       await _noteService.updateNote(updatedNote);
     } else {
@@ -72,11 +76,19 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
         content: content,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
-        categoryId: 'all',
+        // ✅ Set categoryId berdasarkan bookmark
+        categoryId: _isBookmarked ? 'bookmarks' : 'all',
         isFavorite: false,
       );
       await _noteService.addNote(newNote);
     }
+  }
+
+  // ✅ Toggle bookmark function
+  void _toggleBookmark() {
+    setState(() {
+      _isBookmarked = !_isBookmarked;
+    });
   }
 
   void _handleBack() async {
@@ -93,7 +105,6 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Format Date sesuai Figma: "Monday, 15 Sept 2025"
     final formattedDate = DateFormat('EEEE, d MMM y').format(_currentDate);
     final formattedTime = DateFormat('HH:mm').format(_currentDate);
 
@@ -113,7 +124,7 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
               ? const Center(child: CircularProgressIndicator())
               : Column(
             children: [
-              // === Custom App Bar (Sesuai Figma) ===
+              // === Custom App Bar ===
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
                 child: Row(
@@ -138,7 +149,7 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
                     ),
                     Row(
                       children: [
-                        // Time Display (Figma element)
+                        // Time Display
                         Text(
                           formattedTime,
                           style: GoogleFonts.poppins(
@@ -148,8 +159,15 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
                           ),
                         ),
                         const SizedBox(width: 16),
-                        // Bookmark Icon (Figma element)
-                        const Icon(Icons.bookmark_border, size: 24, color: Colors.black),
+                        // ✅ Bookmark Icon - FIXED
+                        GestureDetector(
+                          onTap: _toggleBookmark,
+                          child: Icon(
+                            _isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                            size: 24,
+                            color: _isBookmarked ? const Color(0xFFFFEB3B) : Colors.black,
+                          ),
+                        ),
                         const SizedBox(width: 16),
                       ],
                     )
@@ -220,15 +238,15 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
                           border: InputBorder.none,
                           contentPadding: EdgeInsets.zero,
                         ),
-                        maxLines: null, // Expandable
+                        maxLines: null,
                       ),
-                      const SizedBox(height: 100), // Space for bottom bar
+                      const SizedBox(height: 100),
                     ],
                   ),
                 ),
               ),
 
-              // === Bottom Formatting Toolbar (Visual Only based on Figma) ===
+              // === Bottom Formatting Toolbar ===
               _buildBottomToolbar(),
             ],
           ),
@@ -242,7 +260,7 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
       height: 50,
       width: double.infinity,
       decoration: const BoxDecoration(
-        color: Color(0xEACDCFD3), // Background color from Figma
+        color: Color(0xEACDCFD3),
         border: Border(top: BorderSide(color: Color(0xFFE0E0E0))),
       ),
       child: ListView(
@@ -290,7 +308,7 @@ class _ToolButton extends StatelessWidget {
       width: 40,
       margin: const EdgeInsets.symmetric(horizontal: 4),
       decoration: BoxDecoration(
-        color: const Color(0xFFFCFCFE), // Button color from Figma
+        color: const Color(0xFFFCFCFE),
         borderRadius: BorderRadius.circular(4.6),
         boxShadow: const [
           BoxShadow(

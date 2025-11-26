@@ -32,7 +32,6 @@ class _NotesMainPageState extends State<NotesMainPage> {
   int _selectedTabIndex = 0;
   String _searchQuery = '';
 
-  // Selection Mode State
   bool _isSelectionMode = false;
   final Set<String> _selectedNoteIds = {};
   List<NoteModel> _currentNotesList = [];
@@ -62,12 +61,7 @@ class _NotesMainPageState extends State<NotesMainPage> {
   }
 
   void _handleNavigation(int index) {
-    final routes = [
-      AppRoutes.home,
-      AppRoutes.notes,
-      AppRoutes.todo,
-      AppRoutes.calendar,
-    ];
+    final routes = [AppRoutes.home, AppRoutes.notes, AppRoutes.todo, AppRoutes.calendar];
     if (index != 1) Navigator.pushReplacementNamed(context, routes[index]);
   }
 
@@ -139,46 +133,43 @@ class _NotesMainPageState extends State<NotesMainPage> {
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => StreamBuilder<List<CategoryModel>>(
-          stream: _noteService.getCategoriesStream(),
-          builder: (context, snapshot) {
-            final categories = snapshot.data ?? [];
-            return SafeArea(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const SizedBox(height: 16),
-                  Text('Move to...', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 16),
-                  if(categories.isEmpty) const Padding(padding: EdgeInsets.all(16), child: Text("No categories")),
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: categories.length,
-                      itemBuilder: (context, index) => ListTile(
-                        title: Text(categories[index].name, style: GoogleFonts.poppins()),
-                        onTap: () async {
-                          await _noteService.moveNotesBatch(_selectedNoteIds.toList(), categories[index].id);
-                          Navigator.pop(ctx);
-                          _exitSelectionMode();
-                          if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Notes moved')));
-                        },
-                      ),
+        stream: _noteService.getCategoriesStream(),
+        builder: (context, snapshot) {
+          final categories = snapshot.data ?? [];
+          return SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 16),
+                Text('Move to...', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 16),
+                if (categories.isEmpty) const Padding(padding: EdgeInsets.all(16), child: Text("No categories")),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: categories.length,
+                    itemBuilder: (context, index) => ListTile(
+                      title: Text(categories[index].name, style: GoogleFonts.poppins()),
+                      onTap: () async {
+                        await _noteService.moveNotesBatch(_selectedNoteIds.toList(), categories[index].id);
+                        Navigator.pop(ctx);
+                        _exitSelectionMode();
+                        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Notes moved')));
+                      },
                     ),
                   ),
-                ],
-              ),
-            );
-          }
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
 
-  // ✅ FIXED: Add Note Function - Navigasi ke NoteEditorPage tanpa noteId
   void _handleAddNote() {
-    // Navigasi ke editor tanpa noteId = mode create new note
     Navigator.pushNamed(context, AppRoutes.noteEditor);
   }
 
-  // ✅ Dialog untuk Add Category
   void _showAddCategoryDialog() {
     final controller = TextEditingController();
     showDialog(
@@ -191,19 +182,11 @@ class _NotesMainPageState extends State<NotesMainPage> {
           autofocus: true,
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           TextButton(
             onPressed: () async {
               if (controller.text.trim().isNotEmpty) {
-                await _noteService.addCategory(
-                  CategoryModel(
-                    id: '',
-                    name: controller.text.trim(),
-                  ),
-                );
+                await _noteService.addCategory(CategoryModel(id: '', name: controller.text.trim()));
                 Navigator.pop(ctx);
               }
             },
@@ -216,20 +199,21 @@ class _NotesMainPageState extends State<NotesMainPage> {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<List<NoteModel>>(
-      stream: _noteService.getNotesStream(),
-      builder: (context, snapshotNotes) {
-        final allNotes = snapshotNotes.data ?? [];
-        final filteredNotes = _getFilteredNotes(allNotes);
-        _currentNotesList = filteredNotes;
+    // ✅ FIX: Gabungkan kedua stream untuk trigger update bersamaan
+    return StreamBuilder<List<CategoryModel>>(
+      stream: _noteService.getCategoriesStream(),
+      builder: (context, snapshotCategories) {
+        final allCategories = snapshotCategories.data ?? [];
 
-        final selectedModels = allNotes.where((n) => _selectedNoteIds.contains(n.id)).toList();
-        final isAllFavorites = selectedModels.isNotEmpty && selectedModels.every((n) => n.isFavorite);
+        return StreamBuilder<List<NoteModel>>(
+          stream: _noteService.getNotesStream(),
+          builder: (context, snapshotNotes) {
+            final allNotes = snapshotNotes.data ?? [];
+            final filteredNotes = _getFilteredNotes(allNotes);
+            _currentNotesList = filteredNotes;
 
-        return StreamBuilder<List<CategoryModel>>(
-          stream: _noteService.getCategoriesStream(),
-          builder: (context, snapshotCategories) {
-            final allCategories = snapshotCategories.data ?? [];
+            final selectedModels = allNotes.where((n) => _selectedNoteIds.contains(n.id)).toList();
+            final isAllFavorites = selectedModels.isNotEmpty && selectedModels.every((n) => n.isFavorite);
 
             return Scaffold(
               backgroundColor: Colors.white,
@@ -256,7 +240,6 @@ class _NotesMainPageState extends State<NotesMainPage> {
                     child: IndexedStack(
                       index: _selectedTabIndex,
                       children: [
-                        // ✅ Tab 0: All Notes - Sudah Fixed, hanya dari Firestore
                         AllNotesTab(
                           notes: filteredNotes,
                           scrollController: _scrollController,
@@ -270,16 +253,13 @@ class _NotesMainPageState extends State<NotesMainPage> {
                           },
                           searchQuery: _searchQuery,
                         ),
-
-                        // Tab 1: Categories
+                        // ✅ Pass categories langsung dari stream
                         CategoriesTab(
                           noteService: _noteService,
                           categories: allCategories,
                           allNotes: allNotes,
                           onNoteSelected: (id) => Navigator.pushNamed(context, AppRoutes.noteEditor, arguments: id),
                         ),
-
-                        // Tab 2: Favorites
                         FavoritesTab(
                           notes: filteredNotes.where((n) => n.isFavorite).toList(),
                           favoriteCategories: allCategories.where((c) => c.isFavorite).toList(),
@@ -304,12 +284,11 @@ class _NotesMainPageState extends State<NotesMainPage> {
                   ),
                 ],
               ),
-              // ✅ FIXED: FAB sekarang terhubung dengan fungsi add note
               floatingActionButton: _isSelectionMode
                   ? null
                   : NotesExpandableFab(
-                onAddNoteTap: _handleAddNote, // ✅ Fungsi add note
-                onAddCategoryTap: _showAddCategoryDialog, // ✅ Fungsi add category
+                onAddNoteTap: _handleAddNote,
+                onAddCategoryTap: _showAddCategoryDialog,
               ),
               floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
               bottomNavigationBar: _buildBottomNavBar(isAllFavorites, allNotes),
@@ -346,8 +325,6 @@ class _NotesMainPageState extends State<NotesMainPage> {
   List<NoteModel> _getFilteredNotes(List<NoteModel> notes) {
     if (_searchQuery.isEmpty) return notes;
     final query = _searchQuery.toLowerCase();
-    return notes.where((note) =>
-    note.title.toLowerCase().contains(query) ||
-        note.content.toLowerCase().contains(query)).toList();
+    return notes.where((note) => note.title.toLowerCase().contains(query) || note.content.toLowerCase().contains(query)).toList();
   }
 }
