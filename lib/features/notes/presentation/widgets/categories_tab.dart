@@ -36,30 +36,20 @@ class _CategoriesTabState extends State<CategoriesTab> {
     });
   }
 
-  void _toggleCategoryFavorite(CategoryModel category) async {
-    // ✅ FIX: Langsung toggle tanpa refresh callback
-    await widget.noteService.toggleCategoryFavorite(category.id, category.isFavorite);
-    // Stream akan auto-update UI tanpa perlu setState
-  }
-
   @override
   Widget build(BuildContext context) {
-    // ✅ FIX 1: Filter & Sort Categories
     final allCategories = widget.categories;
 
-    // Pisahkan categories
     final bookmarksCategory = allCategories.firstWhere(
           (c) => c.id == 'bookmarks',
       orElse: () => CategoryModel(id: 'bookmarks', name: 'Bookmarks'),
     );
 
-    // Custom categories (bukan 'all' dan 'bookmarks'), diurutkan A-Z
     final customCategories = allCategories
         .where((c) => c.id != 'all' && c.id != 'bookmarks')
         .toList()
       ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
-    // Urutan final: Bookmarks → Custom Categories (A-Z)
     final sortedCategories = [bookmarksCategory, ...customCategories];
 
     return ListView.builder(
@@ -69,18 +59,19 @@ class _CategoriesTabState extends State<CategoriesTab> {
       itemBuilder: (context, index) {
         final category = sortedCategories[index];
 
-        // Filter notes by category
         final notes = category.id == 'bookmarks'
             ? widget.allNotes.where((n) => n.categoryId == 'bookmarks').toList()
             : widget.allNotes.where((n) => n.categoryId == category.id).toList();
 
+        // ✅ Pass key dengan category.isFavorite untuk force rebuild
         return _CategoryItem(
+          key: ValueKey('${category.id}_${category.isFavorite}'),
           category: category,
           noteCount: notes.length,
           isExpanded: _expandedCategories.contains(category.id),
           notes: notes,
           onTap: () => _toggleExpand(category.id),
-          onFavoriteTap: () => _toggleCategoryFavorite(category),
+          noteService: widget.noteService,
           onNoteSelected: widget.onNoteSelected,
         );
       },
@@ -88,24 +79,70 @@ class _CategoriesTabState extends State<CategoriesTab> {
   }
 }
 
-class _CategoryItem extends StatelessWidget {
+// ✅ FIXED: Gunakan StatefulWidget untuk manage favorite state
+class _CategoryItem extends StatefulWidget {
   final CategoryModel category;
   final int noteCount;
   final bool isExpanded;
   final List<NoteModel> notes;
   final VoidCallback onTap;
-  final VoidCallback onFavoriteTap;
+  final NoteService noteService;
   final Function(String) onNoteSelected;
 
   const _CategoryItem({
+    super.key,
     required this.category,
     required this.noteCount,
     required this.isExpanded,
     required this.notes,
     required this.onTap,
-    required this.onFavoriteTap,
+    required this.noteService,
     required this.onNoteSelected,
   });
+
+  @override
+  State<_CategoryItem> createState() => _CategoryItemState();
+}
+
+class _CategoryItemState extends State<_CategoryItem> {
+  late bool _isFavorite;
+
+  @override
+  void initState() {
+    super.initState();
+    _isFavorite = widget.category.isFavorite;
+  }
+
+  @override
+  void didUpdateWidget(_CategoryItem oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // ✅ Update state saat category berubah dari parent
+    if (oldWidget.category.isFavorite != widget.category.isFavorite) {
+      setState(() {
+        _isFavorite = widget.category.isFavorite;
+      });
+    }
+  }
+
+  Future<void> _toggleFavorite() async {
+    // ✅ Optimistic update - langsung update UI
+    setState(() {
+      _isFavorite = !_isFavorite;
+    });
+
+    // ✅ Kemudian update ke Firestore
+    try {
+      await widget.noteService.toggleCategoryFavorite(
+        widget.category.id,
+        widget.category.isFavorite,
+      );
+    } catch (e) {
+      // ✅ Rollback jika gagal
+      setState(() {
+        _isFavorite = !_isFavorite;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -133,16 +170,15 @@ class _CategoryItem extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
-                // ✅ FIX 2: Category name clickable untuk expand/collapse
                 Expanded(
                   child: GestureDetector(
-                    onTap: onTap,
+                    onTap: widget.onTap,
                     behavior: HitTestBehavior.opaque,
                     child: Row(
                       children: [
                         Expanded(
                           child: Text(
-                            category.name,
+                            widget.category.name,
                             style: GoogleFonts.poppins(
                               fontSize: 14,
                               fontWeight: FontWeight.w400,
@@ -150,11 +186,11 @@ class _CategoryItem extends StatelessWidget {
                             ),
                           ),
                         ),
-                        if (noteCount > 0)
+                        if (widget.noteCount > 0)
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                             child: Text(
-                              noteCount.toString(),
+                              widget.noteCount.toString(),
                               style: GoogleFonts.poppins(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
@@ -167,15 +203,15 @@ class _CategoryItem extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
-                // ✅ FIX 3: Heart icon clickable terpisah
+                // ✅ FIX: Icon dengan local state
                 GestureDetector(
-                  onTap: onFavoriteTap,
+                  onTap: _toggleFavorite,
                   behavior: HitTestBehavior.opaque,
                   child: Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: Icon(
-                      category.isFavorite ? Icons.favorite : Icons.favorite_border,
-                      color: category.isFavorite ? Colors.red : outlineGrey,
+                      _isFavorite ? Icons.favorite : Icons.favorite_border,
+                      color: _isFavorite ? Colors.red : outlineGrey,
                       size: 22,
                     ),
                   ),
@@ -186,7 +222,7 @@ class _CategoryItem extends StatelessWidget {
         ),
         AnimatedCrossFade(
           firstChild: const SizedBox.shrink(),
-          secondChild: notes.isNotEmpty
+          secondChild: widget.notes.isNotEmpty
               ? Padding(
             padding: const EdgeInsets.fromLTRB(25, 0, 25, 16),
             child: GridView.builder(
@@ -198,16 +234,16 @@ class _CategoryItem extends StatelessWidget {
                 mainAxisSpacing: 12,
                 childAspectRatio: 0.85,
               ),
-              itemCount: notes.length,
+              itemCount: widget.notes.length,
               itemBuilder: (context, index) {
-                final note = notes[index];
+                final note = widget.notes[index];
                 return NoteCard(
                   title: note.title,
                   content: note.content,
                   date: note.formattedDate,
                   color: Color(note.color),
                   isFavorite: note.isFavorite,
-                  onTap: () => onNoteSelected(note.id),
+                  onTap: () => widget.onNoteSelected(note.id),
                 );
               },
             ),
@@ -219,7 +255,7 @@ class _CategoryItem extends StatelessWidget {
               style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey),
             ),
           ),
-          crossFadeState: isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+          crossFadeState: widget.isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
           duration: const Duration(milliseconds: 200),
         ),
       ],
