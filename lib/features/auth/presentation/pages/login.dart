@@ -9,10 +9,10 @@ import 'package:notesapp/core/widgets/navigation/loading_overlay.dart';
 class LoginAccountScreen extends StatefulWidget {
   const LoginAccountScreen({super.key});
   @override
-  _LoginAccountScreenState createState() => _LoginAccountScreenState();
+  LoginAccountScreenState createState() => LoginAccountScreenState();
 }
 
-class _LoginAccountScreenState extends State<LoginAccountScreen> {
+class LoginAccountScreenState extends State<LoginAccountScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
