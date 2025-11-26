@@ -1,8 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../data/models/category_model.dart';
 import '../../data/models/note_model.dart';
 import 'note_card.dart';
+import 'package:flutter_quill/flutter_quill.dart' as quill;
 
 class FavoritesTab extends StatefulWidget {
   final List<NoteModel> notes;
@@ -41,6 +43,16 @@ class FavoritesTab extends StatefulWidget {
 class _FavoritesTabState extends State<FavoritesTab> {
   bool _isCategoriesExpanded = true;
   bool _isAllNotesExpanded = true;
+
+  // Helper untuk convert JSON ke plain text
+  String _getPlainText(String jsonContent) {
+    try {
+      final doc = quill.Document.fromJson(jsonDecode(jsonContent));
+      return doc.toPlainText().trim();
+    } catch (e) {
+      return jsonContent;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -109,7 +121,8 @@ class _FavoritesTabState extends State<FavoritesTab> {
 
                   return NoteCard(
                     title: note.title,
-                    content: note.content,
+                    // ✅ FIX: Gunakan helper untuk convert
+                    content: _getPlainText(note.content),
                     date: note.formattedDate,
                     color: Color(note.color),
                     isFavorite: note.isFavorite,

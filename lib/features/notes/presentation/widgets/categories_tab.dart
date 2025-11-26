@@ -1,9 +1,11 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../data/models/category_model.dart';
 import '../../data/models/note_model.dart';
 import '../../data/services/note_service.dart';
 import 'note_card.dart';
+import 'package:flutter_quill/flutter_quill.dart' as quill;
 
 class CategoriesTab extends StatefulWidget {
   final NoteService noteService;
@@ -25,6 +27,16 @@ class CategoriesTab extends StatefulWidget {
 
 class _CategoriesTabState extends State<CategoriesTab> {
   final Set<String> _expandedCategories = {};
+
+  // Helper untuk convert JSON ke plain text
+  String _getPlainText(String jsonContent) {
+    try {
+      final doc = quill.Document.fromJson(jsonDecode(jsonContent));
+      return doc.toPlainText().trim();
+    } catch (e) {
+      return jsonContent;
+    }
+  }
 
   void _toggleExpand(String categoryId) {
     setState(() {
@@ -63,7 +75,6 @@ class _CategoriesTabState extends State<CategoriesTab> {
             ? widget.allNotes.where((n) => n.categoryId == 'bookmarks').toList()
             : widget.allNotes.where((n) => n.categoryId == category.id).toList();
 
-        // ✅ Pass key dengan category.isFavorite untuk force rebuild
         return _CategoryItem(
           key: ValueKey('${category.id}_${category.isFavorite}'),
           category: category,
@@ -73,13 +84,13 @@ class _CategoriesTabState extends State<CategoriesTab> {
           onTap: () => _toggleExpand(category.id),
           noteService: widget.noteService,
           onNoteSelected: widget.onNoteSelected,
+          getPlainText: _getPlainText, // ✅ Pass helper
         );
       },
     );
   }
 }
 
-// ✅ FIXED: Gunakan StatefulWidget untuk manage favorite state
 class _CategoryItem extends StatefulWidget {
   final CategoryModel category;
   final int noteCount;
@@ -88,6 +99,7 @@ class _CategoryItem extends StatefulWidget {
   final VoidCallback onTap;
   final NoteService noteService;
   final Function(String) onNoteSelected;
+  final String Function(String) getPlainText; // ✅ Terima helper
 
   const _CategoryItem({
     super.key,
@@ -98,6 +110,7 @@ class _CategoryItem extends StatefulWidget {
     required this.onTap,
     required this.noteService,
     required this.onNoteSelected,
+    required this.getPlainText,
   });
 
   @override
@@ -116,7 +129,6 @@ class _CategoryItemState extends State<_CategoryItem> {
   @override
   void didUpdateWidget(_CategoryItem oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // ✅ Update state saat category berubah dari parent
     if (oldWidget.category.isFavorite != widget.category.isFavorite) {
       setState(() {
         _isFavorite = widget.category.isFavorite;
@@ -125,19 +137,16 @@ class _CategoryItemState extends State<_CategoryItem> {
   }
 
   Future<void> _toggleFavorite() async {
-    // ✅ Optimistic update - langsung update UI
     setState(() {
       _isFavorite = !_isFavorite;
     });
 
-    // ✅ Kemudian update ke Firestore
     try {
       await widget.noteService.toggleCategoryFavorite(
         widget.category.id,
         widget.category.isFavorite,
       );
     } catch (e) {
-      // ✅ Rollback jika gagal
       setState(() {
         _isFavorite = !_isFavorite;
       });
@@ -203,7 +212,6 @@ class _CategoryItemState extends State<_CategoryItem> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                // ✅ FIX: Icon dengan local state
                 GestureDetector(
                   onTap: _toggleFavorite,
                   behavior: HitTestBehavior.opaque,
@@ -239,7 +247,8 @@ class _CategoryItemState extends State<_CategoryItem> {
                 final note = widget.notes[index];
                 return NoteCard(
                   title: note.title,
-                  content: note.content,
+                  // ✅ FIX: Gunakan helper
+                  content: widget.getPlainText(note.content),
                   date: note.formattedDate,
                   color: Color(note.color),
                   isFavorite: note.isFavorite,
