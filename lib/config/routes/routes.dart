@@ -12,6 +12,8 @@ import '../../features/calendar/presentation/pages/awalcalendar.dart';
 import '../../features/profile/presentation/pages/about_info.dart';
 import '../../features/profile/presentation/pages/help_faq.dart';
 import '../../features/profile/presentation/pages/profile.dart';
+import 'package:notesapp/features/auth/presentation/pages/terms_of_service.dart';
+import 'package:notesapp/features/auth/presentation/pages/privacy_policy.dart';
 
 class AppRoutes {
   AppRoutes._();
@@ -29,6 +31,8 @@ class AppRoutes {
   static const String calendar = '/calendar';
   static const String helpFaq = '/help_faq';
   static const String aboutUs = '/about_info';
+  static const String termsOfService = '/terms-of-service';
+  static const String PrivacyPolicy = '/privacy-policy';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -44,6 +48,10 @@ class AppRoutes {
         return _buildRoute(const HomePage());
       case resetPassword:
         return _buildRoute(const ResetPasswordScreen());
+      case AppRoutes.termsOfService:
+        return MaterialPageRoute(builder: (_) => const TermsOfServiceScreen());
+      case AppRoutes.PrivacyPolicy:
+        return MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen());
       case profile:
         return _buildRoute(const AccountProfilePage());
       case notes:
