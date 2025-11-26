@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../features/auth/presentation/pages/forgotpass.dart';
 import '../../features/auth/presentation/pages/intro_app.dart';
 import '../../features/auth/presentation/pages/login.dart';
 import '../../features/auth/presentation/pages/resetpass.dart';
@@ -23,7 +22,6 @@ class AppRoutes {
   static const String signIn = '/sign_in';
   static const String home = '/home';
   static const String resetPassword = '/reset_password';
-  static const String forgotPassword = '/forgot_password';
   static const String profile = '/profile';
   static const String notes = '/notes';
   static const String noteEditor = '/note-editor';
@@ -46,8 +44,6 @@ class AppRoutes {
         return _buildRoute(const HomePage());
       case resetPassword:
         return _buildRoute(const ResetPasswordScreen());
-      case forgotPassword:
-        return _buildRoute(const ForgotPasswordScreen());
       case profile:
         return _buildRoute(const AccountProfilePage());
       case notes:
@@ -65,7 +61,6 @@ class AppRoutes {
       case aboutUs:
         return _buildRoute(const AboutPage());
 
-    // Default - 404
       default:
         return _buildRoute(_NotFoundPage(routeName: settings.name));
     }
