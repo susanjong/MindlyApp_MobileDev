@@ -2,14 +2,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:notesapp/features/notes/presentation/pages/notes_main_page.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../../core/widgets/navigation/custom_navbar_widget.dart';
 import '../../../../core/widgets/navigation/custom_top_app_bar.dart';
 import '../../../calendar/data/model/event_model.dart';
-import '../../../profile/presentation/pages/profile.dart';
+import '../../../../config/routes/routes.dart';
 
-//TODO: Task item ini masukkin ke modelnya bgian file task ya
 class TaskItem {
   String title;
   String time;
@@ -35,10 +33,8 @@ class _HomePageState extends State<HomePage> {
   bool _isNavBarVisible = true;
   final ScrollController _scrollController = ScrollController();
   String _userName = 'User';
-  bool _isLoadingUserData = false;
 
-  // TODO: ubah data dummy ini berdasarkan firestore
-  List<TaskItem> _tasks = [
+  final List<TaskItem> _tasks = [
     TaskItem(
       title: 'Meeting with marketing team',
       time: 'Today',
@@ -67,7 +63,6 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
-  // Load user data from Firestore with real-time updates
   Future<void> _loadUserData() async {
     try {
       final userData = await AuthService.getUserData();
@@ -123,7 +118,6 @@ class _HomePageState extends State<HomePage> {
       _tasks.removeWhere((task) => task.isCompleted);
     });
 
-    // show snackbar confirmation
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -141,7 +135,7 @@ class _HomePageState extends State<HomePage> {
   List<TaskItem> get _pendingTasks => _tasks.where((task) => !task.isCompleted).toList();
   List<TaskItem> get _completedTasks => _tasks.where((task) => task.isCompleted).toList();
 
-  List<EventModel> _getEvents() { //TODO: ubah ini ke data dari firestore
+  List<EventModel> _getEvents() {
     return [
       EventModel(
         title: 'Team meeting preparation',
@@ -179,30 +173,16 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _navigateToNotesPage() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => NotesMainPage()),
-    );
+    Navigator.pushNamed(context, AppRoutes.notes);
   }
 
   void _navigateToEventsPage() {
-    // TODO: Implement navigation to events page
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Events page coming soon!',
-          style: GoogleFonts.poppins(),
-        ),
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    Navigator.pushNamed(context, AppRoutes.calendar);
   }
 
   @override
   Widget build(BuildContext context) {
     final events = _getEvents();
-    /*final notes = _getNotes();*/
     final completedTasksCount = _completedTasks.length;
     final totalTasks = _tasks.length;
     final progress = totalTasks > 0 ? completedTasksCount / totalTasks : 0.0;
@@ -215,10 +195,7 @@ class _HomePageState extends State<HomePage> {
             // App Bar
             CustomTopAppBar(
               onProfileTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const AccountProfilePage()),
-                );
+                Navigator.pushNamed(context, AppRoutes.profile);
               },
               onNotificationTap: () {
                 // TODO: Implement notification functionality
@@ -255,11 +232,8 @@ class _HomePageState extends State<HomePage> {
                             title: 'Needs Attention',
                           ),
                           const SizedBox(height: 12),
-                          ..._pendingTasks.asMap().entries.map((entry) {
-                            final index = _tasks.indexOf(entry.value);
-                            final task = entry.value;
-                            return _buildPendingTaskItem(task, index);
-                          }).toList(),
+                          for (var entry in _pendingTasks.asMap().entries)
+                            _buildPendingTaskItem(entry.value, _tasks.indexOf(entry.value)),
                           const SizedBox(height: 24),
                         ],
 
@@ -267,11 +241,8 @@ class _HomePageState extends State<HomePage> {
                         if (_completedTasks.isNotEmpty) ...[
                           _buildCompletedSectionHeader(),
                           const SizedBox(height: 12),
-                          ..._completedTasks.asMap().entries.map((entry) {
-                            final index = _tasks.indexOf(entry.value);
-                            final task = entry.value;
-                            return _buildCompletedTaskItem(task, index);
-                          }).toList(),
+                          for (var entry in _completedTasks.asMap().entries)
+                            _buildCompletedTaskItem(entry.value, _tasks.indexOf(entry.value)),
                           const SizedBox(height: 24),
                         ],
 
@@ -284,7 +255,7 @@ class _HomePageState extends State<HomePage> {
                           onActionTap: _navigateToEventsPage,
                         ),
                         const SizedBox(height: 12),
-                        ...events.map((event) => _buildEventCard(event)).toList(),
+                        for (var event in events) _buildEventCard(event),
                         const SizedBox(height: 24),
 
                         // Today's Notes Section
@@ -296,7 +267,6 @@ class _HomePageState extends State<HomePage> {
                           onActionTap: _navigateToNotesPage,
                         ),
                         const SizedBox(height: 12),
-                        /*...notes.map((note) => _buildNoteCard(note)).toList(),*/
                         const SizedBox(height: 20),
                       ],
                     ),
@@ -311,7 +281,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // widget builders for better code organization
   Widget _buildGreetingSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -336,7 +305,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // NEW: Greeting section with real-time updates using StreamBuilder
   Widget _buildGreetingSectionWithStream() {
     final userDataStream = AuthService.getUserDataStream();
 
@@ -767,53 +735,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  /*Widget _buildNoteCard(NoteModel note) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE3F2FD),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                note.title,
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFF1A1A1A),
-                ),
-              ),
-              Text(
-                note.timeAgo,
-                style: GoogleFonts.poppins(
-                  fontSize: 11,
-                  color: const Color(0xFF6B6B6B),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            note.content,
-            style: GoogleFonts.poppins(
-              fontSize: 13,
-              color: const Color(0xFF4A4A4A),
-              height: 1.4,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-    );
-  }*/
-
   Widget _buildBottomNavigationBar() {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
@@ -821,27 +742,8 @@ class _HomePageState extends State<HomePage> {
       child: AnimatedOpacity(
         duration: const Duration(milliseconds: 300),
         opacity: _isNavBarVisible ? 1.0 : 0.0,
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
-                blurRadius: 8,
-                offset: const Offset(0, -2),
-              ),
-            ],
-          ),
-          child: SafeArea(
-            child: CustomNavBar(
-              selectedIndex: 0,
-              onItemTapped: (index) {
-                if (index == 1) {
-                  _navigateToNotesPage();
-                }
-              },
-            ),
-          ),
+        child: const CustomNavBar(
+          selectedIndex: 0, // Home selected
         ),
       ),
     );
