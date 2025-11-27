@@ -229,6 +229,11 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
                       tasks[index]['completed'] = !tasks[index]['completed'];
                     });
                   },
+                  onDelete: () {
+                    setState(() {
+                      tasks.removeAt(index);
+                    });
+                  },
                 );
               },
             ),

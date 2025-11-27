@@ -23,6 +23,7 @@ class FolderScreen extends StatefulWidget {
 
 class _FolderScreenState extends State<FolderScreen> {
   late List<Map<String, dynamic>> tasks;
+  bool _isSelectMode = false;
 
   @override
   void initState() {
@@ -61,9 +62,52 @@ class _FolderScreenState extends State<FolderScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
-          IconButton(
+          PopupMenuButton<String>(
             icon: const Icon(Icons.more_horiz, color: Colors.black),
-            onPressed: () {},
+            offset: const Offset(0, 40),
+            elevation: 2,
+            onSelected: (value) {
+              if (value == 'select') {
+                setState(() {
+                  _isSelectMode = true;
+                });
+              } else if (value == 'complete') {
+                setState(() {
+                  for (var task in tasks) {
+                    task['completed'] = true;
+                  }
+                });
+              }
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'select',
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Select Task',
+                      style: GoogleFonts.poppins(fontWeight: FontWeight.w500),
+                    ),
+                    const Icon(Icons.list, color: Colors.black54, size: 20),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(height: 1),
+              PopupMenuItem(
+                value: 'complete',
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Complete All',
+                      style: GoogleFonts.poppins(fontWeight: FontWeight.w500),
+                    ),
+                    const Icon(Icons.check_circle_outline, color: Colors.black54, size: 20),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -129,13 +173,14 @@ class _FolderScreenState extends State<FolderScreen> {
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: tasks.length,
                 itemBuilder: (context, index) {
-                  return Stack(
-                    children: [
-                      TaskItem(
-                        task: tasks[index],
-                        onToggle: () => _toggleTask(index),
-                      ),
-                    ],
+                  return TaskItem(
+                    task: tasks[index],
+                    onToggle: () => _toggleTask(index),
+                    onDelete: () {
+                      setState(() {
+                        tasks.removeAt(index);
+                      });
+                    },
                   );
                 },
               )

@@ -186,7 +186,7 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
                         ),
                         child: PopupMenuButton<String>(
                           icon: const Icon(Icons.more_horiz, color: Colors.black),
-                          offset: const Offset(0, 40), // Menggeser menu ke bawah icon
+                          offset: const Offset(0, 40),
                           elevation: 2,
                           onSelected: (value) {
                             if (value == 'select') {
@@ -235,7 +235,6 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
                     ],
                   ),
                   const SizedBox(height: 16),
-
                   // Task List
                   ListView.builder(
                     shrinkWrap: true,
@@ -248,9 +247,13 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
                         task: uncategorizedTasks[index],
                         onToggle: () {
                           setState(() {
-                            bool current =
-                                uncategorizedTasks[index]['completed'] ?? false;
+                            bool current = uncategorizedTasks[index]['completed'] ?? false;
                             uncategorizedTasks[index]['completed'] = !current;
+                          });
+                        },
+                        onDelete: () {
+                          setState(() {
+                            uncategorizedTasks.removeAt(index);
                           });
                         },
                       );
@@ -515,7 +518,6 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
   }
 }
 
-// ... Widget _IOSAddCategoryDialogContent (Sama) ...
 class _IOSAddCategoryDialogContent extends StatefulWidget {
   const _IOSAddCategoryDialogContent({Key? key}) : super(key: key);
 
