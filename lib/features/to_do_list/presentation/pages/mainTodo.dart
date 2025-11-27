@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:notesapp/features/to_do_list/presentation/pages/urgent_screen.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../../config/routes/routes.dart';
 import '../../../../core/widgets/navigation/custom_top_app_bar.dart';
@@ -7,6 +8,7 @@ import '../../../../core/widgets/navigation/custom_navbar_widget.dart';
 import '../widgets/task_item.dart';
 import '../widgets/add_task_bottom_sheet.dart';
 import 'all_category_screen.dart';
+import 'overdue_screen.dart';
 
 class MainTodoScreen extends StatefulWidget {
   final String? username;
@@ -281,6 +283,22 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
             context,
             MaterialPageRoute(
               builder: (context) => const AllCategoryScreen(),
+            ),
+          );
+        }
+        else if (label == 'Urgent') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const UrgentTaskScreen(),
+            ),
+          );
+        }
+        else if (label == 'Overdue') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const OverdueTaskScreen(),
             ),
           );
         }
