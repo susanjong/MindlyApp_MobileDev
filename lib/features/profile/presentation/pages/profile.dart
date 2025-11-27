@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../config/routes/routes.dart';
+import '../../../../core/services/auth_service.dart';
 import '../../../../core/widgets/dialog/alert_dialog.dart';
-import '../../../../core/widgets/dialog/succes_popup.dart';
 import '../../data/models/profile_model.dart';
-import 'edit_bioprofile.dart';
+import 'package:notesapp/features/profile/presentation/pages/edit_bioprofile.dart';
 
 class AccountProfilePage extends StatefulWidget {
   const AccountProfilePage({super.key});
@@ -14,23 +14,133 @@ class AccountProfilePage extends StatefulWidget {
 }
 
 class _AccountProfilePageState extends State<AccountProfilePage> {
-  bool _notificationsEnabled = true;
+  bool? _notificationsEnabled;
   late UserProfile _userProfile;
+  bool _isLoadingProfile = true;
 
   @override
   void initState() {
     super.initState();
     _initializeUserProfile();
+    _loadUserDataFromFirestore();
+    _loadNotificationSetting();
+  }
+
+  // load notification setting from firestore
+  Future<void> _loadNotificationSetting() async {
+    try {
+      final userData = await AuthService.getUserData();
+      if (userData != null && mounted) {
+        setState(() {
+          if (userData.containsKey('notificationsEnabled')) {
+            _notificationsEnabled = userData['notificationsEnabled'] as bool;
+          } else {
+            _notificationsEnabled = true;
+          }
+        });
+      } else if (mounted) {
+        setState(() {
+          _notificationsEnabled = true;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading notification setting: $e');
+      if (mounted) {
+        setState(() {
+          _notificationsEnabled = true;
+        });
+      }
+    }
+  }
+
+  // save notification setting to firestore
+  Future<void> _saveNotificationSetting(bool value) async {
+    try {
+      await AuthService.updateUserData({
+        'notificationsEnabled': value,
+      });
+    } catch (e) {
+      debugPrint('Error saving notification setting: $e');
+    }
   }
 
   void _initializeUserProfile() {
     _userProfile = UserProfile(
-      name: 'Susan Jong',
-      email: 'susanjong5@gmail.com',
-      bio: 'Smile in front of your assignments',
-      imageUrl:
-      'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop',
+      name: 'User',
+      email: 'user@example.com',
+      bio: 'Update your bio here.',
+      imageUrl: 'https://ui-avatars.com/api/?name=User&size=150&background=4CAF50&color=fff',
     );
+  }
+
+  Future<void> _loadUserDataFromFirestore() async {
+    setState(() {
+      _isLoadingProfile = true;
+    });
+
+    try {
+      final userData = await AuthService.getUserData();
+
+      if (userData != null) {
+        if (mounted) {
+          setState(() {
+            if (userData['displayName'] != null) {
+              _userProfile = UserProfile(
+                name: userData['displayName'],
+                email: userData['email'] ?? _userProfile.email,
+                bio: userData['bio'] ?? _userProfile.bio,
+                imageUrl: userData['photoURL'] ??
+                    'https://ui-avatars.com/api/?name=${Uri.encodeComponent(userData['displayName'] ?? 'User')}&size=150&background=4CAF50&color=fff',
+              );
+            } else {
+              final displayName = AuthService.getUserDisplayName();
+              final email = AuthService.getCurrentUserEmail();
+
+              _userProfile = UserProfile(
+                name: displayName ?? 'User',
+                email: email ?? _userProfile.email,
+                bio: userData['bio'] ?? _userProfile.bio,
+                imageUrl: userData['photoURL'] ??
+                    'https://ui-avatars.com/api/?name=${Uri.encodeComponent(displayName ?? 'User')}&size=150&background=4CAF50&color=fff',
+              );
+            }
+            _isLoadingProfile = false;
+          });
+        }
+      } else {
+        final displayName = AuthService.getUserDisplayName();
+        final email = AuthService.getCurrentUserEmail();
+
+        if (mounted) {
+          setState(() {
+            _userProfile = UserProfile(
+              name: displayName ?? 'User',
+              email: email ?? 'user@example.com',
+              bio: _userProfile.bio,
+              imageUrl: 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(displayName ?? 'User')}&size=150&background=4CAF50&color=fff',
+            );
+            _isLoadingProfile = false;
+          });
+        }
+      }
+    } catch (e) {
+      final displayName = AuthService.getUserDisplayName();
+      final email = AuthService.getCurrentUserEmail();
+
+      if (mounted) {
+        setState(() {
+          _userProfile = UserProfile(
+            name: displayName ?? 'User',
+            email: email ?? 'user@example.com',
+            bio: _userProfile.bio,
+            imageUrl: 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(displayName ?? 'User')}&size=150&background=4CAF50&color=fff',
+          );
+          _isLoadingProfile = false;
+        });
+      }
+
+      debugPrint('Error loading user data: $e');
+    }
   }
 
   @override
@@ -39,25 +149,30 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
       backgroundColor: Colors.white,
       appBar: _buildAppBar(),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _ProfileCard(
-                profile: _userProfile,
-                onEdit: _navigateToEditProfile,
-              ),
-              const SizedBox(height: 24),
-              _buildPreferenceSection(),
-              const SizedBox(height: 24),
-              _buildSupportSection(),
-              const SizedBox(height: 24),
-              _buildSecuritySection(),
-              const SizedBox(height: 24),
-              _buildDangerZoneSection(),
-              const SizedBox(height: 32),
-            ],
+        child: RefreshIndicator(
+          onRefresh: _loadUserDataFromFirestore,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _ProfileCard(
+                  profile: _userProfile,
+                  isLoading: _isLoadingProfile,
+                  onEdit: _navigateToEditProfile,
+                ),
+                const SizedBox(height: 24),
+                _buildPreferenceSection(),
+                const SizedBox(height: 24),
+                _buildSupportSection(),
+                const SizedBox(height: 24),
+                _buildSecuritySection(),
+                const SizedBox(height: 24),
+                _buildDangerZoneSection(),
+                const SizedBox(height: 32),
+              ],
+            ),
           ),
         ),
       ),
@@ -92,10 +207,20 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
           icon: Icons.notifications_outlined,
           title: 'Notifications',
           subtitle: 'Receive push notifications for reminders and updates',
-          trailing: Switch(
-            value: _notificationsEnabled,
+          trailing: _notificationsEnabled == null
+              ? const SizedBox(
+            width: 24,
+            height: 24,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF4CAF50)),
+            ),
+          )
+              : Switch(
+            value: _notificationsEnabled!,
             onChanged: (value) {
               setState(() => _notificationsEnabled = value);
+              _saveNotificationSetting(value);
             },
             activeThumbColor: const Color(0xFF4CAF50),
           ),
@@ -138,7 +263,7 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
           icon: Icons.lock_outline,
           title: 'Reset Password',
           subtitle: 'Change your account password',
-          onTap: () => _showResetDialog(context),
+          onTap: _showResetDialog,
         ),
       ],
     );
@@ -153,14 +278,14 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
           title: 'Logout',
           subtitle: 'Sign out from your account',
           iconColor: const Color(0xFFFF6B6B),
-          onTap: () => _showLogoutDialog(context),
+          onTap: _showLogoutDialog,
         ),
         SettingItem(
           icon: Icons.delete_outline,
           title: 'Delete Account',
           subtitle: 'Permanently remove your account data',
           iconColor: const Color(0xFFFF6B6B),
-          onTap: () => _showDeleteAccountDialog(context),
+          onTap: _showDeleteAccountDialog,
         ),
       ],
     );
@@ -193,24 +318,33 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
     );
   }
 
-  void _navigateToEditProfile() {}
+  void _navigateToEditProfile() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const EditAccountInformationScreen(),
+      ),
+    );
 
-  // reset password dialog
-  void _showResetDialog(BuildContext context) {
+    if (result == true && mounted) {
+      _loadUserDataFromFirestore();
+    }
+  }
+
+  void _showResetDialog() {
+    if (!mounted) return;
+    final navigatorContext = context;
+
     showIOSDialog(
-      context: context,
+      context: navigatorContext,
       title: 'Reset Password',
       message: 'Are you sure you want to \nreset your password ?',
       cancelText: 'Cancel',
       confirmText: 'Reset',
       confirmTextColor: const Color(0xFFFF453A),
       onConfirm: () {
-        // close confirmation dialog
-        Navigator.of(context).pop();
-
-        // show success dialog and auto navigate after 2 seconds
-        SuccessDialog.showWithNavigation(
-          context: context,
+        Navigator.of(navigatorContext).pop();
+        _showSuccessAndNavigate(
           title: 'Success !',
           message: 'Your password has been\nsuccessfully reset.',
           routeName: AppRoutes.resetPassword,
@@ -220,64 +354,188 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
     );
   }
 
-  // logout dialog
-  void _showLogoutDialog(BuildContext context) {
+  void _showLogoutDialog() {
+    if (!mounted) return;
+    final navigatorContext = context;
+
     showIOSDialog(
-      context: context,
+      context: navigatorContext,
       title: 'Logout',
       message: 'Are you sure you want to \nlogout this account?',
       cancelText: 'Cancel',
       confirmText: 'Logout',
       confirmTextColor: const Color(0xFFFF453A),
-      onConfirm: () {
-        // close confirmation dialog
-        Navigator.of(context).pop();
+      onConfirm: () async {
+        Navigator.of(navigatorContext).pop();
 
-        // show success dialog and auto navigate to sign in after 2 seconds
-        SuccessDialog.showWithNavigation(
-          context: context,
-          title: 'Success !',
-          message: 'Your account was\nsuccessfully logout.',
-          routeName: AppRoutes.signIn,
-          useReplacement: true,
-        );
+        try {
+          await AuthService.signOut();
+
+          if (mounted) {
+            _showSuccessAndNavigate(
+              title: 'Success !',
+              message: 'Your account was\nsuccessfully logout.',
+              routeName: AppRoutes.signIn,
+              useReplacement: true,
+            );
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Logout failed: ${e.toString()}',
+                  style: GoogleFonts.poppins(),
+                ),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
       },
     );
   }
 
-  // delete account dialog
-  void _showDeleteAccountDialog(BuildContext context) {
+  void _showDeleteAccountDialog() {
+    if (!mounted) return;
+    final navigatorContext = context;
+
     showIOSDialog(
-      context: context,
+      context: navigatorContext,
       title: 'Delete Account',
       message: 'This action cannot be undone.\nAre you sure?',
       cancelText: 'Cancel',
       confirmText: 'Delete',
       confirmTextColor: const Color(0xFFFF453A),
       onConfirm: () {
-        // close confirmation dialog
-        Navigator.of(context).pop();
+        Navigator.of(navigatorContext).pop();
 
-        // show success dialog and auto navigate after 2 seconds
-        SuccessDialog.showWithNavigation(
-          context: context,
+        _showSuccessAndNavigate(
           title: 'Success !',
           message: 'Your account has been\nsuccessfully deleted.',
           routeName: AppRoutes.signUp,
           useReplacement: true,
+        );
+
+        AuthService.deleteAccount().catchError((e) {
+          debugPrint('Delete account error: $e');
+        });
+      },
+    );
+  }
+
+  void _showSuccessAndNavigate({
+    required String title,
+    required String message,
+    required String routeName,
+    bool useReplacement = true,
+  }) {
+    if (!mounted) return;
+
+    final dialogContext = context;
+    final navigator = Navigator.of(dialogContext);
+
+    showDialog(
+      context: dialogContext,
+      barrierDismissible: false,
+      builder: (BuildContext innerContext) {
+        Future.delayed(const Duration(seconds: 2), () {
+          if (Navigator.canPop(innerContext)) {
+            Navigator.of(innerContext).pop();
+
+            Future.delayed(const Duration(milliseconds: 100), () {
+              if (useReplacement) {
+                navigator.pushReplacementNamed(routeName);
+              } else {
+                navigator.pushNamed(routeName);
+              }
+            });
+          }
+        });
+
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          child: Container(
+            width: 317,
+            padding: const EdgeInsets.all(24.0),
+            decoration: ShapeDecoration(
+              color: const Color(0xFFF2F2F2),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF4CAF50),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.check,
+                    color: Colors.white,
+                    size: 40,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  title,
+                  style: GoogleFonts.poppins(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF1A1A1A),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  message,
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w400,
+                    color: const Color(0xFF6B6B6B),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF4CAF50)),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Redirecting...',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
+                    color: const Color(0xFF6B6B6B),
+                  ),
+                ),
+              ],
+            ),
+          ),
         );
       },
     );
   }
 }
 
-// profile card widget
 class _ProfileCard extends StatelessWidget {
   final UserProfile profile;
+  final bool isLoading;
   final VoidCallback onEdit;
 
   const _ProfileCard({
     required this.profile,
+    required this.isLoading,
     required this.onEdit,
   });
 
@@ -292,17 +550,52 @@ class _ProfileCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 32,
-            backgroundImage: NetworkImage(profile.imageUrl),
-            backgroundColor: const Color(0xFFE0E0E0),
+          Stack(
+            children: [
+              CircleAvatar(
+                radius: 32,
+                backgroundImage: NetworkImage(profile.imageUrl),
+                backgroundColor: const Color(0xFFE0E0E0),
+                onBackgroundImageError: (exception, stackTrace) {
+                  debugPrint('Error loading profile image: $exception');
+                },
+              ),
+              if (isLoading)
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.3),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Center(
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                isLoading
+                    ? Container(
+                  height: 20,
+                  width: 120,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE0E0E0),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                )
+                    : Text(
                   profile.name,
                   style: GoogleFonts.poppins(
                     fontSize: 16,
@@ -311,10 +604,19 @@ class _ProfileCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
+                isLoading
+                    ? Container(
+                  height: 14,
+                  width: 150,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE0E0E0),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                )
+                    : Text(
                   profile.email,
                   style: GoogleFonts.poppins(
-                    fontSize: 12,
+                    fontSize: 11,
                     color: const Color(0xFF6B6B6B),
                   ),
                 ),
@@ -333,13 +635,21 @@ class _ProfileCard extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.edit_outlined),
             splashRadius: 20,
-            onPressed: () {
-              Navigator.push(
-                context,
+            onPressed: () async {
+              // ✅ Capture context before async gap
+              final navigatorContext = context;
+
+              final result = await Navigator.push(
+                navigatorContext,
                 MaterialPageRoute(
                   builder: (context) => const EditAccountInformationScreen(),
                 ),
               );
+
+              // ✅ Use navigatorContext.mounted
+              if (result == true && navigatorContext.mounted) {
+                navigatorContext.findAncestorStateOfType<_AccountProfilePageState>()?._loadUserDataFromFirestore();
+              }
             },
           ),
         ],
@@ -348,7 +658,6 @@ class _ProfileCard extends StatelessWidget {
   }
 }
 
-// setting section widget
 class _SettingSection extends StatelessWidget {
   final String title;
   final List<SettingItem> items;
@@ -402,7 +711,6 @@ class _SettingSection extends StatelessWidget {
   }
 }
 
-//  setting item widget
 class _SettingItemWidget extends StatelessWidget {
   final SettingItem item;
 
@@ -473,7 +781,6 @@ class _SettingItemWidget extends StatelessWidget {
   }
 }
 
-//setting item model
 class SettingItem {
   final IconData icon;
   final String title;
