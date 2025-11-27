@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 // ✅ Import FolderScreen
+import '../widgets/urgent_overdue_taskItem.dart';
 import 'folder_screen.dart';
 
 class UrgentTaskScreen extends StatefulWidget {
@@ -161,13 +162,17 @@ class _UrgentTaskScreenState extends State<UrgentTaskScreen> {
             const SizedBox(height: 32),
             Expanded(
               child: urgentTasks.isEmpty
-                  ? Center(
-                  child: Text("No urgent tasks!",
-                      style: GoogleFonts.poppins(color: Colors.grey)))
+                  ? Center(child: Text("No urgent tasks!", style: GoogleFonts.poppins(color: Colors.grey)))
                   : ListView.builder(
                 itemCount: urgentTasks.length,
                 itemBuilder: (context, index) {
-                  return _buildUrgentTaskItem(urgentTasks[index]);
+                  final task = urgentTasks[index];
+                  return UrgentOverdueTaskItem(
+                    task: task,
+                    themeColor: const Color(0xFFE08E00), // Warna Orange
+                    timeText: _getTimeLeft(task['deadline']),
+                    onTapArrow: () => _navigateToFolder(task['category']),
+                  );
                 },
               ),
             ),
