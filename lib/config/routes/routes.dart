@@ -8,7 +8,7 @@ import '../../features/home/presentation/pages/home.dart';
 import '../../features/notes/presentation/pages/note_editor_page.dart';
 import '../../features/notes/presentation/pages/notes_main_page.dart';
 import '../../features/to_do_list/presentation/pages/mainTodo.dart';
-import '../../features/calendar/presentation/pages/awalcalendar.dart';
+import '../../features/calendar/presentation/pages/home_calendar.dart';
 import '../../features/profile/presentation/pages/about_info.dart';
 import '../../features/profile/presentation/pages/help_faq.dart';
 import '../../features/profile/presentation/pages/profile.dart';
@@ -56,14 +56,13 @@ class AppRoutes {
         return _buildRoute(const AccountProfilePage());
       case notes:
         return _buildRoute(const NotesMainPage());
-
       case noteEditor:
         final noteId = settings.arguments as String?;
         return _buildRoute(NoteEditorPage(noteId: noteId));
       case todo:
         return _buildRoute(const MainTodoScreen());
       case calendar:
-        return _buildRoute(const CalendarPage());
+        return _buildRoute(const CalendarScreen());
       case helpFaq:
         return _buildRoute(const HelpFaqScreen());
       case aboutUs:
