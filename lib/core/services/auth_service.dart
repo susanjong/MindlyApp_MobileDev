@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:notesapp/core/services/auth_service.dart';
 
 class AuthService {
   static final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -19,7 +20,7 @@ class AuthService {
   static String? getUserEmail() => _auth.currentUser?.email;
   static String? getUserPhotoURL() => _auth.currentUser?.photoURL;
 
-  // Method untuk mendapatkan email current user
+  // Method for get email current user
   static String? getCurrentUserEmail() => _auth.currentUser?.email;
 
   static String? getAuthProvider() {
