@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import '../models/category_model.dart';
 import '../models/note_model.dart';
 
@@ -265,7 +266,9 @@ class NoteService {
       }
       return null;
     } catch (e) {
-      print("Error getting note: $e");
+      if (kDebugMode) {
+        print("Error getting note: $e");
+      }
       return null;
     }
   }
