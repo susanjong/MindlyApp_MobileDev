@@ -3,13 +3,12 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/widgets/dialog/alert_dialog.dart';
 class TaskDetailScreen extends StatelessWidget {
   final Map<String, dynamic> task;
-  // Tambahkan callback ini untuk menerima fungsi hapus dari parent
   final VoidCallback onDelete;
 
   const TaskDetailScreen({
     Key? key,
     required this.task,
-    required this.onDelete, // Wajib diisi
+    required this.onDelete,
   }) : super(key: key);
 
   @override
@@ -26,23 +25,15 @@ class TaskDetailScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.delete_outline, color: Colors.black),
-            // PERBAIKAN: Gunakan onPressed, bukan onTap
             onPressed: () {
               showIOSDialog(
                 context: context,
                 title: 'Delete Task',
-                // Tampilkan pesan yang relevan untuk satu task
                 message: 'Are you sure you want to delete "${task['title']}"?',
                 confirmText: 'Delete',
                 confirmTextColor: const Color(0xFFFF453A),
                 onConfirm: () {
-                  // 1. Panggil fungsi delete yang dikirim dari parent
                   onDelete();
-
-                  // 2. Tutup Alert Dialog (jika showIOSDialog tidak otomatis menutup)
-                  // Navigator.pop(context);
-
-                  // 3. Kembali ke layar sebelumnya (Tutup Detail Page)
                   Navigator.pop(context);
                 },
               );
@@ -74,8 +65,8 @@ class TaskDetailScreen extends StatelessWidget {
                     child: Text(
                       task['title'] ?? 'No Title',
                       style: GoogleFonts.poppins(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w600,
                         color: Colors.black,
                       ),
                     ),
