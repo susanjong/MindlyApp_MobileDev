@@ -2,14 +2,13 @@ import 'package:flutter/material.dart';
 import '../../../../config/routes/routes.dart';
 import '../../../../core/widgets/navigation/custom_navbar_widget.dart';
 import '../../../../core/widgets/navigation/custom_top_app_bar.dart';
-import '../widgets/add_task_bottom_sheet.dart';
 import '../widgets/task_item.dart';
-import 'all_category_screen.dart';
+import 'package:notesapp/core/services/auth_service.dart';
 
 class MainTodoScreen extends StatefulWidget {
   final String? username;
 
-  const MainTodoScreen({Key? key, this.username}) : super(key: key);
+  const MainTodoScreen({super.key, this.username});
 
   @override
   State<MainTodoScreen> createState() => _MainTodoScreenState();
@@ -18,6 +17,8 @@ class MainTodoScreen extends StatefulWidget {
 class _MainTodoScreenState extends State<MainTodoScreen> {
   int selectedDay = 16; // Tuesday selected
   String _username = 'User';
+  int _selectedNavIndex = 2; // Todo tab selected
+  bool _isLoading = true;
 
   final List<Map<String, dynamic>> tasks = [
     {'time': '4:50 PM', 'title': 'Diskusi project', 'completed': false},
@@ -26,25 +27,75 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
     {'time': '4:50 PM', 'title': 'Diskusi project', 'completed': false},
   ];
 
+  // Susan added for get full name and copy into hello 'user' from firestore
   @override
   void initState() {
     super.initState();
-    _username = widget.username ?? 'User';
+    _loadUserData();
   }
 
-  // PERBAIKAN: Handler navigation yang konsisten
-  void _handleNavigation(int index) {
-    print('📝 Todo - Navigation tapped: index=$index');
+  // get data user from firestore
+  Future<void> _loadUserData() async {
+    try {
+      if (widget.username != null && widget.username!.isNotEmpty) {
+        setState(() {
+          _username = widget.username!;
+          _isLoading = false;
+        });
+        return;
+      }
 
-    // Routes sesuai urutan navbar: Home(0), Notes(1), Todo(2), Calendar(3)
-    final routes = ['/home', '/notes', '/todo', '/calendar'];
+      final userData = await AuthService.getUserData();
 
-    // Jangan navigate jika sudah di halaman yang sama (Todo = index 2)
-    if (index != 2) {
-      print('📝 Todo - Navigating to: ${routes[index]}');
-      Navigator.pushReplacementNamed(context, routes[index]);
-    } else {
-      print('📝 Todo - Already on Todo page');
+      if (userData != null) {
+        setState(() {
+          // priority: displayName > email > 'user'
+          _username = userData['displayName'] ??
+              userData['email']?.split('@')[0] ??
+              'User';
+          _isLoading = false;
+        });
+      } else {
+        // Fall back into firebase auth if error get data
+        final displayName = AuthService.getUserDisplayName();
+        final email = AuthService.getUserEmail();
+
+        setState(() {
+          _username = displayName ??
+              email?.split('@')[0] ??
+              'User';
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      // if error, use fallback
+      setState(() {
+        _username = AuthService.getUserDisplayName() ??
+            AuthService.getUserEmail()?.split('@')[0] ??
+            'User';
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _onNavItemTapped(int index) {
+    setState(() {
+      _selectedNavIndex = index;
+    });
+
+    switch (index) {
+      case 0: // Home
+        Navigator.pushReplacementNamed(context, AppRoutes.home);
+        break;
+      case 1: // Notes
+        Navigator.pushReplacementNamed(context, AppRoutes.notes);
+        break;
+      case 2: // Todo (current page)
+      // Already on Todo page
+        break;
+      case 3: // Calendar
+        Navigator.pushReplacementNamed(context, AppRoutes.calendar);
+        break;
     }
   }
 
@@ -60,7 +111,11 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
           // Navigator.pushNamed(context, '/notifications');
         },
       ),
-      body: Column(
+      body: _isLoading
+          ? const Center(
+        child: CircularProgressIndicator(),
+      )
+          : Column(
         children: [
           // Fixed Content Section
           Padding(
@@ -221,90 +276,77 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: SafeArea(
-        child: CustomNavBar(
-          selectedIndex: 2, // Todo tab (index 2)
-          onItemTapped: _handleNavigation,
-        ),
+
+      // Bottom Navigation using CustomNavBar
+      bottomNavigationBar: CustomNavBar(
+        selectedIndex: _selectedNavIndex,
+        onItemTapped: _onNavItemTapped,
       ),
     );
   }
 
   Widget _buildStatusCard(String count, String label, Color topColor, Color bottomColor) {
-    return GestureDetector(
-      onTap: () {
-        // Navigasi ke All Category Screen saat tap card "All"
-        if (label == 'All') {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const AllCategoryScreen(),
-            ),
-          );
-        }
-      },
-      child: Container(
-        height: 120,
-        constraints: const BoxConstraints(
-          minWidth: 100,
+    return Container(
+      height: 120,
+      constraints: const BoxConstraints(
+        minWidth: 100,
+      ),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [topColor, bottomColor],
         ),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [topColor, bottomColor],
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Arrow icon di pojok kanan atas
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 12,
+                  color: Colors.black.withValues(alpha: 0.6),
+                ),
+              ],
+            ),
+            const Spacer(),
+            // Number
+            Text(
+              count,
+              style: const TextStyle(
+                fontSize: 36,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+                height: 1,
+              ),
+            ),
+            const SizedBox(height: 6),
+            // Label
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.black,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Arrow icon di pojok kanan atas
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Icon(
-                    Icons.arrow_forward_ios,
-                    size: 12,
-                    color: Colors.black.withOpacity(0.6),
-                  ),
-                ],
-              ),
-              const Spacer(),
-              // Number
-              Text(
-                count,
-                style: const TextStyle(
-                  fontSize: 36,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                  height: 1,
-                ),
-              ),
-              const SizedBox(height: 6),
-              // Label
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
         ),
       ),
     );
@@ -342,24 +384,45 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
   }
 
   void _showAddTaskDialog() {
-    AddTaskBottomSheet.show(
-      context,
-      onSave: (taskData) {
-        setState(() {
-          // Tambahkan task baru ke list
-          tasks.add({
-            'time': '${taskData['day']} ${taskData['month']} ${taskData['year']}',
-            'title': taskData['name'],
-            'completed': false,
-          });
-        });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Task "${taskData['name']}" added successfully!'),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 2),
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Add New Task'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Task Title',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Time',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                // Add task logic here
+                Navigator.pop(context);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.purple,
+              ),
+              child: const Text('Add'),
+            ),
+          ],
         );
       },
     );

@@ -31,6 +31,8 @@ class AppRoutes {
   static const String calendar = '/calendar';
   static const String helpFaq = '/help_faq';
   static const String aboutUs = '/about_info';
+  static const String termsOfService = '/terms-of-service';
+  static const String PrivacyPolicy = '/privacy-policy';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -46,6 +48,10 @@ class AppRoutes {
         return _buildRoute(const HomePage());
       case resetPassword:
         return _buildRoute(const ResetPasswordScreen());
+      case AppRoutes.termsOfService:
+        return MaterialPageRoute(builder: (_) => const TermsOfServiceScreen());
+      case AppRoutes.PrivacyPolicy:
+        return MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen());
       case forgotPassword:
         return _buildRoute(const ForgotPasswordScreen());
       case profile:
