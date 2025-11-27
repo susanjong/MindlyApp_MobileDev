@@ -11,10 +11,10 @@ class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
 
   @override
-  _SignUpScreenState createState() => _SignUpScreenState();
+  SignUpScreenState createState() => SignUpScreenState();
 }
 
-class _SignUpScreenState extends State<SignUpScreen> {
+class SignUpScreenState extends State<SignUpScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -240,7 +240,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
       });
     }
 
-    // check if any errors exist
     if (_nameError != null || _emailError != null || _passwordError != null ||
         _confirmPasswordError != null || _termsError != null) {
       return;
@@ -381,7 +380,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  // google Signup Button
+                                  // google Sign In Button
                                   Container(
                                     width: double.infinity,
                                     height: 38,
@@ -408,7 +407,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                             ),
                                             const SizedBox(width: 10),
                                             Text(
-                                              'Sign up with Google',
+                                              'Sign In with Google',
                                               style: GoogleFonts.poppins(
                                                 color: Colors.black,
                                                 fontSize: 15,

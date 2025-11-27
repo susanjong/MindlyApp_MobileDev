@@ -4,15 +4,15 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../../../config/routes/routes.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../../core/widgets/buttons/primary_button.dart';
-import '../../../../core/widgets/navigation/loading_overlay.dart';
+import 'package:notesapp/core/widgets/navigation/loading_overlay.dart';
 
 class LoginAccountScreen extends StatefulWidget {
   const LoginAccountScreen({super.key});
   @override
-  _LoginAccountScreenState createState() => _LoginAccountScreenState();
+  LoginAccountScreenState createState() => LoginAccountScreenState();
 }
 
-class _LoginAccountScreenState extends State<LoginAccountScreen> {
+class LoginAccountScreenState extends State<LoginAccountScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -141,7 +141,6 @@ class _LoginAccountScreenState extends State<LoginAccountScreen> {
   Future<void> _handleLogin() async {
     if (_isLoading) return;
 
-    // validate on button press
     if (mounted) {
       setState(() {
         if (_emailController.text.trim().isEmpty) {
@@ -173,7 +172,7 @@ class _LoginAccountScreenState extends State<LoginAccountScreen> {
     }
 
     try {
-      // Login menggunakan AuthService
+      // login using authService
       final userCredential = await AuthService.signInWithEmailPassword(
         _emailController.text.trim(),
         _passwordController.text,
@@ -297,7 +296,7 @@ class _LoginAccountScreenState extends State<LoginAccountScreen> {
                                 child: Padding(
                                   padding: const EdgeInsets.only(bottom: 30),
                                   child: Text(
-                                    'Login Account',
+                                    'Sign In Account',
                                     textAlign: TextAlign.center,
                                     style: GoogleFonts.poppins(
                                       fontSize: 20,
@@ -455,7 +454,7 @@ class _LoginAccountScreenState extends State<LoginAccountScreen> {
                                         // login button
                                         Center(
                                           child: PrimaryButton(
-                                            label: 'Login Account',
+                                            label: ' Sign In Account',
                                             onPressed: _isLoading ? null : _handleLogin,
                                             enabled: !_isLoading,
                                             width: double.infinity,

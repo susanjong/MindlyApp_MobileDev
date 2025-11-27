@@ -121,8 +121,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     height: 44,
                     child: ElevatedButton(
                       onPressed: () {
-                        Navigator.of(context).pop(); // Close dialog
-                        Navigator.pushReplacementNamed(context, AppRoutes.signIn); // Navigate to Login
+                        Navigator.pushReplacementNamed(context, AppRoutes.signIn);
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF5784EB),
@@ -160,7 +159,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     });
 
     try {
-      // Kirim email reset password menggunakan AuthService
       await AuthService.sendPasswordResetEmail(_emailController.text.trim());
 
       if (mounted) {
@@ -177,17 +175,16 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           _isLoading = false;
         });
 
-        // Ambil error message
+        // get error message
         String errorMessage = e.toString().replaceAll('Exception: ', '');
 
-        // Cek apakah error karena email tidak terdaftar
         if (errorMessage.toLowerCase().contains('not registered') ||
             errorMessage.toLowerCase().contains('not found') ||
             errorMessage.toLowerCase().contains('user-not-found')) {
           errorMessage = 'Email not registered. Please sign up first.';
         }
 
-        // Show error snackbar
+        // show error snackbar
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
@@ -253,7 +250,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                             Align(
                               alignment: Alignment.centerLeft,
                               child: GestureDetector(
-                                onTap: _isLoading ? null : () => Navigator.pop(context),
+                                onTap: _isLoading ? null : () {
+                                  Navigator.pushReplacementNamed(context, AppRoutes.introApp);
+                                },
+
                                 child: Container(
                                   width: 40,
                                   height: 40,
@@ -262,7 +262,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                     shape: BoxShape.circle,
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.grey.withOpacity(0.2),
+                                        color: Colors.grey.withValues(alpha: 0.2),
                                         spreadRadius: 1,
                                         blurRadius: 3,
                                         offset: const Offset(0, 1),
@@ -484,7 +484,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
             if (_isLoading)
               Positioned.fill(
                 child: Container(
-                  color: Colors.black.withOpacity(0.4),
+                  color: Colors.black.withValues(alpha: 0.4),
                   child: Center(
                     child: Container(
                       padding: const EdgeInsets.all(24),
@@ -493,7 +493,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
+                            color: Colors.black.withValues(alpha: 0.2),
                             blurRadius: 10,
                             spreadRadius: 2,
                           ),
