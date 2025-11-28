@@ -50,30 +50,36 @@ class _CategoriesTabState extends State<CategoriesTab> {
 
   @override
   Widget build(BuildContext context) {
-    final allCategories = widget.categories;
-
-    final bookmarksCategory = allCategories.firstWhere(
-          (c) => c.id == 'bookmarks',
-      orElse: () => CategoryModel(id: 'bookmarks', name: 'Bookmarks'),
-    );
-
-    final customCategories = allCategories
+    // Gunakan kategori langsung dari stream (sudah diurutkan di service)
+    // Filter manual untuk jaga-jaga jika ada data lama 'all' atau 'bookmarks'
+    final displayCategories = widget.categories
         .where((c) => c.id != 'all' && c.id != 'bookmarks')
-        .toList()
-      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+        .toList();
 
-    final sortedCategories = [bookmarksCategory, ...customCategories];
+    if (displayCategories.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.folder_open, size: 60, color: Colors.grey.shade300),
+            const SizedBox(height: 16),
+            Text(
+              'No categories yet',
+              style: GoogleFonts.poppins(color: Colors.grey),
+            ),
+          ],
+        ),
+      );
+    }
 
     return ListView.builder(
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(0, 10, 0, 120),
-      itemCount: sortedCategories.length,
+      itemCount: displayCategories.length,
       itemBuilder: (context, index) {
-        final category = sortedCategories[index];
+        final category = displayCategories[index];
 
-        final notes = category.id == 'bookmarks'
-            ? widget.allNotes.where((n) => n.categoryId == 'bookmarks').toList()
-            : widget.allNotes.where((n) => n.categoryId == category.id).toList();
+        final notes = widget.allNotes.where((n) => n.categoryId == category.id).toList();
 
         return _CategoryItem(
           key: ValueKey('${category.id}_${category.isFavorite}'),
@@ -84,7 +90,7 @@ class _CategoriesTabState extends State<CategoriesTab> {
           onTap: () => _toggleExpand(category.id),
           noteService: widget.noteService,
           onNoteSelected: widget.onNoteSelected,
-          getPlainText: _getPlainText, // ✅ Pass helper
+          getPlainText: _getPlainText,
         );
       },
     );
@@ -99,7 +105,7 @@ class _CategoryItem extends StatefulWidget {
   final VoidCallback onTap;
   final NoteService noteService;
   final Function(String) onNoteSelected;
-  final String Function(String) getPlainText; // ✅ Terima helper
+  final String Function(String) getPlainText;
 
   const _CategoryItem({
     super.key,
@@ -137,6 +143,7 @@ class _CategoryItemState extends State<_CategoryItem> {
   }
 
   Future<void> _toggleFavorite() async {
+    // Optimistic Update: Update UI dulu
     setState(() {
       _isFavorite = !_isFavorite;
     });
@@ -144,9 +151,10 @@ class _CategoryItemState extends State<_CategoryItem> {
     try {
       await widget.noteService.toggleCategoryFavorite(
         widget.category.id,
-        widget.category.isFavorite,
+        widget.category.isFavorite, // kirim status lama untuk ditoggle di service
       );
     } catch (e) {
+      // Revert jika gagal
       setState(() {
         _isFavorite = !_isFavorite;
       });
@@ -247,12 +255,13 @@ class _CategoryItemState extends State<_CategoryItem> {
                 final note = widget.notes[index];
                 return NoteCard(
                   title: note.title,
-                  // ✅ FIX: Gunakan helper
                   content: widget.getPlainText(note.content),
                   date: note.formattedDate,
                   color: Color(note.color),
                   isFavorite: note.isFavorite,
                   onTap: () => widget.onNoteSelected(note.id),
+                  // Disable favorite tap inside category view to prevent confusion, or enable if needed
+                  onFavoriteTap: () {},
                 );
               },
             ),

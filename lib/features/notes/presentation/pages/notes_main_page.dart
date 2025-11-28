@@ -135,7 +135,9 @@ class _NotesMainPageState extends State<NotesMainPage> {
       builder: (ctx) => StreamBuilder<List<CategoryModel>>(
         stream: _noteService.getCategoriesStream(),
         builder: (context, snapshot) {
+          // Stream ini sekarang sudah bersih dari 'All' dan 'Bookmarks'
           final categories = snapshot.data ?? [];
+
           return SafeArea(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -143,11 +145,14 @@ class _NotesMainPageState extends State<NotesMainPage> {
                 const SizedBox(height: 16),
                 Text('Move to...', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 16),
-                if (categories.isEmpty) const Padding(padding: EdgeInsets.all(16), child: Text("No categories")),
+                if (categories.isEmpty)
+                  const Padding(padding: EdgeInsets.all(16), child: Text("No categories available. Create one first!")),
+
                 Expanded(
                   child: ListView.builder(
                     itemCount: categories.length,
                     itemBuilder: (context, index) => ListTile(
+                      leading: const Icon(Icons.folder_outlined, color: Colors.grey),
                       title: Text(categories[index].name, style: GoogleFonts.poppins()),
                       onTap: () async {
                         await _noteService.moveNotesBatch(_selectedNoteIds.toList(), categories[index].id);
@@ -199,7 +204,6 @@ class _NotesMainPageState extends State<NotesMainPage> {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ FIX: Gabungkan kedua stream untuk trigger update bersamaan
     return StreamBuilder<List<CategoryModel>>(
       stream: _noteService.getCategoriesStream(),
       builder: (context, snapshotCategories) {
@@ -253,7 +257,6 @@ class _NotesMainPageState extends State<NotesMainPage> {
                           },
                           searchQuery: _searchQuery,
                         ),
-                        // ✅ Pass categories langsung dari stream
                         CategoriesTab(
                           noteService: _noteService,
                           categories: allCategories,

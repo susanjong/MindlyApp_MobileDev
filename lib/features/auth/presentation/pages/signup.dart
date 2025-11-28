@@ -105,7 +105,7 @@ class SignUpScreenState extends State<SignUpScreen> {
         final value = _emailController.text.trim();
         if (value.isEmpty) {
           _emailError = null;
-        } else if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+        } else if (!RegExp(r'^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
           _emailError = 'Please enter a valid email';
         } else {
           _emailError = null;
