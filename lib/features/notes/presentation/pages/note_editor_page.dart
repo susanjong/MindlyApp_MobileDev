@@ -26,10 +26,13 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
 
   bool _isLoading = false;
   bool _isEditing = false;
-  bool _isBookmarked = false;
   bool _isDirty = false;
   late DateTime _currentDate;
   int _wordCount = 0;
+
+  // State untuk menyimpan data existing
+  String _currentCategoryId = '';
+  bool _isFavorite = false; // ✅ FIX: Tambahkan variabel state untuk menyimpan status favorite
 
   // Toolbar state
   bool _isBold = false;
@@ -65,7 +68,6 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
   }
 
   void _onFocusChanged() {
-    // Update toolbar state saat fokus berubah
     if (_editorFocusNode.hasFocus) {
       _updateToolbarState();
     }
@@ -104,8 +106,6 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
 
   void _updateToolbarState() {
     final selection = _quillController.selection;
-
-    // Pastikan ada selection yang valid
     if (!selection.isValid || selection.baseOffset < 0) {
       return;
     }
@@ -165,7 +165,8 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
 
       setState(() {
         _currentDate = note.updatedAt;
-        _isBookmarked = note.categoryId == 'bookmarks';
+        _currentCategoryId = note.categoryId;
+        _isFavorite = note.isFavorite; // ✅ FIX: Simpan status favorite yang ada
       });
     }
     if (mounted) setState(() => _isLoading = false);
@@ -189,8 +190,8 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
       content: contentJson,
       createdAt: _isEditing ? _currentDate : DateTime.now(),
       updatedAt: DateTime.now(),
-      categoryId: _isBookmarked ? 'bookmarks' : 'all',
-      isFavorite: false,
+      categoryId: _currentCategoryId,
+      isFavorite: _isFavorite, // ✅ FIX: Gunakan variabel state, JANGAN hardcode false
     );
 
     if (_isEditing) {
@@ -201,18 +202,9 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
     }
   }
 
-  void _toggleBookmark() {
-    setState(() {
-      _isBookmarked = !_isBookmarked;
-      _isDirty = true;
-    });
-  }
-
   void _applyFormatting(String format) {
-    // Pastikan ada fokus sebelum formatting
     if (!_editorFocusNode.hasFocus) {
       _editorFocusNode.requestFocus();
-      // Tunggu sebentar agar fokus teraplikasi
       Future.delayed(const Duration(milliseconds: 50), () {
         _applyFormattingInternal(format);
       });
@@ -223,8 +215,6 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
 
   void _applyFormattingInternal(String format) {
     final selection = _quillController.selection;
-
-    // Jika tidak ada selection, set selection di posisi kursor
     if (!selection.isValid || selection.baseOffset < 0) {
       final offset = _quillController.document.length - 1;
       _quillController.updateSelection(
@@ -256,7 +246,6 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
         break;
     }
 
-    // Update toolbar state setelah formatting
     Future.delayed(const Duration(milliseconds: 100), _updateToolbarState);
   }
 
@@ -479,7 +468,6 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
                   ),
                 ),
               ),
-              // Toolbar - tanpa animasi, langsung muncul
               _buildBottomToolbar(),
             ],
           ),
@@ -510,14 +498,6 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
                   'Saving...',
                   style: TextStyle(color: Colors.orange.shade700, fontSize: 12),
                 ),
-              const SizedBox(width: 8),
-              GestureDetector(
-                onTap: _toggleBookmark,
-                child: Icon(
-                  _isBookmarked ? Icons.bookmark : Icons.bookmark_border,
-                  color: _isBookmarked ? const Color(0xFFFFEB3B) : Colors.black,
-                ),
-              ),
               const SizedBox(width: 16),
             ],
           )

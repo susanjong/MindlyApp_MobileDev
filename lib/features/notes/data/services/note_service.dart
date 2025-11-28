@@ -40,50 +40,18 @@ class NoteService {
   Stream<List<CategoryModel>> getCategoriesStream() {
     if (_uid == null) return Stream.value([]);
 
-    // ✅ Stream untuk Bookmarks favorite status dari Firestore
+    // HANYA ambil kategori yang dibuat user dari Firestore
+    // Tidak ada lagi injeksi 'All' atau 'Bookmarks'
     return _firestore
         .collection('users')
         .doc(_uid)
+        .collection('categories')
+        .orderBy('name', descending: false) // Urutkan sesuai nama
         .snapshots()
-        .asyncMap((userDoc) async {
-      // Ambil categories dari subcollection
-      final categoriesSnapshot = await _firestore
-          .collection('users')
-          .doc(_uid)
-          .collection('categories')
-          .get();
-
-      var cats = categoriesSnapshot.docs
+        .map((snapshot) {
+      return snapshot.docs
           .map((doc) => CategoryModel.fromMap(doc.data(), doc.id))
           .toList();
-
-      // ✅ Get bookmarks favorite status dari user document
-      final userData = userDoc.data();
-      final isBookmarksFavorite = userData?['bookmarksFavorite'] ?? false;
-
-      // Add virtual categories
-      if (!cats.any((c) => c.id == 'all')) {
-        cats.insert(0, CategoryModel(id: 'all', name: 'All'));
-      }
-
-      // ✅ Bookmarks dengan favorite status dari Firestore
-      if (!cats.any((c) => c.id == 'bookmarks')) {
-        cats.insert(1, CategoryModel(
-          id: 'bookmarks',
-          name: 'Bookmarks',
-          isFavorite: isBookmarksFavorite,
-        ));
-      } else {
-        // Update existing bookmarks category
-        final bookmarksIndex = cats.indexWhere((c) => c.id == 'bookmarks');
-        if (bookmarksIndex != -1) {
-          cats[bookmarksIndex] = cats[bookmarksIndex].copyWith(
-            isFavorite: isBookmarksFavorite,
-          );
-        }
-      }
-
-      return cats;
     });
   }
 
@@ -92,18 +60,24 @@ class NoteService {
   Future<void> addNote(NoteModel note) async {
     if (_uid == null) return;
     final docRef = _firestore.collection('users').doc(_uid).collection('notes').doc();
+
+    // Pastikan categoryId tidak null/kosong, default ke string kosong jika tidak ada kategori
+    final safeCategoryId = (note.categoryId == 'all' || note.categoryId == 'bookmarks')
+        ? ''
+        : note.categoryId;
+
     final noteWithIdAndColor = note.copyWith(
       id: docRef.id,
       color: getColorForNote(docRef.id),
+      categoryId: safeCategoryId,
     );
     await docRef.set(noteWithIdAndColor.toMap());
   }
 
-  // ✅ FIX: Update note tanpa mengubah warna
   Future<void> updateNote(NoteModel note) async {
     if (_uid == null) return;
 
-    // Ambil warna lama dari Firestore
+    // Ambil warna lama agar tidak berubah
     final existingDoc = await _firestore
         .collection('users')
         .doc(_uid)
@@ -113,9 +87,15 @@ class NoteService {
 
     final existingColor = existingDoc.data()?['color'] ?? note.color;
 
-    // Update dengan warna yang sama
+    // Bersihkan categoryId jika masih ada sisa 'bookmarks' atau 'all' dari data lama
+    String cleanCategoryId = note.categoryId;
+    if (cleanCategoryId == 'all' || cleanCategoryId == 'bookmarks') {
+      cleanCategoryId = '';
+    }
+
     final noteMap = note.toMap();
-    noteMap['color'] = existingColor; // ✅ Pertahankan warna lama
+    noteMap['color'] = existingColor;
+    noteMap['categoryId'] = cleanCategoryId;
 
     await _firestore
         .collection('users')
@@ -135,6 +115,7 @@ class NoteService {
         .delete();
   }
 
+  // Logic Favorite Sederhana - Langsung update boolean
   Future<void> toggleFavorite(String noteId, bool currentStatus) async {
     if (_uid == null) return;
     await _firestore
@@ -143,17 +124,6 @@ class NoteService {
         .collection('notes')
         .doc(noteId)
         .update({'isFavorite': !currentStatus});
-  }
-
-  Future<void> toggleBookmark(String noteId, bool currentStatus) async {
-    if (_uid == null) return;
-    final newCategoryId = currentStatus ? 'all' : 'bookmarks';
-    await _firestore
-        .collection('users')
-        .doc(_uid)
-        .collection('notes')
-        .doc(noteId)
-        .update({'categoryId': newCategoryId});
   }
 
   Future<void> deleteNotesBatch(List<String> noteIds) async {
@@ -178,10 +148,14 @@ class NoteService {
 
   Future<void> moveNotesBatch(List<String> noteIds, String categoryId) async {
     if (_uid == null) return;
+
+    // Pastikan tidak memindahkan ke 'all' atau 'bookmarks' secara tidak sengaja
+    final safeCategory = (categoryId == 'all' || categoryId == 'bookmarks') ? '' : categoryId;
+
     final batch = _firestore.batch();
     for (var id in noteIds) {
       final docRef = _firestore.collection('users').doc(_uid).collection('notes').doc(id);
-      batch.update(docRef, {'categoryId': categoryId});
+      batch.update(docRef, {'categoryId': safeCategory});
     }
     await batch.commit();
   }
@@ -214,6 +188,7 @@ class NoteService {
         .doc(categoryId)
         .delete();
 
+    // Reset notes yang ada di kategori ini menjadi uncategorized ('')
     final notesSnapshot = await _firestore
         .collection('users')
         .doc(_uid)
@@ -223,32 +198,19 @@ class NoteService {
 
     final batch = _firestore.batch();
     for (var doc in notesSnapshot.docs) {
-      batch.update(doc.reference, {'categoryId': 'all'});
+      batch.update(doc.reference, {'categoryId': ''});
     }
     await batch.commit();
   }
 
-  // ✅ FIXED: Toggle category favorite - handle Bookmarks
   Future<void> toggleCategoryFavorite(String categoryId, bool currentStatus) async {
     if (_uid == null) return;
-
-    if (categoryId == 'bookmarks') {
-      // ✅ Store Bookmarks favorite status di user document
-      await _firestore
-          .collection('users')
-          .doc(_uid)
-          .set({
-        'bookmarksFavorite': !currentStatus,
-      }, SetOptions(merge: true));
-    } else {
-      // Regular categories
-      await _firestore
-          .collection('users')
-          .doc(_uid)
-          .collection('categories')
-          .doc(categoryId)
-          .update({'isFavorite': !currentStatus});
-    }
+    await _firestore
+        .collection('users')
+        .doc(_uid)
+        .collection('categories')
+        .doc(categoryId)
+        .update({'isFavorite': !currentStatus});
   }
 
   Future<NoteModel?> getNoteById(String noteId) async {
