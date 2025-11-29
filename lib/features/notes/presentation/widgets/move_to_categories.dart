@@ -168,7 +168,6 @@ class _MoveToCategoriesDialogState extends State<MoveToCategoriesDialog> {
 
               NoteSearchBar(
                 controller: _searchController,
-                greetingText: '',
                 hintText: 'Search categories...',
                 onClear: () {
                   setState(() => _searchQuery = '');
