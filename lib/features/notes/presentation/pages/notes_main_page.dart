@@ -1,20 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import '../widgets/add_category_dialog.dart';
 import '../../../../config/routes/routes.dart';
 import '../../../../core/widgets/dialog/alert_dialog.dart';
 import '../../../../core/widgets/navigation/custom_navbar_widget.dart';
 import '../../../../core/widgets/navigation/custom_top_app_bar.dart';
+import '../widgets/move_to_categories.dart';
 import '../widgets/selection_action_bar.dart';
 import '../../data/models/note_model.dart';
 import '../../data/models/category_model.dart';
 import '../../data/services/note_service.dart';
 import '../widgets/all_notes_tab.dart';
-import '../widgets/categories_tab.dart';
+import '../widgets/categories_tab.dart'; // Pastikan import ini benar
 import '../widgets/favorites_tab.dart';
 import '../widgets/note_search_bar.dart';
 import '../widgets/note_tab_bar.dart';
 import '../widgets/notes_expandable_fab.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class NotesMainPage extends StatefulWidget {
   const NotesMainPage({super.key});
@@ -28,13 +29,20 @@ class _NotesMainPageState extends State<NotesMainPage> {
   final TextEditingController _searchController = TextEditingController();
   final NoteService _noteService = NoteService();
 
+  // Key untuk mengakses state CategoriesTab
+  final GlobalKey<CategoriesTabState> _categoriesTabKey = GlobalKey<CategoriesTabState>();
+
   bool _isNavBarVisible = true;
   int _selectedTabIndex = 0;
   String _searchQuery = '';
 
+  // State untuk Notes Selection
   bool _isSelectionMode = false;
   final Set<String> _selectedNoteIds = {};
   List<NoteModel> _currentNotesList = [];
+
+  // State untuk Category Selection (Diangkat ke Parent untuk kontrol UI)
+  bool _isCategorySelectionMode = false;
 
   @override
   void initState() {
@@ -65,6 +73,7 @@ class _NotesMainPageState extends State<NotesMainPage> {
     if (index != 1) Navigator.pushReplacementNamed(context, routes[index]);
   }
 
+  // === NOTE SELECTION LOGIC ===
   void _enterSelectionMode(String noteId) {
     setState(() {
       _isSelectionMode = true;
@@ -96,13 +105,20 @@ class _NotesMainPageState extends State<NotesMainPage> {
   }
 
   void _selectAll() {
-    setState(() {
-      if (_selectedNoteIds.length == _currentNotesList.length) {
-        _selectedNoteIds.clear();
-      } else {
-        _selectedNoteIds.addAll(_currentNotesList.map((e) => e.id));
-      }
-    });
+    // Logic Select All untuk Notes
+    if (_selectedTabIndex == 0 || _selectedTabIndex == 2) {
+      setState(() {
+        if (_selectedNoteIds.length == _currentNotesList.length) {
+          _selectedNoteIds.clear();
+        } else {
+          _selectedNoteIds.addAll(_currentNotesList.map((e) => e.id));
+        }
+      });
+    }
+    // Logic Select All untuk Categories
+    else if (_selectedTabIndex == 1 && _isCategorySelectionMode) {
+      _categoriesTabKey.currentState?.selectAll();
+    }
   }
 
   void _deleteSelected() {
@@ -128,76 +144,43 @@ class _NotesMainPageState extends State<NotesMainPage> {
   }
 
   void _moveSelected() {
-    showModalBottomSheet(
+    showMoveToDialog(
       context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => StreamBuilder<List<CategoryModel>>(
-        stream: _noteService.getCategoriesStream(),
-        builder: (context, snapshot) {
-          // Stream ini sekarang sudah bersih dari 'All' dan 'Bookmarks'
-          final categories = snapshot.data ?? [];
-
-          return SafeArea(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(height: 16),
-                Text('Move to...', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 16),
-                if (categories.isEmpty)
-                  const Padding(padding: EdgeInsets.all(16), child: Text("No categories available. Create one first!")),
-
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: categories.length,
-                    itemBuilder: (context, index) => ListTile(
-                      leading: const Icon(Icons.folder_outlined, color: Colors.grey),
-                      title: Text(categories[index].name, style: GoogleFonts.poppins()),
-                      onTap: () async {
-                        await _noteService.moveNotesBatch(_selectedNoteIds.toList(), categories[index].id);
-                        Navigator.pop(ctx);
-                        _exitSelectionMode();
-                        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Notes moved')));
-                      },
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
+      noteService: _noteService,
+      selectedNoteIds: _selectedNoteIds.toList(),
+      onMoveConfirmed: (categoryId) async {
+        await _noteService.moveNotesBatch(_selectedNoteIds.toList(), categoryId);
+        _exitSelectionMode();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Notes moved')));
+        }
+      },
+      onAddCategory: (categoryName) async {
+        await _noteService.addCategory(
+          CategoryModel(id: '', name: categoryName),
+        );
+      },
     );
   }
 
+  // === GENERAL ACTIONS ===
   void _handleAddNote() {
     Navigator.pushNamed(context, AppRoutes.noteEditor);
   }
 
   void _showAddCategoryDialog() {
-    final controller = TextEditingController();
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('New Category', style: GoogleFonts.poppins()),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(hintText: 'Category name'),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () async {
-              if (controller.text.trim().isNotEmpty) {
-                await _noteService.addCategory(CategoryModel(id: '', name: controller.text.trim()));
-                Navigator.pop(ctx);
-              }
-            },
-            child: const Text('Add'),
-          ),
-        ],
+      builder: (ctx) => AddCategoryDialog(
+        onAdd: (name) async {
+          await _noteService.addCategory(CategoryModel(id: '', name: name));
+          if (mounted) {
+            Navigator.pop(ctx);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Category "$name" added')),
+            );
+          }
+        },
       ),
     );
   }
@@ -219,10 +202,18 @@ class _NotesMainPageState extends State<NotesMainPage> {
             final selectedModels = allNotes.where((n) => _selectedNoteIds.contains(n.id)).toList();
             final isAllFavorites = selectedModels.isNotEmpty && selectedModels.every((n) => n.isFavorite);
 
+            // Cek status favorite category yg sedang dipilih (jika ada 1 yang dipilih)
+            bool isCategoryFavorite = false;
+            if (_isCategorySelectionMode && _categoriesTabKey.currentState != null) {
+              isCategoryFavorite = _categoriesTabKey.currentState!.isSelectionFavorite;
+            }
+
             return Scaffold(
               backgroundColor: Colors.white,
+              resizeToAvoidBottomInset: false,
               appBar: CustomTopAppBar(
-                isSelectionMode: _isSelectionMode,
+                // Tampilkan tombol Select All (Expand) jika salah satu mode aktif
+                isSelectionMode: _isSelectionMode || _isCategorySelectionMode,
                 onSelectAllTap: _selectAll,
                 onProfileTap: () => Navigator.pushNamed(context, AppRoutes.profile),
                 onNotificationTap: () {},
@@ -236,7 +227,11 @@ class _NotesMainPageState extends State<NotesMainPage> {
                   NoteTabBar(
                     selectedIndex: _selectedTabIndex,
                     onTabSelected: (index) {
+                      // Reset semua mode saat ganti tab
                       if (_isSelectionMode) _exitSelectionMode();
+                      if (_isCategorySelectionMode) {
+                        _categoriesTabKey.currentState?.exitSelectionMode();
+                      }
                       setState(() => _selectedTabIndex = index);
                     },
                   ),
@@ -244,6 +239,7 @@ class _NotesMainPageState extends State<NotesMainPage> {
                     child: IndexedStack(
                       index: _selectedTabIndex,
                       children: [
+                        // Tab 0: All Notes
                         AllNotesTab(
                           notes: filteredNotes,
                           scrollController: _scrollController,
@@ -257,12 +253,23 @@ class _NotesMainPageState extends State<NotesMainPage> {
                           },
                           searchQuery: _searchQuery,
                         ),
+                        // Tab 1: Categories
                         CategoriesTab(
+                          key: _categoriesTabKey,
                           noteService: _noteService,
                           categories: allCategories,
                           allNotes: allNotes,
                           onNoteSelected: (id) => Navigator.pushNamed(context, AppRoutes.noteEditor, arguments: id),
+                          // Callback saat mode seleksi kategori berubah
+                          onSelectionModeChanged: (isSelecting) {
+                            setState(() {
+                              _isCategorySelectionMode = isSelecting;
+                              // Pastikan navbar visible saat mode seleksi aktif
+                              if (isSelecting) _isNavBarVisible = true;
+                            });
+                          },
                         ),
+                        // Tab 2: Favorites
                         FavoritesTab(
                           notes: filteredNotes.where((n) => n.isFavorite).toList(),
                           favoriteCategories: allCategories.where((c) => c.isFavorite).toList(),
@@ -287,14 +294,15 @@ class _NotesMainPageState extends State<NotesMainPage> {
                   ),
                 ],
               ),
-              floatingActionButton: _isSelectionMode
+              // FAB hilang jika sedang mode seleksi apapun
+              floatingActionButton: (_isSelectionMode || _isCategorySelectionMode)
                   ? null
                   : NotesExpandableFab(
                 onAddNoteTap: _handleAddNote,
                 onAddCategoryTap: _showAddCategoryDialog,
               ),
               floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-              bottomNavigationBar: _buildBottomNavBar(isAllFavorites, allNotes),
+              bottomNavigationBar: _buildBottomNavBar(isAllFavorites, allNotes, isCategoryFavorite),
             );
           },
         );
@@ -302,26 +310,37 @@ class _NotesMainPageState extends State<NotesMainPage> {
     );
   }
 
-  Widget _buildBottomNavBar(bool isAllFavorites, List<NoteModel> allNotes) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      height: _isNavBarVisible ? (_isSelectionMode ? 75 : 64) + MediaQuery.of(context).padding.bottom : 0,
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 200),
-        child: _isSelectionMode
-            ? SelectionActionBar(
-          key: const ValueKey('SelectionBar'),
-          onMove: _moveSelected,
-          onFavorite: () => _toggleFavoriteSelected(allNotes),
-          onDelete: _deleteSelected,
-          isAllSelectedFavorite: isAllFavorites,
-        )
-            : CustomNavBar(
-          key: const ValueKey('NavBar'),
-          selectedIndex: 1,
-          onItemTapped: _handleNavigation,
-        ),
-      ),
+  Widget _buildBottomNavBar(bool isAllNotesFavorite, List<NoteModel> allNotes, bool isCategoryFavorite) {
+    final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
+    if (isKeyboardOpen) return const SizedBox.shrink();
+    if (!_isNavBarVisible) return const SizedBox.shrink();
+
+    // 1. Navbar untuk Category Selection
+    if (_isCategorySelectionMode) {
+      // Mengambil widget action bar dari CategoriesTab (yang sudah dibuat public)
+      // atau membuatnya disini memanggil fungsi via key
+      return CategorySelectionActionBar(
+        onEdit: () => _categoriesTabKey.currentState?.handleEdit(),
+        onFavorite: () => _categoriesTabKey.currentState?.handleToggleFavorite(),
+        onDelete: () => _categoriesTabKey.currentState?.handleDelete(),
+        isSelectedFavorite: isCategoryFavorite,
+      );
+    }
+
+    // 2. Navbar untuk Note Selection
+    if (_isSelectionMode) {
+      return SelectionActionBar(
+        onMove: _moveSelected,
+        onFavorite: () => _toggleFavoriteSelected(allNotes),
+        onDelete: _deleteSelected,
+        isAllSelectedFavorite: isAllNotesFavorite,
+      );
+    }
+
+    // 3. Navbar Normal
+    return CustomNavBar(
+      selectedIndex: 1,
+      onItemTapped: _handleNavigation,
     );
   }
 
