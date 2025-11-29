@@ -1,26 +1,38 @@
 import 'package:flutter/material.dart';
-// ✅ Import Model & Service Kategori
 import '../../data/models/category_model.dart';
 import '../../data/services/category_service.dart';
 
 class AddTaskBottomSheet extends StatefulWidget {
   final Function(Map<String, dynamic>)? onSave;
+  final String? initialCategory;
+  final bool isCategoryLocked;
 
   const AddTaskBottomSheet({
     Key? key,
     this.onSave,
+    this.initialCategory,
+    this.isCategoryLocked = false,
   }) : super(key: key);
 
   @override
   State<AddTaskBottomSheet> createState() => _AddTaskBottomSheetState();
 
-  static void show(BuildContext context, {Function(Map<String, dynamic>)? onSave}) {
+  // Static method untuk show bottom sheet
+  static void show(BuildContext context, {
+    Function(Map<String, dynamic>)? onSave,
+    String? initialCategory,
+    bool isCategoryLocked = false,
+  }) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
-        return AddTaskBottomSheet(onSave: onSave);
+        return AddTaskBottomSheet(
+          onSave: onSave,
+          initialCategory: initialCategory,
+          isCategoryLocked: isCategoryLocked,
+        );
       },
     );
   }
@@ -29,12 +41,20 @@ class AddTaskBottomSheet extends StatefulWidget {
 class _AddTaskBottomSheetState extends State<AddTaskBottomSheet> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
-  final CategoryService _categoryService = CategoryService(); // ✅ Panggil Service
+  final CategoryService _categoryService = CategoryService();
 
   String _selectedDay = 'Day';
   String _selectedMonth = 'Month';
   String _selectedYear = 'Year';
-  String? _selectedCategory; // Nullable agar bisa handle loading
+  String? _selectedCategory;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialCategory != null) {
+      _selectedCategory = widget.initialCategory;
+    }
+  }
 
   @override
   void dispose() {
@@ -47,13 +67,20 @@ class _AddTaskBottomSheetState extends State<AddTaskBottomSheet> {
     // Validasi input minimal
     if (_nameController.text.trim().isEmpty) return;
 
+    String finalCategory;
+    if (widget.isCategoryLocked && widget.initialCategory != null) {
+      finalCategory = widget.initialCategory!;
+    } else {
+      finalCategory = _selectedCategory ?? 'Uncategorized';
+    }
+
     final taskData = {
       'name': _nameController.text.trim(),
       'description': _descriptionController.text.trim(),
       'day': _selectedDay,
       'month': _selectedMonth,
       'year': _selectedYear,
-      'category': _selectedCategory ?? 'Uncategorized', // Default jika null
+      'category': finalCategory,
       'completed': false,
     };
 
@@ -154,36 +181,58 @@ class _AddTaskBottomSheetState extends State<AddTaskBottomSheet> {
                   ),
 
                   const SizedBox(height: 24),
-
-                  // ✅ BAGIAN KATEGORI (Dinamis dari Firebase)
                   _buildLabel('CATEGORY'),
                   const SizedBox(height: 8),
 
-                  StreamBuilder<List<CategoryModel>>(
-                    stream: _categoryService.getCategoriesStream(),
-                    builder: (context, snapshot) {
-                      if (!snapshot.hasData) {
-                        return const Center(child: LinearProgressIndicator());
-                      }
+                  if (widget.isCategoryLocked && widget.initialCategory != null)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade400, width: 1.5),
+                        borderRadius: BorderRadius.circular(8),
+                        color: Colors.grey.shade100, // Visual feedback bahwa ini disabled
+                      ),
+                      child: Text(
+                        widget.initialCategory!,
+                        style: const TextStyle(
+                            color: Colors.black54,
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold
+                        ),
+                      ),
+                    )
+                  else
+                  // Jika tidak dikunci, baru render dropdown dinamis
+                    StreamBuilder<List<CategoryModel>>(
+                      stream: _categoryService.getCategoriesStream(),
+                      builder: (context, snapshot) {
+                        if (!snapshot.hasData) {
+                          return const Center(child: LinearProgressIndicator());
+                        }
 
-                      final categories = snapshot.data!;
-                      List<String> categoryNames = ['Uncategorized']; // Default option
-                      categoryNames.addAll(categories.map((c) => c.name).toList());
+                        final categories = snapshot.data!;
+                        List<String> categoryNames = ['Uncategorized'];
+                        categoryNames.addAll(categories.map((c) => c.name).toList());
 
-                      // Pastikan nilai yang dipilih ada di dalam list (untuk menghindari error dropdown)
-                      if (_selectedCategory == null || !categoryNames.contains(_selectedCategory)) {
-                        _selectedCategory = categoryNames.first;
-                      }
+                        // Logic fallback selection
+                        if (_selectedCategory == null || (!categoryNames.contains(_selectedCategory))) {
+                          if (widget.initialCategory != null && categoryNames.contains(widget.initialCategory)) {
+                            _selectedCategory = widget.initialCategory;
+                          } else {
+                            _selectedCategory = categoryNames.first;
+                          }
+                        }
 
-                      return _buildDropdown(
-                        value: _selectedCategory!,
-                        items: categoryNames,
-                        onChanged: (val) {
-                          setState(() => _selectedCategory = val);
-                        },
-                      );
-                    },
-                  ),
+                        return _buildDropdown(
+                          value: _selectedCategory!,
+                          items: categoryNames,
+                          onChanged: (val) {
+                            setState(() => _selectedCategory = val);
+                          },
+                        );
+                      },
+                    ),
                 ],
               ),
             ),
@@ -193,7 +242,7 @@ class _AddTaskBottomSheetState extends State<AddTaskBottomSheet> {
     );
   }
 
-  // Helper Widgets (Tidak Berubah)
+  // Helper Widgets
   Widget _buildLabel(String text) {
     return Text(
       text,

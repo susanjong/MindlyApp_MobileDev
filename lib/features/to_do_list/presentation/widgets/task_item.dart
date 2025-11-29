@@ -119,7 +119,7 @@ class TaskItem extends StatelessWidget {
                         ),
                       ),
 
-                      // --- LOGIC BADGE (URGENT / OVERDUE) ---
+                      // logic badge
                       if (isOverdue) ...[
                         const SizedBox(width: 8),
                         _buildBadge('Overdue', const Color(0xFFD4183D)),
