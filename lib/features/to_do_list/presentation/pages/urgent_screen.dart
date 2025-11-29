@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
-// ✅ Import FolderScreen
 import '../widgets/urgent_overdue_taskItem.dart';
 import 'folder_screen.dart';
 
@@ -17,9 +15,9 @@ class _UrgentTaskScreenState extends State<UrgentTaskScreen> {
   List<Map<String, dynamic>> urgentTasks = [];
 
   final List<List<Color>> availableGradients = [
-    [const Color(0xFFBEE973), const Color(0xFFD9D9D9)], // Hijau
-    [const Color(0xFF93B7D9), const Color(0xFFD9D9D9)], // Biru
-    [const Color(0xFFE2A8D3), const Color(0xFFFFF4FD)], // Pink
+    [const Color(0xFFBEE973), const Color(0xFFD9D9D9)],
+    [const Color(0xFF93B7D9), const Color(0xFFD9D9D9)],
+    [const Color(0xFFE2A8D3), const Color(0xFFFFF4FD)],
   ];
 
   @override
@@ -87,7 +85,6 @@ class _UrgentTaskScreenState extends State<UrgentTaskScreen> {
 
   void _navigateToFolder(String categoryName) {
     final folderTasks = allTasks.where((t) => t['category'] == categoryName).toList();
-
     int gradientIndex = categoryName.length % availableGradients.length;
 
     Navigator.push(
@@ -167,9 +164,10 @@ class _UrgentTaskScreenState extends State<UrgentTaskScreen> {
                 itemCount: urgentTasks.length,
                 itemBuilder: (context, index) {
                   final task = urgentTasks[index];
+                  // ✅ Integrated the shared widget
                   return UrgentOverdueTaskItem(
                     task: task,
-                    themeColor: const Color(0xFFE08E00), // Warna Orange
+                    themeColor: const Color(0xFFE08E00), // Orange for Urgent
                     timeText: _getTimeLeft(task['deadline']),
                     onTapArrow: () => _navigateToFolder(task['category']),
                   );
@@ -178,108 +176,6 @@ class _UrgentTaskScreenState extends State<UrgentTaskScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildUrgentTaskItem(Map<String, dynamic> task) {
-    final DateTime deadline = task['deadline'];
-    final String day = DateFormat('dd').format(deadline);
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 24),
-      child: Row(
-        children: [
-          Container(
-            width: 50,
-            height: 50,
-            decoration: const BoxDecoration(
-              color: Color(0xFFE08E00),
-              shape: BoxShape.circle,
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'Today',
-                  style: GoogleFonts.poppins(
-                    fontSize: 10,
-                    color: Colors.white,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                Text(
-                  day,
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    height: 1.0,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 16),
-
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.access_time, size: 14, color: Colors.grey),
-                    const SizedBox(width: 4),
-                    Text(
-                      _getTimeLeft(deadline),
-                      style: GoogleFonts.poppins(
-                        fontSize: 11,
-                        color: const Color(0xFF535353),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      width: 1,
-                      height: 11,
-                      color: Colors.grey,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        task['category'],
-                        style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          color: const Color(0xFF535353),
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  task['title'],
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.black,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          IconButton(
-            icon: const Icon(
-              Icons.chevron_right,
-              color: Colors.black,
-              size: 28,
-            ),
-            onPressed: () {
-              _navigateToFolder(task['category']);
-            },
-          ),
-        ],
       ),
     );
   }

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
 import '../widgets/urgent_overdue_taskItem.dart';
 import 'folder_screen.dart';
 
@@ -165,9 +164,10 @@ class _OverdueTaskScreenState extends State<OverdueTaskScreen> {
                 itemCount: overdueTasks.length,
                 itemBuilder: (context, index) {
                   final task = overdueTasks[index];
+                  // ✅ Integrated the shared widget
                   return UrgentOverdueTaskItem(
                     task: task,
-                    themeColor: primaryRed, // Warna Merah
+                    themeColor: primaryRed, // Red for Overdue
                     timeText: _getOverdueTime(task['deadline']),
                     onTapArrow: () => _navigateToFolder(task['category']),
                   );
@@ -176,116 +176,6 @@ class _OverdueTaskScreenState extends State<OverdueTaskScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildOverdueTaskItem(Map<String, dynamic> task, Color color) {
-    final DateTime deadline = task['deadline'];
-    final String day = DateFormat('dd').format(deadline);
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 24),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'Today',
-                  style: GoogleFonts.poppins(
-                    fontSize: 10,
-                    color: Colors.white,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                Text(
-                  day,
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    height: 1.0,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(width: 16),
-
-          // 2. Task Info (Menggunakan RichText)
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                RichText(
-                  text: TextSpan(
-                    style: GoogleFonts.poppins(
-                      fontSize: 11,
-                      color: const Color(0xFF535353),
-                      height: 1.4,
-                    ),
-                    children: [
-                      const WidgetSpan(
-                        alignment: PlaceholderAlignment.middle,
-                        child: Padding(
-                          padding: EdgeInsets.only(right: 4.0, bottom: 2.0),
-                          child: Icon(Icons.access_time, size: 14, color: Color(0xFF535353)),
-                        ),
-                      ),
-
-                      TextSpan(
-                        text: _getOverdueTime(deadline),
-                      ),
-
-                      // C. Separator
-                      const TextSpan(
-                        text: "  |  ",
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-
-                      TextSpan(
-                        text: task['category'] ?? '',
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 4),
-
-                Text(
-                  task['title'],
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.black,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // 3. Arrow Icon
-          IconButton(
-            icon: const Icon(
-              Icons.chevron_right,
-              color: Colors.black,
-              size: 28,
-            ),
-            onPressed: () {
-              _navigateToFolder(task['category']);
-            },
-          ),
-        ],
       ),
     );
   }
