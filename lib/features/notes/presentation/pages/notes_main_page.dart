@@ -11,7 +11,7 @@ import '../../data/models/note_model.dart';
 import '../../data/models/category_model.dart';
 import '../../data/services/note_service.dart';
 import '../widgets/all_notes_tab.dart';
-import '../widgets/categories_tab.dart'; // Pastikan import ini benar
+import '../widgets/categories_tab.dart';
 import '../widgets/favorites_tab.dart';
 import '../widgets/note_search_bar.dart';
 import '../widgets/note_tab_bar.dart';
@@ -29,19 +29,19 @@ class _NotesMainPageState extends State<NotesMainPage> {
   final TextEditingController _searchController = TextEditingController();
   final NoteService _noteService = NoteService();
 
-  // Key untuk mengakses state CategoriesTab
+  // Key untuk CategoriesTab agar bisa akses state
   final GlobalKey<CategoriesTabState> _categoriesTabKey = GlobalKey<CategoriesTabState>();
 
   bool _isNavBarVisible = true;
   int _selectedTabIndex = 0;
   String _searchQuery = '';
 
-  // State untuk Notes Selection
+  // State untuk Notes Selection (Note Multi-Select)
   bool _isSelectionMode = false;
   final Set<String> _selectedNoteIds = {};
   List<NoteModel> _currentNotesList = [];
 
-  // State untuk Category Selection (Diangkat ke Parent untuk kontrol UI)
+  // State untuk Category Selection (Category Multi-Select)
   bool _isCategorySelectionMode = false;
 
   @override
@@ -75,6 +75,9 @@ class _NotesMainPageState extends State<NotesMainPage> {
 
   // === NOTE SELECTION LOGIC ===
   void _enterSelectionMode(String noteId) {
+    // Jangan masuk mode seleksi Note jika sedang mode seleksi Kategori
+    if (_isCategorySelectionMode) return;
+
     setState(() {
       _isSelectionMode = true;
       _selectedNoteIds.add(noteId);
@@ -90,6 +93,9 @@ class _NotesMainPageState extends State<NotesMainPage> {
   }
 
   void _toggleSelection(String noteId) {
+    // Jangan lakukan apapun jika sedang mode seleksi Kategori
+    if (_isCategorySelectionMode) return;
+
     if (!_isSelectionMode) {
       Navigator.pushNamed(context, AppRoutes.noteEditor, arguments: noteId);
       return;
@@ -105,8 +111,8 @@ class _NotesMainPageState extends State<NotesMainPage> {
   }
 
   void _selectAll() {
-    // Logic Select All untuk Notes
-    if (_selectedTabIndex == 0 || _selectedTabIndex == 2) {
+    // Logic Select All untuk Notes (Berlaku di tab All Notes & Favorites & Categories jika sedang pilih note)
+    if (_isSelectionMode || (_selectedTabIndex != 1 && !_isCategorySelectionMode)) {
       setState(() {
         if (_selectedNoteIds.length == _currentNotesList.length) {
           _selectedNoteIds.clear();
@@ -115,7 +121,7 @@ class _NotesMainPageState extends State<NotesMainPage> {
         }
       });
     }
-    // Logic Select All untuk Categories
+    // Logic Select All untuk Categories (Hanya di tab Categories)
     else if (_selectedTabIndex == 1 && _isCategorySelectionMode) {
       _categoriesTabKey.currentState?.selectAll();
     }
@@ -202,7 +208,7 @@ class _NotesMainPageState extends State<NotesMainPage> {
             final selectedModels = allNotes.where((n) => _selectedNoteIds.contains(n.id)).toList();
             final isAllFavorites = selectedModels.isNotEmpty && selectedModels.every((n) => n.isFavorite);
 
-            // Cek status favorite category yg sedang dipilih (jika ada 1 yang dipilih)
+            // Cek status favorite category yg sedang dipilih
             bool isCategoryFavorite = false;
             if (_isCategorySelectionMode && _categoriesTabKey.currentState != null) {
               isCategoryFavorite = _categoriesTabKey.currentState!.isSelectionFavorite;
@@ -259,12 +265,18 @@ class _NotesMainPageState extends State<NotesMainPage> {
                           noteService: _noteService,
                           categories: allCategories,
                           allNotes: allNotes,
-                          onNoteSelected: (id) => Navigator.pushNamed(context, AppRoutes.noteEditor, arguments: id),
-                          // Callback saat mode seleksi kategori berubah
-                          onSelectionModeChanged: (isSelecting) {
+                          // === LOGIKA SELECTION NOTES DI DALAM KATEGORI ===
+                          isNoteSelectionMode: _isSelectionMode,
+                          selectedNoteIds: _selectedNoteIds,
+                          onNoteTap: _toggleSelection,
+                          onNoteLongPress: _enterSelectionMode,
+
+                          // Callback saat mode seleksi KATEGORI (folder) berubah
+                          onCategorySelectionModeChanged: (isSelecting) {
+                            // Jangan masuk mode kategori jika sedang mode note
+                            if (_isSelectionMode) return;
                             setState(() {
                               _isCategorySelectionMode = isSelecting;
-                              // Pastikan navbar visible saat mode seleksi aktif
                               if (isSelecting) _isNavBarVisible = true;
                             });
                           },
@@ -315,10 +327,8 @@ class _NotesMainPageState extends State<NotesMainPage> {
     if (isKeyboardOpen) return const SizedBox.shrink();
     if (!_isNavBarVisible) return const SizedBox.shrink();
 
-    // 1. Navbar untuk Category Selection
+    // 1. Navbar untuk Category Selection (Folder)
     if (_isCategorySelectionMode) {
-      // Mengambil widget action bar dari CategoriesTab (yang sudah dibuat public)
-      // atau membuatnya disini memanggil fungsi via key
       return CategorySelectionActionBar(
         onEdit: () => _categoriesTabKey.currentState?.handleEdit(),
         onFavorite: () => _categoriesTabKey.currentState?.handleToggleFavorite(),
@@ -327,7 +337,8 @@ class _NotesMainPageState extends State<NotesMainPage> {
       );
     }
 
-    // 2. Navbar untuk Note Selection
+    // 2. Navbar untuk Note Selection (Move, Fav, Delete)
+    // Ini akan muncul baik di All Notes, Categories (expanded), maupun Favorites
     if (_isSelectionMode) {
       return SelectionActionBar(
         onMove: _moveSelected,
