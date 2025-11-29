@@ -30,9 +30,8 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
   late DateTime _currentDate;
   int _wordCount = 0;
 
-  // State untuk menyimpan data existing
   String _currentCategoryId = '';
-  bool _isFavorite = false; // ✅ FIX: Tambahkan variabel state untuk menyimpan status favorite
+  bool _isFavorite = false;
 
   // Toolbar state
   bool _isBold = false;
@@ -47,21 +46,18 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
     _currentDate = DateTime.now();
     _isEditing = widget.noteId != null;
 
-    // Initialize controller
     _quillController = quill.QuillController.basic();
 
     if (_isEditing) {
       _fetchNoteData();
     }
 
-    // Auto-save timer
     _autoSaveTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
       if (_isDirty) {
         _autoSave();
       }
     });
 
-    // Listeners
     _titleController.addListener(_onTitleChanged);
     _quillController.addListener(_onContentChanged);
     _editorFocusNode.addListener(_onFocusChanged);
@@ -166,7 +162,7 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
       setState(() {
         _currentDate = note.updatedAt;
         _currentCategoryId = note.categoryId;
-        _isFavorite = note.isFavorite; // ✅ FIX: Simpan status favorite yang ada
+        _isFavorite = note.isFavorite;
       });
     }
     if (mounted) setState(() => _isLoading = false);
@@ -191,7 +187,7 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
       createdAt: _isEditing ? _currentDate : DateTime.now(),
       updatedAt: DateTime.now(),
       categoryId: _currentCategoryId,
-      isFavorite: _isFavorite, // ✅ FIX: Gunakan variabel state, JANGAN hardcode false
+      isFavorite: _isFavorite,
     );
 
     if (_isEditing) {
@@ -363,6 +359,8 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
       },
       child: Scaffold(
         backgroundColor: Colors.white,
+        // ✅ FIX 1: Set resizeToAvoidBottomInset = false untuk smooth keyboard
+        resizeToAvoidBottomInset: true,
         body: SafeArea(
           child: _isLoading
               ? const Center(child: CircularProgressIndicator())
@@ -372,7 +370,7 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(horizontal: 25),
-                  physics: const ClampingScrollPhysics(),
+                  physics: const BouncingScrollPhysics(), // ✅ Lebih smooth
                   keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -411,7 +409,7 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
                             readOnly: false,
                             autoFocus: false,
                             expands: false,
-                            scrollPhysics: const ClampingScrollPhysics(),
+                            scrollPhysics: const BouncingScrollPhysics(), // ✅ Smooth scroll
                             customStyles: quill.DefaultStyles(
                               paragraph: quill.DefaultTextBlockStyle(
                                 GoogleFonts.poppins(
@@ -547,6 +545,7 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        physics: const BouncingScrollPhysics(), // ✅ Smooth scroll
         child: Row(
           children: [
             _ToolButton(
