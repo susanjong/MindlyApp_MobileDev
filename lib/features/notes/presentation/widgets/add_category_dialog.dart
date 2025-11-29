@@ -83,7 +83,7 @@ class _AddCategoryDialogState extends State<AddCategoryDialog> {
           decoration: InputDecoration(
             hintText: 'Category Name',
             hintStyle: GoogleFonts.poppins(
-              color: const Color(0xFFC7C7CC),
+              color: const Color(0xFF111111),
               fontSize: 14,
             ),
             border: InputBorder.none,

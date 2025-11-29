@@ -1,3 +1,5 @@
+// lib/features/notes/presentation/widgets/favorites_tab.dart
+
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -14,12 +16,18 @@ class FavoritesTab extends StatefulWidget {
   final Function(String) onCategoryToggleFavorite;
   final String searchQuery;
 
-  // Selection Mode Props
-  final bool isSelectionMode;
+  // Note Selection Props
+  final bool isSelectionMode; // Note selection mode
   final Set<String> selectedNoteIds;
   final Function(String) onNoteTap;
   final Function(String) onNoteLongPress;
   final Function(String) onToggleFavorite;
+
+  // Category Selection Props (BARU)
+  final bool isCategorySelectionMode;
+  final Set<String> selectedCategoryIds;
+  final Function(String) onCategoryTap;
+  final Function(String) onCategoryLongPress;
 
   const FavoritesTab({
     super.key,
@@ -29,11 +37,17 @@ class FavoritesTab extends StatefulWidget {
     required this.onNoteSelected,
     required this.onCategoryToggleFavorite,
     this.searchQuery = '',
+    // Note Params
     required this.isSelectionMode,
     required this.selectedNoteIds,
     required this.onNoteTap,
     required this.onNoteLongPress,
     required this.onToggleFavorite,
+    // Category Params
+    required this.isCategorySelectionMode,
+    required this.selectedCategoryIds,
+    required this.onCategoryTap,
+    required this.onCategoryLongPress,
   });
 
   @override
@@ -44,7 +58,6 @@ class _FavoritesTabState extends State<FavoritesTab> {
   bool _isCategoriesExpanded = true;
   bool _isAllNotesExpanded = true;
 
-  // Helper untuk convert JSON ke plain text
   String _getPlainText(String jsonContent) {
     try {
       final doc = quill.Document.fromJson(jsonDecode(jsonContent));
@@ -81,9 +94,33 @@ class _FavoritesTabState extends State<FavoritesTab> {
               padding: const EdgeInsets.only(bottom: 16),
               itemBuilder: (context, index) {
                 final category = widget.favoriteCategories[index];
+                // Cek apakah kategori ini sedang dipilih
+                final isCatSelected = widget.selectedCategoryIds.contains(category.id);
+
                 return _FavoriteCategoryItem(
                   category: category,
-                  onFavoriteTap: () => widget.onCategoryToggleFavorite(category.id),
+                  isSelected: widget.isCategorySelectionMode && isCatSelected,
+                  isSelectionMode: widget.isCategorySelectionMode,
+                  onTap: () {
+                    // Jika sedang mode seleksi kategori -> toggle select
+                    if (widget.isCategorySelectionMode) {
+                      widget.onCategoryTap(category.id);
+                    }
+                    // Jika sedang mode seleksi Note -> disable tap kategori (opsional)
+                    // Jika mode normal -> bisa navigasi (disini kita belum implementasi navigasi ke kategori spesifik)
+                  },
+                  onLongPress: () {
+                    // Jika TIDAK sedang seleksi Note, masuk mode seleksi Kategori
+                    if (!widget.isSelectionMode) {
+                      widget.onCategoryLongPress(category.id);
+                    }
+                  },
+                  onFavoriteTap: () {
+                    // Disable favorite button saat mode seleksi apapun aktif
+                    if (!widget.isCategorySelectionMode && !widget.isSelectionMode) {
+                      widget.onCategoryToggleFavorite(category.id);
+                    }
+                  },
                 );
               },
             ),
@@ -117,19 +154,30 @@ class _FavoritesTabState extends State<FavoritesTab> {
                 itemCount: widget.notes.length,
                 itemBuilder: (context, index) {
                   final note = widget.notes[index];
-                  final isSelected = widget.selectedNoteIds.contains(note.id);
+                  // Cek apakah note ini dipilih
+                  final isNoteSelected = widget.selectedNoteIds.contains(note.id);
 
                   return NoteCard(
                     title: note.title,
-                    // ✅ FIX: Gunakan helper untuk convert
                     content: _getPlainText(note.content),
                     date: note.formattedDate,
                     color: Color(note.color),
                     isFavorite: note.isFavorite,
-                    isSelected: widget.isSelectionMode && isSelected,
+
+                    // Logic Seleksi Note
+                    isSelected: widget.isSelectionMode && isNoteSelected,
                     onTap: () => widget.onNoteTap(note.id),
-                    onLongPress: () => widget.onNoteLongPress(note.id),
-                    onFavoriteTap: () => widget.onToggleFavorite(note.id),
+                    onLongPress: () {
+                      // Jika TIDAK sedang seleksi Kategori, masuk mode seleksi Note
+                      if (!widget.isCategorySelectionMode) {
+                        widget.onNoteLongPress(note.id);
+                      }
+                    },
+                    onFavoriteTap: () {
+                      if (!widget.isSelectionMode && !widget.isCategorySelectionMode) {
+                        widget.onToggleFavorite(note.id);
+                      }
+                    },
                   );
                 },
               ),
@@ -188,35 +236,76 @@ class _FavoritesTabState extends State<FavoritesTab> {
 
 class _FavoriteCategoryItem extends StatelessWidget {
   final CategoryModel category;
+  final bool isSelected;
+  final bool isSelectionMode;
+  final VoidCallback onTap;
+  final VoidCallback onLongPress;
   final VoidCallback onFavoriteTap;
 
-  const _FavoriteCategoryItem({required this.category, required this.onFavoriteTap});
+  const _FavoriteCategoryItem({
+    required this.category,
+    required this.isSelected,
+    required this.isSelectionMode,
+    required this.onTap,
+    required this.onLongPress,
+    required this.onFavoriteTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 25, vertical: 6),
-      height: 50,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFD732A8)),
-        boxShadow: const [BoxShadow(color: Color(0x3F000000), blurRadius: 4, offset: Offset(0, 4))],
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              category.name,
-              style: GoogleFonts.poppins(fontSize: 14, color: Colors.black),
+    const Color borderPink = Color(0xFFD732A8);
+    const Color selectedGrey = Color(0xFFBABABA);
+    const Color checkCircleColor = Color(0xFF777777);
+
+    return GestureDetector(
+      onTap: onTap,
+      onLongPress: onLongPress,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: const EdgeInsets.symmetric(horizontal: 25, vertical: 6),
+        height: 50,
+        decoration: BoxDecoration(
+          // Ganti background jadi abu-abu jika terpilih
+          color: isSelected ? selectedGrey : Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isSelected ? selectedGrey : borderPink,
+          ),
+          boxShadow: const [BoxShadow(color: Color(0x3F000000), blurRadius: 4, offset: Offset(0, 4))],
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                category.name,
+                style: GoogleFonts.poppins(fontSize: 14, color: Colors.black),
+              ),
             ),
-          ),
-          GestureDetector(
-            onTap: onFavoriteTap,
-            child: const Icon(Icons.favorite, color: Colors.red, size: 22),
-          ),
-        ],
+
+            // Visual Selection Logic
+            if (isSelected) ...[
+              // Tampilkan Centang Abu-abu
+              Container(
+                width: 24,
+                height: 24,
+                decoration: const BoxDecoration(
+                  color: checkCircleColor,
+                  shape: BoxShape.circle,
+                ),
+                child: const Center(
+                  child: Icon(Icons.check, size: 16, color: Colors.white),
+                ),
+              ),
+            ] else ...[
+              // Tampilkan Icon Heart
+              GestureDetector(
+                onTap: onFavoriteTap,
+                child: const Icon(Icons.favorite, color: Colors.red, size: 22),
+              ),
+            ]
+          ],
+        ),
       ),
     );
   }
