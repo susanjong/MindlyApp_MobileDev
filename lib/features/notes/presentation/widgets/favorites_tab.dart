@@ -297,7 +297,6 @@ class _FavoriteCategoryItem extends StatelessWidget {
     const Color borderPink = Color(0xFFD732A8);
     const Color selectedGrey = Color(0xFFBABABA);
     const Color checkCircleColor = Color(0xFF777777);
-    const Color outlineGrey = Color(0xFF777777);
 
     return Column(
       children: [
