@@ -12,27 +12,34 @@ class CategoriesTab extends StatefulWidget {
   final NoteService noteService;
   final List<CategoryModel> categories;
   final List<NoteModel> allNotes;
+  final Function(String) onNoteSelected;
 
-  // Callback untuk Category Mode (Folder Selection)
-  final Function(bool isSelecting) onCategorySelectionModeChanged;
-
-  // Props untuk Note Selection Mode (diteruskan dari Parent)
+  // Note Selection Props
   final bool isNoteSelectionMode;
   final Set<String> selectedNoteIds;
   final Function(String) onNoteTap;
   final Function(String) onNoteLongPress;
+
+  // Category Selection Props
+  final bool isCategorySelectionMode;
+  final Set<String> selectedCategoryIds;
+  final Function(String) onCategoryTap;
+  final Function(String) onCategoryLongPress;
 
   const CategoriesTab({
     super.key,
     required this.noteService,
     required this.categories,
     required this.allNotes,
-    required this.onCategorySelectionModeChanged,
-    // Add Note Selection Params
+    required this.onNoteSelected,
     required this.isNoteSelectionMode,
     required this.selectedNoteIds,
     required this.onNoteTap,
     required this.onNoteLongPress,
+    required this.isCategorySelectionMode,
+    required this.selectedCategoryIds,
+    required this.onCategoryTap,
+    required this.onCategoryLongPress,
   });
 
   @override
@@ -41,10 +48,6 @@ class CategoriesTab extends StatefulWidget {
 
 class CategoriesTabState extends State<CategoriesTab> {
   final Set<String> _expandedCategories = {};
-
-  // State untuk Category Selection (Folder)
-  bool _isCategorySelectionMode = false;
-  final Set<String> _selectedCategoryIds = {};
 
   String _getPlainText(String jsonContent) {
     try {
@@ -56,17 +59,10 @@ class CategoriesTabState extends State<CategoriesTab> {
   }
 
   void _toggleExpand(String categoryId) {
-    // 1. Jika sedang Mode Seleksi Kategori (Folder) -> Toggle Select Kategori
-    if (_isCategorySelectionMode) {
-      _toggleCategorySelection(categoryId);
+    if (widget.isCategorySelectionMode) {
+      widget.onCategoryTap(categoryId);
       return;
     }
-
-    // 2. Jika sedang Mode Seleksi Note -> Disable Expand/Collapse (agar tidak mengganggu)
-    //    atau biarkan expand/collapse, tapi tap di note akan select note.
-    //    Biasanya, kita biarkan expand/collapse.
-
-    // Normal expand/collapse
     setState(() {
       if (_expandedCategories.contains(categoryId)) {
         _expandedCategories.remove(categoryId);
@@ -74,128 +70,6 @@ class CategoriesTabState extends State<CategoriesTab> {
         _expandedCategories.add(categoryId);
       }
     });
-  }
-
-  // === LOGIKA SELEKSI KATEGORI (FOLDER) ===
-
-  void _enterCategorySelectionMode(String categoryId) {
-    // Jangan masuk mode kategori jika sedang mode note
-    if (widget.isNoteSelectionMode) return;
-
-    setState(() {
-      _isCategorySelectionMode = true;
-      _selectedCategoryIds.clear();
-      _selectedCategoryIds.add(categoryId);
-    });
-    widget.onCategorySelectionModeChanged(true);
-  }
-
-  void _toggleCategorySelection(String categoryId) {
-    setState(() {
-      if (_selectedCategoryIds.contains(categoryId)) {
-        _selectedCategoryIds.remove(categoryId);
-        if (_selectedCategoryIds.isEmpty) {
-          exitSelectionMode();
-        }
-      } else {
-        _selectedCategoryIds.add(categoryId);
-      }
-    });
-  }
-
-  void selectAll() {
-    final validCategories = widget.categories
-        .where((c) => c.id != 'all' && c.id != 'bookmarks')
-        .map((c) => c.id)
-        .toList();
-
-    setState(() {
-      if (_selectedCategoryIds.length == validCategories.length) {
-        _selectedCategoryIds.clear();
-      } else {
-        _selectedCategoryIds.addAll(validCategories);
-      }
-    });
-  }
-
-  void exitSelectionMode() {
-    setState(() {
-      _isCategorySelectionMode = false;
-      _selectedCategoryIds.clear();
-    });
-    widget.onCategorySelectionModeChanged(false);
-  }
-
-  bool get isSelectionFavorite {
-    if (_selectedCategoryIds.isEmpty) return false;
-    final selectedCats = widget.categories.where((c) => _selectedCategoryIds.contains(c.id));
-    return selectedCats.every((c) => c.isFavorite);
-  }
-
-  // --- ACTIONS CATEGORY ---
-
-  void handleEdit() {
-    if (_selectedCategoryIds.length != 1) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select exactly one category to edit')),
-      );
-      return;
-    }
-    final categoryId = _selectedCategoryIds.first;
-    final category = widget.categories.firstWhere((c) => c.id == categoryId);
-
-    showDialog(
-      context: context,
-      builder: (ctx) => _RenameCategoryDialog(
-        initialName: category.name,
-        onSave: (newName) async {
-          await widget.noteService.updateCategory(
-            category.copyWith(name: newName),
-          );
-          exitSelectionMode();
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Category renamed to "$newName"')),
-            );
-          }
-        },
-      ),
-    );
-  }
-
-  void handleToggleFavorite() async {
-    if (_selectedCategoryIds.isEmpty) return;
-    final areAllFav = isSelectionFavorite;
-    for (var id in _selectedCategoryIds) {
-      final cat = widget.categories.firstWhere((c) => c.id == id);
-      if (cat.isFavorite == areAllFav) {
-        await widget.noteService.toggleCategoryFavorite(id, cat.isFavorite);
-      }
-    }
-    exitSelectionMode();
-  }
-
-  void handleDelete() {
-    if (_selectedCategoryIds.isEmpty) return;
-    final count = _selectedCategoryIds.length;
-    showIOSDialog(
-      context: context,
-      title: 'Delete Categories',
-      message: 'Delete $count categories?\nNotes inside will be moved to "Uncategorized".',
-      confirmText: 'Delete',
-      confirmTextColor: const Color(0xFFFF453A),
-      onConfirm: () async {
-        for (var id in _selectedCategoryIds) {
-          await widget.noteService.deleteCategory(id);
-        }
-        exitSelectionMode();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Categories deleted')),
-          );
-        }
-      },
-    );
   }
 
   @override
@@ -211,57 +85,41 @@ class CategoriesTabState extends State<CategoriesTab> {
           children: [
             Icon(Icons.folder_open, size: 60, color: Colors.grey.shade300),
             const SizedBox(height: 16),
-            Text(
-              'No categories yet',
-              style: GoogleFonts.poppins(color: Colors.grey),
-            ),
+            Text('No categories yet', style: GoogleFonts.poppins(color: Colors.grey)),
           ],
         ),
       );
     }
 
-    return PopScope(
-      canPop: !_isCategorySelectionMode,
-      onPopInvokedWithResult: (didPop, result) {
-        if (!didPop && _isCategorySelectionMode) {
-          exitSelectionMode();
-        }
+    return ListView.builder(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(0, 10, 0, 120),
+      itemCount: displayCategories.length,
+      itemBuilder: (context, index) {
+        final category = displayCategories[index];
+        final notes = widget.allNotes.where((n) => n.categoryId == category.id).toList();
+        final isSelected = widget.selectedCategoryIds.contains(category.id);
+
+        return _CategoryItem(
+          key: ValueKey('${category.id}_${category.isFavorite}_$isSelected'),
+          category: category,
+          noteCount: notes.length,
+          isExpanded: _expandedCategories.contains(category.id),
+          isSelected: isSelected,
+          isCategorySelectionMode: widget.isCategorySelectionMode,
+          notes: notes,
+          onTap: () => _toggleExpand(category.id),
+          onLongPress: () {
+            if (!widget.isNoteSelectionMode) widget.onCategoryLongPress(category.id);
+          },
+          noteService: widget.noteService,
+          getPlainText: _getPlainText,
+          isNoteSelectionMode: widget.isNoteSelectionMode,
+          selectedNoteIds: widget.selectedNoteIds,
+          onNoteTap: widget.onNoteTap,
+          onNoteLongPress: widget.onNoteLongPress,
+        );
       },
-      child: ListView.builder(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(0, 10, 0, 120),
-        itemCount: displayCategories.length,
-        itemBuilder: (context, index) {
-          final category = displayCategories[index];
-          final notes = widget.allNotes.where((n) => n.categoryId == category.id).toList();
-          final isSelected = _selectedCategoryIds.contains(category.id);
-
-          return _CategoryItem(
-            key: ValueKey('${category.id}_${category.isFavorite}_$isSelected'),
-            category: category,
-            noteCount: notes.length,
-            isExpanded: _expandedCategories.contains(category.id),
-            isSelected: isSelected, // Status seleksi kategori
-            isCategorySelectionMode: _isCategorySelectionMode,
-            notes: notes,
-
-            // Interaction Kategori
-            onTap: () => _toggleExpand(category.id),
-            onLongPress: () {
-              if (!_isCategorySelectionMode) _enterCategorySelectionMode(category.id);
-            },
-
-            noteService: widget.noteService,
-            getPlainText: _getPlainText,
-
-            // Props Seleksi Notes (Diteruskan ke NoteCard)
-            isNoteSelectionMode: widget.isNoteSelectionMode,
-            selectedNoteIds: widget.selectedNoteIds,
-            onNoteTap: widget.onNoteTap,
-            onNoteLongPress: widget.onNoteLongPress,
-          );
-        },
-      ),
     );
   }
 }
@@ -270,15 +128,14 @@ class _CategoryItem extends StatefulWidget {
   final CategoryModel category;
   final int noteCount;
   final bool isExpanded;
-  final bool isSelected; // Apakah kategori ini dipilih?
-  final bool isCategorySelectionMode; // Apakah sedang mode pilih kategori?
+  final bool isSelected;
+  final bool isCategorySelectionMode;
   final List<NoteModel> notes;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
   final NoteService noteService;
   final String Function(String) getPlainText;
 
-  // Note Selection Props
   final bool isNoteSelectionMode;
   final Set<String> selectedNoteIds;
   final Function(String) onNoteTap;
@@ -296,7 +153,6 @@ class _CategoryItem extends StatefulWidget {
     required this.onLongPress,
     required this.noteService,
     required this.getPlainText,
-    // Params Note Selection
     required this.isNoteSelectionMode,
     required this.selectedNoteIds,
     required this.onNoteTap,
@@ -309,6 +165,7 @@ class _CategoryItem extends StatefulWidget {
 
 class _CategoryItemState extends State<_CategoryItem> {
   late bool _isFavorite;
+  bool _isTogglingFavorite = false;
 
   @override
   void initState() {
@@ -327,10 +184,11 @@ class _CategoryItemState extends State<_CategoryItem> {
   }
 
   Future<void> _toggleFavorite() async {
-    // Disable favorite tap on category card when in ANY selection mode
-    if (widget.isCategorySelectionMode || widget.isNoteSelectionMode) return;
+    // Prevent toggle during selection mode
+    if (widget.isCategorySelectionMode || _isTogglingFavorite) return;
 
     setState(() {
+      _isTogglingFavorite = true;
       _isFavorite = !_isFavorite;
     });
 
@@ -340,9 +198,21 @@ class _CategoryItemState extends State<_CategoryItem> {
         widget.category.isFavorite,
       );
     } catch (e) {
-      setState(() {
-        _isFavorite = !_isFavorite;
-      });
+      // Revert on failure
+      if (mounted) {
+        setState(() {
+          _isFavorite = !_isFavorite;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to update favorite')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isTogglingFavorite = false;
+        });
+      }
     }
   }
 
@@ -352,10 +222,6 @@ class _CategoryItemState extends State<_CategoryItem> {
     const Color selectedGrey = Color(0xFFBABABA);
     const Color checkCircleColor = Color(0xFF777777);
     const Color outlineGrey = Color(0xFF777777);
-
-    // Kategori tidak bisa di-expand jika sedang mode seleksi kategori (agar user fokus milih folder)
-    // TAPI harus tetap bisa di-expand jika sedang mode seleksi NOTE (agar user bisa cari note di folder lain)
-    final bool showNotes = widget.isExpanded;
 
     return Column(
       children: [
@@ -388,15 +254,9 @@ class _CategoryItemState extends State<_CategoryItem> {
                   Expanded(
                     child: Text(
                       widget.category.name,
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w400,
-                        color: Colors.black,
-                      ),
+                      style: GoogleFonts.poppins(fontSize: 14),
                     ),
                   ),
-
-                  // VISUAL KATEGORI (Centang atau Count/Fav)
                   if (widget.isSelected) ...[
                     Container(
                       width: 24,
@@ -406,28 +266,26 @@ class _CategoryItemState extends State<_CategoryItem> {
                         shape: BoxShape.circle,
                       ),
                       child: const Center(
-                        child: Icon(Icons.check, size: 16, color: Colors.white),
+                        child: Icon(
+                          Icons.check,
+                          size: 16,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ] else ...[
                     if (widget.noteCount > 0)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        child: Text(
-                          widget.noteCount.toString(),
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black54,
-                          ),
-                        ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Text(widget.noteCount.toString()),
                       ),
-                    const SizedBox(width: 12),
-                    GestureDetector(
+                    const SizedBox(width: 8),
+                    // FIX: Wrap icon with GestureDetector/InkWell
+                    InkWell(
                       onTap: _toggleFavorite,
-                      behavior: HitTestBehavior.opaque,
+                      borderRadius: BorderRadius.circular(20),
                       child: Padding(
-                        padding: const EdgeInsets.all(8.0),
+                        padding: const EdgeInsets.all(4),
                         child: Icon(
                           _isFavorite ? Icons.favorite : Icons.favorite_border,
                           color: _isFavorite ? Colors.red : outlineGrey,
@@ -435,16 +293,12 @@ class _CategoryItemState extends State<_CategoryItem> {
                         ),
                       ),
                     ),
-                  ],
+                  ]
                 ],
               ),
             ),
           ),
         ),
-
-        // GRID NOTES DI DALAM KATEGORI
-        // Disembunyikan jika mode seleksi Kategori aktif (agar UI bersih)
-        // Tampil jika Expanded (baik mode normal maupun mode seleksi note)
         if (!widget.isCategorySelectionMode)
           AnimatedCrossFade(
             firstChild: const SizedBox.shrink(),
@@ -463,50 +317,33 @@ class _CategoryItemState extends State<_CategoryItem> {
                 itemCount: widget.notes.length,
                 itemBuilder: (context, index) {
                   final note = widget.notes[index];
-                  final isNoteSelected = widget.selectedNoteIds.contains(note.id);
-
                   return NoteCard(
                     title: note.title,
                     content: widget.getPlainText(note.content),
                     date: note.formattedDate,
                     color: Color(note.color),
                     isFavorite: note.isFavorite,
-                    // LOGIKA SELEKSI NOTE
-                    isSelected: widget.isNoteSelectionMode && isNoteSelected,
+                    isSelected: widget.isNoteSelectionMode &&
+                        widget.selectedNoteIds.contains(note.id),
                     onTap: () => widget.onNoteTap(note.id),
                     onLongPress: () => widget.onNoteLongPress(note.id),
-                    onFavoriteTap: () {
-                      // Jika mode seleksi aktif, tap love mungkin bisa select note atau toggle fav?
-                      // Biasanya di mode seleksi, tap love disabled atau select note.
-                      // Kita disable toggle fav single saat mode seleksi.
-                      if (!widget.isNoteSelectionMode) {
-                        // Panggil callback parent (tapi disini kita butuh akses ke _noteService toggle manual atau callback)
-                        // Karena CategoriesTab tidak punya callback onToggleFavoriteNote, kita panggil service langsung atau biarkan.
-                        // NoteService bisa diakses via widget.noteService
-                        widget.noteService.toggleFavorite(note.id, note.isFavorite);
-                      } else {
-                        widget.onNoteTap(note.id); // Select note instead
-                      }
-                    },
+                    onFavoriteTap: () {},
                   );
                 },
               ),
             )
-                : Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: Text(
-                "No notes in this category",
-                style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey),
-              ),
-            ),
-            crossFadeState: showNotes ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+                : const SizedBox.shrink(),
+            crossFadeState: widget.isExpanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
             duration: const Duration(milliseconds: 200),
           ),
       ],
     );
   }
 }
-// Widget Navbar khusus untuk Kategori (Public agar bisa dipakai NotesMainPage)
+
+// Widget Navbar khusus untuk Kategori
 class CategorySelectionActionBar extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback onFavorite;
@@ -608,7 +445,7 @@ class _ActionItem extends StatelessWidget {
   }
 }
 
-// Dialog Rename Category Menggunakan IOSDialog
+// Dialog Rename Category
 class _RenameCategoryDialog extends StatefulWidget {
   final String initialName;
   final Function(String) onSave;
@@ -632,7 +469,6 @@ class _RenameCategoryDialogState extends State<_RenameCategoryDialog> {
     super.initState();
     _controller = TextEditingController(text: widget.initialName);
 
-    // Auto focus text field
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Future.delayed(const Duration(milliseconds: 100), () {
         if (mounted) {
@@ -678,7 +514,7 @@ class _RenameCategoryDialogState extends State<_RenameCategoryDialog> {
       cancelText: 'Cancel',
       confirmTextColor: const Color(0xFF007AFF),
       isLoading: _isLoading,
-      autoDismiss: false, // Kita handle dismiss manual setelah save
+      autoDismiss: false,
       onConfirm: _handleSave,
       onCancel: () {
         _focusNode.unfocus();
