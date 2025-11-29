@@ -26,15 +26,12 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
   Timer? _debounceTimer;
 
   bool _isLoading = false;
-
-  // Flag untuk mendeteksi apakah data berubah
   bool _isDirty = false;
+  bool _isFavorite = false; // State untuk favorite
 
   late DateTime _currentDate;
   int _wordCount = 0;
-
   String _currentCategoryId = '';
-  bool _isFavorite = false;
 
   // Toolbar state
   bool _isBold = false;
@@ -47,23 +44,18 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
   void initState() {
     super.initState();
     _currentDate = DateTime.now();
-
     _quillController = quill.QuillController.basic();
 
     if (widget.noteId != null) {
       _fetchNoteData();
     }
 
-    // ✅ FIX: Autosave dipercepat jadi 5 detik
-    // Autosave hanya berjalan jika noteId TIDAK null (Edit Mode)
-    // Ini mencegah duplikat entry saat membuat note baru karena Service generate ID baru terus.
-    if (widget.noteId != null) {
-      _autoSaveTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
-        if (_isDirty) {
-          _autoSave();
-        }
-      });
-    }
+    // Auto save logic
+    _autoSaveTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+      if (_isDirty && widget.noteId != null) {
+        _autoSave();
+      }
+    });
 
     _titleController.addListener(_onTitleChanged);
     _quillController.addListener(_onContentChanged);
@@ -104,6 +96,24 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
         setState(() => _isDirty = true);
       }
     });
+  }
+
+  // Logic Favorite diperbarui
+  Future<void> _toggleFavorite() async {
+    setState(() {
+      _isFavorite = !_isFavorite;
+      _isDirty = true; // Tandai agar tersimpan saat autosave/back
+    });
+
+    // Jika note sudah ada di database, update langsung statusnya
+    if (widget.noteId != null) {
+      try {
+        await _noteService.toggleFavorite(widget.noteId!, _isFavorite);
+      } catch (e) {
+        // Jika gagal koneksi, biarkan saja, nanti akan terupdate saat saveNote() dipanggil
+        debugPrint("Gagal update favorite via API langsung, akan ikut tersimpan di saveNote: $e");
+      }
+    }
   }
 
   void _updateWordCount() {
@@ -180,7 +190,7 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
         setState(() {
           _currentDate = note.updatedAt;
           _currentCategoryId = note.categoryId;
-          _isFavorite = note.isFavorite;
+          _isFavorite = note.isFavorite; // Load status favorite
         });
       }
     } catch (e) {
@@ -191,7 +201,6 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
   }
 
   Future<void> _autoSave() async {
-    // Hanya autosave jika ini note lama (punya ID)
     if (widget.noteId != null) {
       await _saveNote();
       if (mounted) setState(() => _isDirty = false);
@@ -202,12 +211,10 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
     final title = _titleController.text.trim();
     final plainText = _quillController.document.toPlainText().trim();
 
-    // Jangan simpan jika kosong sama sekali
     if (title.isEmpty && plainText.isEmpty) return;
 
     final contentJson = jsonEncode(_quillController.document.toDelta().toJson());
 
-    // ✅ FIX CRASH: Gunakan null check yang aman
     final String safeId = widget.noteId ?? '';
     final bool isEditingExistingNote = widget.noteId != null;
 
@@ -218,7 +225,7 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
       createdAt: isEditingExistingNote ? _currentDate : DateTime.now(),
       updatedAt: DateTime.now(),
       categoryId: _currentCategoryId,
-      isFavorite: _isFavorite,
+      isFavorite: _isFavorite, // Pastikan status favorite tersimpan
     );
 
     try {
@@ -232,7 +239,6 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
     }
   }
 
-  // --- Formatting Methods (Same as before) ---
   void _applyFormatting(String format) {
     if (!_editorFocusNode.hasFocus) {
       _editorFocusNode.requestFocus();
@@ -366,14 +372,9 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
     );
   }
 
-  // ✅ FIX Navigation: Gunakan logic yang aman
   void _handleBack() async {
-    // Tutup keyboard dulu agar smooth
     FocusManager.instance.primaryFocus?.unfocus();
-
-    // Save note
     await _saveNote();
-
     if (mounted) Navigator.pop(context);
   }
 
@@ -381,23 +382,17 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
   Widget build(BuildContext context) {
     final formattedDate = DateFormat('EEEE, d MMM y').format(_currentDate);
 
-    // ✅ FIX PopScope: Logic yang lebih robust untuk Android Back Button
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (bool didPop, dynamic result) async {
         if (didPop) return;
-
-        // Simpan data sebelum keluar
         await _saveNote();
-
         if (context.mounted) {
           Navigator.of(context).pop();
         }
       },
       child: Scaffold(
         backgroundColor: Colors.white,
-        // ✅ Smoothness: Set false agar keyboard tidak mendorong layout secara kasar
-        // Konten akan discroll via SingleChildScrollView
         resizeToAvoidBottomInset: true,
         body: SafeArea(
           child: _isLoading
@@ -405,40 +400,64 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
               : Column(
             children: [
               _buildHeader(),
+              // SearchBar dihapus dari sini
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(horizontal: 25),
-                  physics: const BouncingScrollPhysics(), // ✅ Smooth Bouncing Scroll
+                  physics: const BouncingScrollPhysics(),
                   keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const SizedBox(height: 20),
-                      TextField(
-                        controller: _titleController,
-                        style: GoogleFonts.poppins(
-                          fontSize: 30,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black,
-                          height: 1.2,
-                        ),
-                        decoration: InputDecoration(
-                          hintText: 'Title',
-                          hintStyle: GoogleFonts.poppins(
-                            fontSize: 30,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey.shade400,
+                      // ROW JUDUL & FAVORITE
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _titleController,
+                              style: GoogleFonts.poppins(
+                                fontSize: 30,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black,
+                                height: 1.2,
+                              ),
+                              decoration: InputDecoration(
+                                hintText: 'Title',
+                                hintStyle: GoogleFonts.poppins(
+                                  fontSize: 30,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey.shade400,
+                                ),
+                                border: InputBorder.none,
+                              ),
+                              maxLines: null,
+                            ),
                           ),
-                          border: InputBorder.none,
-                        ),
-                        maxLines: null,
+                          const SizedBox(width: 8),
+                          // --- ICON FAVORITE (LOGIKA & UI) ---
+                          Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: _toggleFavorite,
+                              customBorder: const CircleBorder(),
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Icon(
+                                  _isFavorite ? Icons.favorite : Icons.favorite_border,
+                                  color: _isFavorite ? Colors.red : Colors.grey.shade400,
+                                  size: 28,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 8),
                       _buildMetadata(formattedDate),
                       const SizedBox(height: 24),
-                      // Editor Area
                       SizedBox(
-                        // Beri tinggi minimal agar scrollable nyaman
                         height: MediaQuery.of(context).size.height * 0.6,
                         child: quill.QuillEditor.basic(
                           focusNode: _editorFocusNode,
@@ -448,8 +467,8 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
                             padding: const EdgeInsets.only(bottom: 100),
                             readOnly: false,
                             autoFocus: false,
-                            expands: false, // Biarkan SingleChildScrollView yang handle scroll utama
-                            scrollPhysics: const NeverScrollableScrollPhysics(), // Disable internal scroll
+                            expands: false,
+                            scrollPhysics: const NeverScrollableScrollPhysics(),
                             customStyles: quill.DefaultStyles(
                               paragraph: quill.DefaultTextBlockStyle(
                                 GoogleFonts.poppins(fontSize: 16, color: Colors.black, height: 1.5),
@@ -511,20 +530,21 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
               Text('All Notes', style: GoogleFonts.poppins(fontSize: 16)),
             ],
           ),
-          Row(
-            children: [
-              if (_isDirty)
-                Text(
-                  'Saving', // Indikator lebih jelas
-                  style: TextStyle(color: Colors.orange.shade700, fontSize: 12),
-                ),
-              const SizedBox(width: 16),
-            ],
-          )
+          // Indikator Saving (Search Icon sudah dihapus)
+          if (_isDirty)
+            Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Text(
+                'Saving',
+                style: TextStyle(color: Colors.orange.shade700, fontSize: 12),
+              ),
+            ),
         ],
       ),
     );
   }
+
+  // _buildSearchBar Dihapus total
 
   Widget _buildMetadata(String formattedDate) {
     return Row(
@@ -558,7 +578,7 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
+            color: Colors.black.withOpacity(0.1),
             blurRadius: 8,
             offset: const Offset(0, -2),
           ),
