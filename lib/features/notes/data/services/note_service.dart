@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import '../models/category_model.dart';
 import '../models/note_model.dart';
 
@@ -7,25 +8,16 @@ class NoteService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // 🎨 7 Warna Notes (sesuai requirement)
   static const List<int> noteColors = [
-    0xFFE6C4DE, // 1. Pink pastel
-    0xFFCFE6AF, // 2. Green pastel
-    0xFFB5D8F9, // 3. Blue pastel
-    0xFFE4BA9B, // 4. Orange pastel
-    0xFFFFBEBE, // 5. Red pastel
-    0xFFF4FFBE, // 6. Yellow pastel
-    0xFFBEFFE2, // 7. Mint pastel
+    0xFFE6C4DE, 0xFFCFE6AF, 0xFFB5D8F9, 0xFFE4BA9B,
+    0xFFFFBEBE, 0xFFF4FFBE, 0xFFBEFFE2,
   ];
 
-  // ✅ FIX: Warna berdasarkan ID note agar konsisten
   int getColorForNote(String noteId) {
-    // Gunakan hashCode dari noteId untuk mendapat warna yang konsisten
     final hash = noteId.hashCode.abs();
     return noteColors[hash % noteColors.length];
   }
 
-  // Helper to get current User UID
   String? get _uid => _auth.currentUser?.uid;
 
   // === REAL-TIME STREAMS ===
@@ -47,27 +39,19 @@ class NoteService {
 
   Stream<List<CategoryModel>> getCategoriesStream() {
     if (_uid == null) return Stream.value([]);
+
+    // HANYA ambil kategori yang dibuat user dari Firestore
+    // Tidak ada lagi injeksi 'All' atau 'Bookmarks'
     return _firestore
         .collection('users')
         .doc(_uid)
         .collection('categories')
+        .orderBy('name', descending: false) // Urutkan sesuai nama
         .snapshots()
         .map((snapshot) {
-      var cats = snapshot.docs
+      return snapshot.docs
           .map((doc) => CategoryModel.fromMap(doc.data(), doc.id))
           .toList();
-
-      // ✅ Ensure 'All' and 'Bookmarks' exist virtually
-      if (!cats.any((c) => c.id == 'all')) {
-        cats.insert(0, CategoryModel(id: 'all', name: 'All'));
-      }
-
-      // ✅ Bookmarks category (paling atas setelah All)
-      if (!cats.any((c) => c.id == 'bookmarks')) {
-        cats.insert(1, CategoryModel(id: 'bookmarks', name: 'Bookmarks'));
-      }
-
-      return cats;
     });
   }
 
@@ -75,26 +59,50 @@ class NoteService {
 
   Future<void> addNote(NoteModel note) async {
     if (_uid == null) return;
-
     final docRef = _firestore.collection('users').doc(_uid).collection('notes').doc();
 
-    // ✅ Assign warna berdasarkan ID (konsisten)
+    // Pastikan categoryId tidak null/kosong, default ke string kosong jika tidak ada kategori
+    final safeCategoryId = (note.categoryId == 'all' || note.categoryId == 'bookmarks')
+        ? ''
+        : note.categoryId;
+
     final noteWithIdAndColor = note.copyWith(
       id: docRef.id,
       color: getColorForNote(docRef.id),
+      categoryId: safeCategoryId,
     );
-
     await docRef.set(noteWithIdAndColor.toMap());
   }
 
   Future<void> updateNote(NoteModel note) async {
     if (_uid == null) return;
+
+    // Ambil warna lama agar tidak berubah
+    final existingDoc = await _firestore
+        .collection('users')
+        .doc(_uid)
+        .collection('notes')
+        .doc(note.id)
+        .get();
+
+    final existingColor = existingDoc.data()?['color'] ?? note.color;
+
+    // Bersihkan categoryId jika masih ada sisa 'bookmarks' atau 'all' dari data lama
+    String cleanCategoryId = note.categoryId;
+    if (cleanCategoryId == 'all' || cleanCategoryId == 'bookmarks') {
+      cleanCategoryId = '';
+    }
+
+    final noteMap = note.toMap();
+    noteMap['color'] = existingColor;
+    noteMap['categoryId'] = cleanCategoryId;
+
     await _firestore
         .collection('users')
         .doc(_uid)
         .collection('notes')
         .doc(note.id)
-        .update(note.toMap());
+        .update(noteMap);
   }
 
   Future<void> deleteNote(String noteId) async {
@@ -107,6 +115,7 @@ class NoteService {
         .delete();
   }
 
+  // Logic Favorite Sederhana - Langsung update boolean
   Future<void> toggleFavorite(String noteId, bool currentStatus) async {
     if (_uid == null) return;
     await _firestore
@@ -117,28 +126,11 @@ class NoteService {
         .update({'isFavorite': !currentStatus});
   }
 
-  // ✅ Toggle Bookmark
-  Future<void> toggleBookmark(String noteId, bool currentStatus) async {
-    if (_uid == null) return;
-
-    // Update categoryId: jika sudah bookmark → pindah ke 'all', jika belum → pindah ke 'bookmarks'
-    final newCategoryId = currentStatus ? 'all' : 'bookmarks';
-
-    await _firestore
-        .collection('users')
-        .doc(_uid)
-        .collection('notes')
-        .doc(noteId)
-        .update({'categoryId': newCategoryId});
-  }
-
-  // Batch Operations for Selection Mode
   Future<void> deleteNotesBatch(List<String> noteIds) async {
     if (_uid == null) return;
     final batch = _firestore.batch();
     for (var id in noteIds) {
-      final docRef =
-      _firestore.collection('users').doc(_uid).collection('notes').doc(id);
+      final docRef = _firestore.collection('users').doc(_uid).collection('notes').doc(id);
       batch.delete(docRef);
     }
     await batch.commit();
@@ -148,8 +140,7 @@ class NoteService {
     if (_uid == null) return;
     final batch = _firestore.batch();
     for (var id in noteIds) {
-      final docRef =
-      _firestore.collection('users').doc(_uid).collection('notes').doc(id);
+      final docRef = _firestore.collection('users').doc(_uid).collection('notes').doc(id);
       batch.update(docRef, {'isFavorite': isFavorite});
     }
     await batch.commit();
@@ -157,11 +148,14 @@ class NoteService {
 
   Future<void> moveNotesBatch(List<String> noteIds, String categoryId) async {
     if (_uid == null) return;
+
+    // Pastikan tidak memindahkan ke 'all' atau 'bookmarks' secara tidak sengaja
+    final safeCategory = (categoryId == 'all' || categoryId == 'bookmarks') ? '' : categoryId;
+
     final batch = _firestore.batch();
     for (var id in noteIds) {
-      final docRef =
-      _firestore.collection('users').doc(_uid).collection('notes').doc(id);
-      batch.update(docRef, {'categoryId': categoryId});
+      final docRef = _firestore.collection('users').doc(_uid).collection('notes').doc(id);
+      batch.update(docRef, {'categoryId': safeCategory});
     }
     await batch.commit();
   }
@@ -187,7 +181,6 @@ class NoteService {
   Future<void> deleteCategory(String categoryId) async {
     if (_uid == null) return;
 
-    // 1. Delete the category
     await _firestore
         .collection('users')
         .doc(_uid)
@@ -195,7 +188,7 @@ class NoteService {
         .doc(categoryId)
         .delete();
 
-    // 2. Move associated notes to 'all'
+    // Reset notes yang ada di kategori ini menjadi uncategorized ('')
     final notesSnapshot = await _firestore
         .collection('users')
         .doc(_uid)
@@ -205,7 +198,7 @@ class NoteService {
 
     final batch = _firestore.batch();
     for (var doc in notesSnapshot.docs) {
-      batch.update(doc.reference, {'categoryId': 'all'});
+      batch.update(doc.reference, {'categoryId': ''});
     }
     await batch.commit();
   }
@@ -235,7 +228,9 @@ class NoteService {
       }
       return null;
     } catch (e) {
-      print("Error getting note: $e");
+      if (kDebugMode) {
+        print("Error getting note: $e");
+      }
       return null;
     }
   }
