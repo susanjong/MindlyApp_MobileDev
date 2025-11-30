@@ -3,14 +3,12 @@ import 'package:google_fonts/google_fonts.dart';
 
 class NoteSearchBar extends StatelessWidget {
   final TextEditingController controller;
-  final String greetingText;
   final String hintText;
   final VoidCallback? onClear;
 
   const NoteSearchBar({
     super.key,
     required this.controller,
-    this.greetingText = 'Hello! How are you today?',
     this.hintText = 'Search notes...',
     this.onClear,
   });
@@ -22,18 +20,6 @@ class NoteSearchBar extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Greeting Text
-          Text(
-            greetingText,
-            style: GoogleFonts.poppins(
-              color: const Color(0xFF444444),
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              letterSpacing: -0.28,
-            ),
-          ),
-          const SizedBox(height: 8),
-
           // Search Field
           Container(
             height: 40,

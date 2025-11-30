@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../widgets/add_category_dialog.dart';
 import '../../../../config/routes/routes.dart';
 import '../../../../core/widgets/dialog/alert_dialog.dart';
 import '../../../../core/widgets/navigation/custom_navbar_widget.dart';
 import '../../../../core/widgets/navigation/custom_top_app_bar.dart';
+import '../widgets/move_to_categories.dart';
 import '../widgets/selection_action_bar.dart';
 import '../../data/models/note_model.dart';
 import '../../data/models/category_model.dart';
@@ -14,7 +17,6 @@ import '../widgets/favorites_tab.dart';
 import '../widgets/note_search_bar.dart';
 import '../widgets/note_tab_bar.dart';
 import '../widgets/notes_expandable_fab.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class NotesMainPage extends StatefulWidget {
   const NotesMainPage({super.key});
@@ -28,13 +30,23 @@ class _NotesMainPageState extends State<NotesMainPage> {
   final TextEditingController _searchController = TextEditingController();
   final NoteService _noteService = NoteService();
 
+  // Key untuk CategoriesTab (opsional jika logic sudah diangkat)
+  // Tapi kita tetap simpan jika butuh akses method spesifik internal tab
+  final GlobalKey<CategoriesTabState> _categoriesTabKey = GlobalKey<CategoriesTabState>();
+
   bool _isNavBarVisible = true;
   int _selectedTabIndex = 0;
   String _searchQuery = '';
 
+  // === STATE SELEKSI NOTES ===
   bool _isSelectionMode = false;
   final Set<String> _selectedNoteIds = {};
   List<NoteModel> _currentNotesList = [];
+
+  // === STATE SELEKSI KATEGORI ===
+  bool _isCategorySelectionMode = false;
+  final Set<String> _selectedCategoryIds = {};
+  List<CategoryModel> _currentCategoriesList = [];
 
   @override
   void initState() {
@@ -65,7 +77,9 @@ class _NotesMainPageState extends State<NotesMainPage> {
     if (index != 1) Navigator.pushReplacementNamed(context, routes[index]);
   }
 
+  // === NOTE SELECTION LOGIC ===
   void _enterSelectionMode(String noteId) {
+    if (_isCategorySelectionMode) return;
     setState(() {
       _isSelectionMode = true;
       _selectedNoteIds.add(noteId);
@@ -73,14 +87,8 @@ class _NotesMainPageState extends State<NotesMainPage> {
     });
   }
 
-  void _exitSelectionMode() {
-    setState(() {
-      _isSelectionMode = false;
-      _selectedNoteIds.clear();
-    });
-  }
-
   void _toggleSelection(String noteId) {
+    if (_isCategorySelectionMode) return;
     if (!_isSelectionMode) {
       Navigator.pushNamed(context, AppRoutes.noteEditor, arguments: noteId);
       return;
@@ -95,130 +103,216 @@ class _NotesMainPageState extends State<NotesMainPage> {
     });
   }
 
-  void _selectAll() {
+  void _exitNoteSelectionMode() {
     setState(() {
-      if (_selectedNoteIds.length == _currentNotesList.length) {
-        _selectedNoteIds.clear();
+      _isSelectionMode = false;
+      _selectedNoteIds.clear();
+    });
+  }
+
+  // === CATEGORY SELECTION LOGIC ===
+  void _enterCategorySelectionMode(String categoryId) {
+    if (_isSelectionMode) return;
+    setState(() {
+      _isCategorySelectionMode = true;
+      _selectedCategoryIds.clear();
+      _selectedCategoryIds.add(categoryId);
+      _isNavBarVisible = true;
+    });
+  }
+
+  void _toggleCategorySelection(String categoryId) {
+    if (!_isCategorySelectionMode) return;
+    setState(() {
+      if (_selectedCategoryIds.contains(categoryId)) {
+        _selectedCategoryIds.remove(categoryId);
+        if (_selectedCategoryIds.isEmpty) _isCategorySelectionMode = false;
       } else {
-        _selectedNoteIds.addAll(_currentNotesList.map((e) => e.id));
+        _selectedCategoryIds.add(categoryId);
       }
     });
   }
 
-  void _deleteSelected() {
+  void _exitCategorySelectionMode() {
+    setState(() {
+      _isCategorySelectionMode = false;
+      _selectedCategoryIds.clear();
+    });
+  }
+
+  // === ACTIONS ===
+  void _selectAll() {
+    if (_isCategorySelectionMode) {
+      // Select All Categories (Logic umum untuk semua tab yang menampilkan kategori)
+      final validCats = _currentCategoriesList
+          .where((c) => c.id != 'all' && c.id != 'bookmarks')
+          .map((c) => c.id);
+      setState(() {
+        if (_selectedCategoryIds.length == validCats.length) {
+          _selectedCategoryIds.clear();
+        } else {
+          _selectedCategoryIds.addAll(validCats);
+        }
+      });
+    } else {
+      // Select All Notes
+      // Logic: Jika di tab Favorites, select favorite notes only?
+      // Untuk simplifikasi, kita select notes yang tampil di layar (_currentNotesList)
+      // Note: _currentNotesList diupdate di builder
+      setState(() {
+        if (_selectedNoteIds.length == _currentNotesList.length) {
+          _selectedNoteIds.clear();
+        } else {
+          _selectedNoteIds.addAll(_currentNotesList.map((e) => e.id));
+        }
+      });
+    }
+  }
+
+  void _deleteSelectedNotes() {
     showIOSDialog(
       context: context,
       title: 'Delete Notes',
-      message: 'Are you sure you want to\ndelete these ${_selectedNoteIds.length} notes?',
+      message: 'Delete ${_selectedNoteIds.length} notes?',
       confirmText: 'Delete',
       confirmTextColor: const Color(0xFFFF453A),
       onConfirm: () async {
         await _noteService.deleteNotesBatch(_selectedNoteIds.toList());
-        _exitSelectionMode();
+        _exitNoteSelectionMode();
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Notes deleted')));
       },
     );
   }
 
-  void _toggleFavoriteSelected(List<NoteModel> allNotes) async {
+  void _toggleFavoriteSelectedNotes(List<NoteModel> allNotes) async {
     final selectedNotes = allNotes.where((n) => _selectedNoteIds.contains(n.id)).toList();
     final allAreFavorites = selectedNotes.every((n) => n.isFavorite);
     await _noteService.setFavoriteBatch(_selectedNoteIds.toList(), !allAreFavorites);
-    _exitSelectionMode();
+    _exitNoteSelectionMode();
   }
 
-  void _moveSelected() {
-    showModalBottomSheet(
+  void _moveSelectedNotes() {
+    showMoveToDialog(
       context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => StreamBuilder<List<CategoryModel>>(
-        stream: _noteService.getCategoriesStream(),
-        builder: (context, snapshot) {
-          final categories = snapshot.data ?? [];
-          return SafeArea(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(height: 16),
-                Text('Move to...', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 16),
-                if (categories.isEmpty) const Padding(padding: EdgeInsets.all(16), child: Text("No categories")),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: categories.length,
-                    itemBuilder: (context, index) => ListTile(
-                      title: Text(categories[index].name, style: GoogleFonts.poppins()),
-                      onTap: () async {
-                        await _noteService.moveNotesBatch(_selectedNoteIds.toList(), categories[index].id);
-                        Navigator.pop(ctx);
-                        _exitSelectionMode();
-                        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Notes moved')));
-                      },
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
+      noteService: _noteService,
+      selectedNoteIds: _selectedNoteIds.toList(),
+      onMoveConfirmed: (categoryId) async {
+        await _noteService.moveNotesBatch(_selectedNoteIds.toList(), categoryId);
+        _exitNoteSelectionMode();
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Notes moved')));
+      },
+      onAddCategory: (name) async {
+        await _noteService.addCategory(CategoryModel(id: '', name: name));
+      },
+    );
+  }
+
+  void _renameSelectedCategory() {
+    if (_selectedCategoryIds.length != 1) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Select exactly one category to edit')));
+      return;
+    }
+    final catId = _selectedCategoryIds.first;
+    final category = _currentCategoriesList.firstWhere((c) => c.id == catId, orElse: () => CategoryModel(id: '', name: ''));
+
+    showDialog(
+      context: context,
+      builder: (ctx) => _RenameCategoryDialog(
+        initialName: category.name,
+        onSave: (newName) async {
+          await _noteService.updateCategory(category.copyWith(name: newName));
+          _exitCategorySelectionMode();
+          if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Renamed to "$newName"')));
         },
       ),
     );
   }
 
-  void _handleAddNote() {
-    Navigator.pushNamed(context, AppRoutes.noteEditor);
+  void _deleteSelectedCategories() {
+    if (_selectedCategoryIds.isEmpty) return;
+    final count = _selectedCategoryIds.length;
+    showIOSDialog(
+      context: context,
+      title: 'Delete Categories',
+      message: 'Delete $count categories?\nNotes will be moved to "Uncategorized".',
+      confirmText: 'Delete',
+      confirmTextColor: const Color(0xFFFF453A),
+      onConfirm: () async {
+        for (var id in _selectedCategoryIds) {
+          await _noteService.deleteCategory(id);
+        }
+        _exitCategorySelectionMode();
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Categories deleted')));
+      },
+    );
   }
 
+  void _toggleFavoriteSelectedCategories() async {
+    final selectedCats = _currentCategoriesList.where((c) => _selectedCategoryIds.contains(c.id));
+    final allFav = selectedCats.every((c) => c.isFavorite);
+    for (var cat in selectedCats) {
+      if (cat.isFavorite == allFav) {
+        await _noteService.toggleCategoryFavorite(cat.id, cat.isFavorite);
+      }
+    }
+    _exitCategorySelectionMode();
+  }
+
+  void _handleAddNote() => Navigator.pushNamed(context, AppRoutes.noteEditor);
+
   void _showAddCategoryDialog() {
-    final controller = TextEditingController();
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('New Category', style: GoogleFonts.poppins()),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(hintText: 'Category name'),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () async {
-              if (controller.text.trim().isNotEmpty) {
-                await _noteService.addCategory(CategoryModel(id: '', name: controller.text.trim()));
-                Navigator.pop(ctx);
-              }
-            },
-            child: const Text('Add'),
-          ),
-        ],
+      builder: (ctx) => AddCategoryDialog(
+        onAdd: (name) async {
+          await _noteService.addCategory(CategoryModel(id: '', name: name));
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Category "$name" added')));
+          }
+        },
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    // ✅ FIX: Gabungkan kedua stream untuk trigger update bersamaan
     return StreamBuilder<List<CategoryModel>>(
       stream: _noteService.getCategoriesStream(),
       builder: (context, snapshotCategories) {
         final allCategories = snapshotCategories.data ?? [];
+        _currentCategoriesList = allCategories;
 
         return StreamBuilder<List<NoteModel>>(
           stream: _noteService.getNotesStream(),
           builder: (context, snapshotNotes) {
             final allNotes = snapshotNotes.data ?? [];
             final filteredNotes = _getFilteredNotes(allNotes);
-            _currentNotesList = filteredNotes;
 
-            final selectedModels = allNotes.where((n) => _selectedNoteIds.contains(n.id)).toList();
-            final isAllFavorites = selectedModels.isNotEmpty && selectedModels.every((n) => n.isFavorite);
+            // Logic filter list berdasarkan tab aktif untuk keperluan selectAll
+            if (_selectedTabIndex == 0) {
+              _currentNotesList = filteredNotes;
+            } else if (_selectedTabIndex == 2) {
+              _currentNotesList = filteredNotes.where((n) => n.isFavorite).toList();
+            } else {
+              // Tab categories handle listnya sendiri per folder,
+              // tapi jika selectAll dipanggil saat note mode di tab category,
+              // kita mungkin butuh logic spesifik di widget CategoriesTab.
+              // Untuk simplifikasi, kita biarkan kosong di sini.
+              _currentNotesList = [];
+            }
+
+            final isCategoryFavorite = _currentCategoriesList
+                .where((c) => _selectedCategoryIds.contains(c.id))
+                .every((c) => c.isFavorite);
+
+            final selectedNoteModels = allNotes.where((n) => _selectedNoteIds.contains(n.id)).toList();
+            final isAllNotesFavorite = selectedNoteModels.isNotEmpty && selectedNoteModels.every((n) => n.isFavorite);
 
             return Scaffold(
               backgroundColor: Colors.white,
+              resizeToAvoidBottomInset: false,
               appBar: CustomTopAppBar(
-                isSelectionMode: _isSelectionMode,
+                isSelectionMode: _isSelectionMode || _isCategorySelectionMode,
                 onSelectAllTap: _selectAll,
                 onProfileTap: () => Navigator.pushNamed(context, AppRoutes.profile),
                 onNotificationTap: () {},
@@ -232,7 +326,8 @@ class _NotesMainPageState extends State<NotesMainPage> {
                   NoteTabBar(
                     selectedIndex: _selectedTabIndex,
                     onTabSelected: (index) {
-                      if (_isSelectionMode) _exitSelectionMode();
+                      if (_isSelectionMode) _exitNoteSelectionMode();
+                      if (_isCategorySelectionMode) _exitCategorySelectionMode();
                       setState(() => _selectedTabIndex = index);
                     },
                   ),
@@ -240,6 +335,7 @@ class _NotesMainPageState extends State<NotesMainPage> {
                     child: IndexedStack(
                       index: _selectedTabIndex,
                       children: [
+                        // Tab 0: All Notes
                         AllNotesTab(
                           notes: filteredNotes,
                           scrollController: _scrollController,
@@ -253,13 +349,23 @@ class _NotesMainPageState extends State<NotesMainPage> {
                           },
                           searchQuery: _searchQuery,
                         ),
-                        // ✅ Pass categories langsung dari stream
+                        // Tab 1: Categories
                         CategoriesTab(
+                          key: _categoriesTabKey,
                           noteService: _noteService,
                           categories: allCategories,
                           allNotes: allNotes,
                           onNoteSelected: (id) => Navigator.pushNamed(context, AppRoutes.noteEditor, arguments: id),
+                          isNoteSelectionMode: _isSelectionMode,
+                          selectedNoteIds: _selectedNoteIds,
+                          onNoteTap: _toggleSelection,
+                          onNoteLongPress: _enterSelectionMode,
+                          isCategorySelectionMode: _isCategorySelectionMode,
+                          selectedCategoryIds: _selectedCategoryIds,
+                          onCategoryTap: _toggleCategorySelection,
+                          onCategoryLongPress: _enterCategorySelectionMode,
                         ),
+                        // Tab 2: Favorites
                         FavoritesTab(
                           notes: filteredNotes.where((n) => n.isFavorite).toList(),
                           favoriteCategories: allCategories.where((c) => c.isFavorite).toList(),
@@ -269,6 +375,7 @@ class _NotesMainPageState extends State<NotesMainPage> {
                             final cat = allCategories.firstWhere((c) => c.id == id);
                             await _noteService.toggleCategoryFavorite(id, cat.isFavorite);
                           },
+                          // Note Selection Props
                           isSelectionMode: _isSelectionMode,
                           selectedNoteIds: _selectedNoteIds,
                           onNoteTap: _toggleSelection,
@@ -277,6 +384,12 @@ class _NotesMainPageState extends State<NotesMainPage> {
                             final note = allNotes.firstWhere((n) => n.id == id);
                             _noteService.toggleFavorite(id, note.isFavorite);
                           },
+                          // Category Selection Props (BARU DITAMBAHKAN)
+                          isCategorySelectionMode: _isCategorySelectionMode,
+                          selectedCategoryIds: _selectedCategoryIds,
+                          onCategoryTap: _toggleCategorySelection,
+                          onCategoryLongPress: _enterCategorySelectionMode,
+
                           searchQuery: _searchQuery,
                         ),
                       ],
@@ -284,14 +397,14 @@ class _NotesMainPageState extends State<NotesMainPage> {
                   ),
                 ],
               ),
-              floatingActionButton: _isSelectionMode
+              floatingActionButton: (_isSelectionMode || _isCategorySelectionMode)
                   ? null
                   : NotesExpandableFab(
                 onAddNoteTap: _handleAddNote,
                 onAddCategoryTap: _showAddCategoryDialog,
               ),
               floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-              bottomNavigationBar: _buildBottomNavBar(isAllFavorites, allNotes),
+              bottomNavigationBar: _buildBottomNavBar(isAllNotesFavorite, allNotes, isCategoryFavorite),
             );
           },
         );
@@ -299,26 +412,32 @@ class _NotesMainPageState extends State<NotesMainPage> {
     );
   }
 
-  Widget _buildBottomNavBar(bool isAllFavorites, List<NoteModel> allNotes) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      height: _isNavBarVisible ? (_isSelectionMode ? 75 : 64) + MediaQuery.of(context).padding.bottom : 0,
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 200),
-        child: _isSelectionMode
-            ? SelectionActionBar(
-          key: const ValueKey('SelectionBar'),
-          onMove: _moveSelected,
-          onFavorite: () => _toggleFavoriteSelected(allNotes),
-          onDelete: _deleteSelected,
-          isAllSelectedFavorite: isAllFavorites,
-        )
-            : CustomNavBar(
-          key: const ValueKey('NavBar'),
-          selectedIndex: 1,
-          onItemTapped: _handleNavigation,
-        ),
-      ),
+  Widget _buildBottomNavBar(bool isAllNotesFavorite, List<NoteModel> allNotes, bool isCategoryFavorite) {
+    final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
+    if (isKeyboardOpen) return const SizedBox.shrink();
+    if (!_isNavBarVisible) return const SizedBox.shrink();
+
+    if (_isCategorySelectionMode) {
+      return CategorySelectionActionBar(
+        onEdit: _renameSelectedCategory,
+        onFavorite: _toggleFavoriteSelectedCategories,
+        onDelete: _deleteSelectedCategories,
+        isSelectedFavorite: isCategoryFavorite,
+      );
+    }
+
+    if (_isSelectionMode) {
+      return SelectionActionBar(
+        onMove: _moveSelectedNotes,
+        onFavorite: () => _toggleFavoriteSelectedNotes(allNotes),
+        onDelete: _deleteSelectedNotes,
+        isAllSelectedFavorite: isAllNotesFavorite,
+      );
+    }
+
+    return CustomNavBar(
+      selectedIndex: 1,
+      onItemTapped: _handleNavigation,
     );
   }
 
@@ -326,5 +445,78 @@ class _NotesMainPageState extends State<NotesMainPage> {
     if (_searchQuery.isEmpty) return notes;
     final query = _searchQuery.toLowerCase();
     return notes.where((note) => note.title.toLowerCase().contains(query) || note.content.toLowerCase().contains(query)).toList();
+  }
+}
+
+// Dialog Rename yang dipindahkan ke sini agar bisa dipakai _renameSelectedCategory
+class _RenameCategoryDialog extends StatefulWidget {
+  final String initialName;
+  final Function(String) onSave;
+  const _RenameCategoryDialog({required this.initialName, required this.onSave});
+  @override
+  State<_RenameCategoryDialog> createState() => _RenameCategoryDialogState();
+}
+
+class _RenameCategoryDialogState extends State<_RenameCategoryDialog> {
+  late TextEditingController _controller;
+  final FocusNode _focusNode = FocusNode();
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialName);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if(mounted) _focusNode.requestFocus();
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleSave() async {
+    final name = _controller.text.trim();
+    if (name.isEmpty || name == widget.initialName) { Navigator.pop(context); return; }
+    setState(() => _isLoading = true);
+    await widget.onSave(name);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return IOSDialog(
+      title: 'Rename Category',
+      confirmText: 'Save',
+      cancelText: 'Cancel',
+      confirmTextColor: const Color(0xFF007AFF),
+      isLoading: _isLoading,
+      autoDismiss: false,
+      onConfirm: _handleSave,
+      onCancel: () => _focusNode.unfocus(),
+      content: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFF007AFF)),
+        ),
+        child: TextField(
+          controller: _controller,
+          focusNode: _focusNode,
+          style: GoogleFonts.poppins(fontSize: 14, color: Colors.black),
+          decoration: InputDecoration(
+            hintText: 'Category Name',
+            hintStyle: GoogleFonts.poppins(color: const Color(0xFFC7C7CC), fontSize: 14),
+            border: InputBorder.none,
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(vertical: 10),
+          ),
+          onSubmitted: (_) => _handleSave(),
+        ),
+      ),
+    );
   }
 }

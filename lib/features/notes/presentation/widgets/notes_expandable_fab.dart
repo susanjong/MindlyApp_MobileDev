@@ -72,7 +72,6 @@ class _NotesExpandableFabState extends State<NotesExpandableFab>
         alignment: Alignment.bottomCenter,
         clipBehavior: Clip.none,
         children: [
-          // Background container panjang
           AnimatedBuilder(
             animation: _expandAnimation,
             builder: (context, child) {

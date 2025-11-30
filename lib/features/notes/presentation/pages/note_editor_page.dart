@@ -21,15 +21,17 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
   late quill.QuillController _quillController;
   final NoteService _noteService = NoteService();
   final FocusNode _editorFocusNode = FocusNode();
+
   Timer? _autoSaveTimer;
   Timer? _debounceTimer;
 
   bool _isLoading = false;
-  bool _isEditing = false;
-  bool _isBookmarked = false;
   bool _isDirty = false;
+  bool _isFavorite = false; // State untuk favorite
+
   late DateTime _currentDate;
   int _wordCount = 0;
+  String _currentCategoryId = '';
 
   // Toolbar state
   bool _isBold = false;
@@ -42,30 +44,35 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
   void initState() {
     super.initState();
     _currentDate = DateTime.now();
-    _isEditing = widget.noteId != null;
-
-    // Initialize controller
     _quillController = quill.QuillController.basic();
 
-    if (_isEditing) {
+    if (widget.noteId != null) {
       _fetchNoteData();
     }
 
-    // Auto-save timer
-    _autoSaveTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
-      if (_isDirty) {
+    // Auto save logic
+    _autoSaveTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+      if (_isDirty && widget.noteId != null) {
         _autoSave();
       }
     });
 
-    // Listeners
     _titleController.addListener(_onTitleChanged);
     _quillController.addListener(_onContentChanged);
     _editorFocusNode.addListener(_onFocusChanged);
   }
 
+  @override
+  void dispose() {
+    _autoSaveTimer?.cancel();
+    _debounceTimer?.cancel();
+    _titleController.dispose();
+    _editorFocusNode.dispose();
+    _quillController.dispose();
+    super.dispose();
+  }
+
   void _onFocusChanged() {
-    // Update toolbar state saat fokus berubah
     if (_editorFocusNode.hasFocus) {
       _updateToolbarState();
     }
@@ -91,6 +98,24 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
     });
   }
 
+  // Logic Favorite diperbarui
+  Future<void> _toggleFavorite() async {
+    setState(() {
+      _isFavorite = !_isFavorite;
+      _isDirty = true; // Tandai agar tersimpan saat autosave/back
+    });
+
+    // Jika note sudah ada di database, update langsung statusnya
+    if (widget.noteId != null) {
+      try {
+        await _noteService.toggleFavorite(widget.noteId!, _isFavorite);
+      } catch (e) {
+        // Jika gagal koneksi, biarkan saja, nanti akan terupdate saat saveNote() dipanggil
+        debugPrint("Gagal update favorite via API langsung, akan ikut tersimpan di saveNote: $e");
+      }
+    }
+  }
+
   void _updateWordCount() {
     final text = _quillController.document.toPlainText().trim();
     final newWordCount = text.isEmpty ? 0 : text.split(RegExp(r'\s+')).length;
@@ -104,8 +129,6 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
 
   void _updateToolbarState() {
     final selection = _quillController.selection;
-
-    // Pastikan ada selection yang valid
     if (!selection.isValid || selection.baseOffset < 0) {
       return;
     }
@@ -144,75 +167,81 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
 
   Future<void> _fetchNoteData() async {
     setState(() => _isLoading = true);
-    final note = await _noteService.getNoteById(widget.noteId!);
-    if (note != null && mounted) {
-      _titleController.text = note.title;
+    try {
+      final note = await _noteService.getNoteById(widget.noteId!);
+      if (note != null && mounted) {
+        _titleController.text = note.title;
 
-      try {
-        final json = jsonDecode(note.content);
-        _quillController = quill.QuillController(
-          document: quill.Document.fromJson(json),
-          selection: const TextSelection.collapsed(offset: 0),
-        );
-      } catch (e) {
-        _quillController = quill.QuillController(
-          document: quill.Document()..insert(0, note.content),
-          selection: const TextSelection.collapsed(offset: 0),
-        );
+        try {
+          final json = jsonDecode(note.content);
+          _quillController = quill.QuillController(
+            document: quill.Document.fromJson(json),
+            selection: const TextSelection.collapsed(offset: 0),
+          );
+        } catch (e) {
+          _quillController = quill.QuillController(
+            document: quill.Document()..insert(0, note.content),
+            selection: const TextSelection.collapsed(offset: 0),
+          );
+        }
+
+        _quillController.addListener(_onContentChanged);
+
+        setState(() {
+          _currentDate = note.updatedAt;
+          _currentCategoryId = note.categoryId;
+          _isFavorite = note.isFavorite; // Load status favorite
+        });
       }
-
-      _quillController.addListener(_onContentChanged);
-
-      setState(() {
-        _currentDate = note.updatedAt;
-        _isBookmarked = note.categoryId == 'bookmarks';
-      });
+    } catch (e) {
+      debugPrint("Error fetching note: $e");
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
-    if (mounted) setState(() => _isLoading = false);
   }
 
   Future<void> _autoSave() async {
-    await _saveNote();
-    if (mounted) setState(() => _isDirty = false);
+    if (widget.noteId != null) {
+      await _saveNote();
+      if (mounted) setState(() => _isDirty = false);
+    }
   }
 
   Future<void> _saveNote() async {
     final title = _titleController.text.trim();
-    final contentJson = jsonEncode(_quillController.document.toDelta().toJson());
     final plainText = _quillController.document.toPlainText().trim();
 
     if (title.isEmpty && plainText.isEmpty) return;
 
+    final contentJson = jsonEncode(_quillController.document.toDelta().toJson());
+
+    final String safeId = widget.noteId ?? '';
+    final bool isEditingExistingNote = widget.noteId != null;
+
     final note = NoteModel(
-      id: _isEditing ? widget.noteId! : '',
+      id: safeId,
       title: title,
       content: contentJson,
-      createdAt: _isEditing ? _currentDate : DateTime.now(),
+      createdAt: isEditingExistingNote ? _currentDate : DateTime.now(),
       updatedAt: DateTime.now(),
-      categoryId: _isBookmarked ? 'bookmarks' : 'all',
-      isFavorite: false,
+      categoryId: _currentCategoryId,
+      isFavorite: _isFavorite, // Pastikan status favorite tersimpan
     );
 
-    if (_isEditing) {
-      await _noteService.updateNote(note);
-    } else {
-      await _noteService.addNote(note);
-      if (mounted) setState(() => _isEditing = true);
+    try {
+      if (isEditingExistingNote) {
+        await _noteService.updateNote(note);
+      } else {
+        await _noteService.addNote(note);
+      }
+    } catch (e) {
+      debugPrint("Error saving note: $e");
     }
   }
 
-  void _toggleBookmark() {
-    setState(() {
-      _isBookmarked = !_isBookmarked;
-      _isDirty = true;
-    });
-  }
-
   void _applyFormatting(String format) {
-    // Pastikan ada fokus sebelum formatting
     if (!_editorFocusNode.hasFocus) {
       _editorFocusNode.requestFocus();
-      // Tunggu sebentar agar fokus teraplikasi
       Future.delayed(const Duration(milliseconds: 50), () {
         _applyFormattingInternal(format);
       });
@@ -223,8 +252,6 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
 
   void _applyFormattingInternal(String format) {
     final selection = _quillController.selection;
-
-    // Jika tidak ada selection, set selection di posisi kursor
     if (!selection.isValid || selection.baseOffset < 0) {
       final offset = _quillController.document.length - 1;
       _quillController.updateSelection(
@@ -256,7 +283,6 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
         break;
     }
 
-    // Update toolbar state setelah formatting
     Future.delayed(const Duration(milliseconds: 100), _updateToolbarState);
   }
 
@@ -347,18 +373,9 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
   }
 
   void _handleBack() async {
+    FocusManager.instance.primaryFocus?.unfocus();
     await _saveNote();
     if (mounted) Navigator.pop(context);
-  }
-
-  @override
-  void dispose() {
-    _autoSaveTimer?.cancel();
-    _debounceTimer?.cancel();
-    _titleController.dispose();
-    _editorFocusNode.dispose();
-    _quillController.dispose();
-    super.dispose();
   }
 
   @override
@@ -370,49 +387,78 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
       onPopInvokedWithResult: (bool didPop, dynamic result) async {
         if (didPop) return;
         await _saveNote();
-        if (context.mounted) Navigator.of(context).pop();
+        if (context.mounted) {
+          Navigator.of(context).pop();
+        }
       },
       child: Scaffold(
         backgroundColor: Colors.white,
+        resizeToAvoidBottomInset: true,
         body: SafeArea(
           child: _isLoading
               ? const Center(child: CircularProgressIndicator())
               : Column(
             children: [
               _buildHeader(),
+              // SearchBar dihapus dari sini
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(horizontal: 25),
-                  physics: const ClampingScrollPhysics(),
+                  physics: const BouncingScrollPhysics(),
                   keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const SizedBox(height: 20),
-                      TextField(
-                        controller: _titleController,
-                        style: GoogleFonts.poppins(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black,
-                          height: 1.2,
-                        ),
-                        decoration: InputDecoration(
-                          hintText: 'Title',
-                          hintStyle: GoogleFonts.poppins(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey.shade400,
+                      // ROW JUDUL & FAVORITE
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _titleController,
+                              style: GoogleFonts.poppins(
+                                fontSize: 30,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black,
+                                height: 1.2,
+                              ),
+                              decoration: InputDecoration(
+                                hintText: 'Title',
+                                hintStyle: GoogleFonts.poppins(
+                                  fontSize: 30,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey.shade400,
+                                ),
+                                border: InputBorder.none,
+                              ),
+                              maxLines: null,
+                            ),
                           ),
-                          border: InputBorder.none,
-                        ),
-                        maxLines: null,
+                          const SizedBox(width: 8),
+                          // --- ICON FAVORITE (LOGIKA & UI) ---
+                          Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: _toggleFavorite,
+                              customBorder: const CircleBorder(),
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Icon(
+                                  _isFavorite ? Icons.favorite : Icons.favorite_border,
+                                  color: _isFavorite ? Colors.red : Colors.grey.shade400,
+                                  size: 28,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 8),
                       _buildMetadata(formattedDate),
                       const SizedBox(height: 24),
                       SizedBox(
-                        height: MediaQuery.of(context).size.height - 300,
+                        height: MediaQuery.of(context).size.height * 0.6,
                         child: quill.QuillEditor.basic(
                           focusNode: _editorFocusNode,
                           configurations: quill.QuillEditorConfigurations(
@@ -422,46 +468,28 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
                             readOnly: false,
                             autoFocus: false,
                             expands: false,
-                            scrollPhysics: const ClampingScrollPhysics(),
+                            scrollPhysics: const NeverScrollableScrollPhysics(),
                             customStyles: quill.DefaultStyles(
                               paragraph: quill.DefaultTextBlockStyle(
-                                GoogleFonts.poppins(
-                                  fontSize: 16,
-                                  color: Colors.black,
-                                  height: 1.5,
-                                ),
+                                GoogleFonts.poppins(fontSize: 16, color: Colors.black, height: 1.5),
                                 const quill.VerticalSpacing(0, 0),
                                 const quill.VerticalSpacing(0, 0),
                                 null,
                               ),
                               h1: quill.DefaultTextBlockStyle(
-                                GoogleFonts.poppins(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.black,
-                                  height: 1.3,
-                                ),
+                                GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.w600, color: Colors.black, height: 1.3),
                                 const quill.VerticalSpacing(16, 8),
                                 const quill.VerticalSpacing(0, 0),
                                 null,
                               ),
                               h2: quill.DefaultTextBlockStyle(
-                                GoogleFonts.poppins(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.black,
-                                  height: 1.3,
-                                ),
+                                GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w500, color: Colors.black, height: 1.3),
                                 const quill.VerticalSpacing(12, 6),
                                 const quill.VerticalSpacing(0, 0),
                                 null,
                               ),
                               lists: quill.DefaultListBlockStyle(
-                                GoogleFonts.poppins(
-                                  fontSize: 16,
-                                  color: Colors.black,
-                                  height: 1.5,
-                                ),
+                                GoogleFonts.poppins(fontSize: 16, color: Colors.black, height: 1.5),
                                 const quill.VerticalSpacing(0, 0),
                                 const quill.VerticalSpacing(0, 6),
                                 null,
@@ -479,7 +507,6 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
                   ),
                 ),
               ),
-              // Toolbar - tanpa animasi, langsung muncul
               _buildBottomToolbar(),
             ],
           ),
@@ -503,28 +530,21 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
               Text('All Notes', style: GoogleFonts.poppins(fontSize: 16)),
             ],
           ),
-          Row(
-            children: [
-              if (_isDirty)
-                Text(
-                  'Saving...',
-                  style: TextStyle(color: Colors.orange.shade700, fontSize: 12),
-                ),
-              const SizedBox(width: 8),
-              GestureDetector(
-                onTap: _toggleBookmark,
-                child: Icon(
-                  _isBookmarked ? Icons.bookmark : Icons.bookmark_border,
-                  color: _isBookmarked ? const Color(0xFFFFEB3B) : Colors.black,
-                ),
+          // Indikator Saving (Search Icon sudah dihapus)
+          if (_isDirty)
+            Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Text(
+                'Saving',
+                style: TextStyle(color: Colors.orange.shade700, fontSize: 12),
               ),
-              const SizedBox(width: 16),
-            ],
-          )
+            ),
         ],
       ),
     );
   }
+
+  // _buildSearchBar Dihapus total
 
   Widget _buildMetadata(String formattedDate) {
     return Row(
@@ -567,52 +587,23 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        physics: const BouncingScrollPhysics(),
         child: Row(
           children: [
-            _ToolButton(
-              icon: Icons.format_bold,
-              isActive: _isBold,
-              onTap: () => _applyFormatting('bold'),
-            ),
-            _ToolButton(
-              icon: Icons.format_italic,
-              isActive: _isItalic,
-              onTap: () => _applyFormatting('italic'),
-            ),
-            _ToolButton(
-              icon: Icons.format_underline,
-              isActive: _isUnderline,
-              onTap: () => _applyFormatting('underline'),
-            ),
-            _ToolButton(
-              icon: Icons.format_strikethrough,
-              isActive: _isStrikethrough,
-              onTap: () => _applyFormatting('strikethrough'),
-            ),
+            _ToolButton(icon: Icons.format_bold, isActive: _isBold, onTap: () => _applyFormatting('bold')),
+            _ToolButton(icon: Icons.format_italic, isActive: _isItalic, onTap: () => _applyFormatting('italic')),
+            _ToolButton(icon: Icons.format_underline, isActive: _isUnderline, onTap: () => _applyFormatting('underline')),
+            _ToolButton(icon: Icons.format_strikethrough, isActive: _isStrikethrough, onTap: () => _applyFormatting('strikethrough')),
             const SizedBox(width: 8),
             Container(width: 1, height: 30, color: Colors.grey.shade300),
             const SizedBox(width: 8),
-            _ToolButton(
-              label: 'H1',
-              isActive: _currentHeading == 'h1',
-              onTap: () => _applyHeading('h1'),
-            ),
-            _ToolButton(
-              label: 'H2',
-              isActive: _currentHeading == 'h2',
-              onTap: () => _applyHeading('h2'),
-            ),
+            _ToolButton(label: 'H1', isActive: _currentHeading == 'h1', onTap: () => _applyHeading('h1')),
+            _ToolButton(label: 'H2', isActive: _currentHeading == 'h2', onTap: () => _applyHeading('h2')),
             const SizedBox(width: 8),
             Container(width: 1, height: 30, color: Colors.grey.shade300),
             const SizedBox(width: 8),
-            _ToolButton(
-              icon: Icons.format_list_bulleted,
-              onTap: _showListOptions,
-            ),
-            _ToolButton(
-              icon: Icons.check_box_outlined,
-              onTap: _insertCheckbox,
-            ),
+            _ToolButton(icon: Icons.format_list_bulleted, onTap: _showListOptions),
+            _ToolButton(icon: Icons.check_box_outlined, onTap: _insertCheckbox),
           ],
         ),
       ),
@@ -645,11 +636,7 @@ class _ToolButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
         ),
         child: icon != null
-            ? Icon(
-          icon,
-          size: 22,
-          color: isActive ? const Color(0xFF5784EB) : Colors.black54,
-        )
+            ? Icon(icon, size: 22, color: isActive ? const Color(0xFF5784EB) : Colors.black54)
             : Text(
           label ?? '',
           style: GoogleFonts.poppins(
