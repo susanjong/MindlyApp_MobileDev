@@ -24,7 +24,7 @@ class SelectionActionBar extends StatelessWidget {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha:0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, -2),
           ),
@@ -78,21 +78,26 @@ class _ActionItem extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: iconColor, size: 24),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                color: textColor,
-                fontWeight: FontWeight.w500,
+        // ✅ FIX 1: Kurangi padding vertikal dari 4 jadi 2
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+        // ✅ FIX 2: Bungkus dengan FittedBox agar auto-resize jika ruang sempit
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: iconColor, size: 24),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  color: textColor,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
