@@ -10,7 +10,6 @@ class NoteTabBar extends StatelessWidget {
     super.key,
     required this.selectedIndex,
     required this.onTabSelected,
-    // UBAH "Favorite" MENJADI "Favorites"
     this.tabs = const ['All Notes', 'Categories', 'Favorites'],
   });
 
