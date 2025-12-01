@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'folder_screen.dart';
 
 class AllCategoryScreen extends StatefulWidget {
-  const AllCategoryScreen({Key? key}) : super(key: key);
+  const AllCategoryScreen({super.key});
 
   @override
   State<AllCategoryScreen> createState() => _AllCategoryScreenState();
@@ -266,7 +266,7 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.4),
+                    color: Colors.white.withValues(alpha: 0.4),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -329,7 +329,7 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
 }
 
 class _IOSAddCategoryDialogContent extends StatefulWidget {
-  const _IOSAddCategoryDialogContent({Key? key}) : super(key: key);
+  const _IOSAddCategoryDialogContent({super.key});
 
   @override
   State<_IOSAddCategoryDialogContent> createState() =>
