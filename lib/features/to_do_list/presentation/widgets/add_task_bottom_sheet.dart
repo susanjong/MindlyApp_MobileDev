@@ -4,9 +4,9 @@ class AddTaskBottomSheet extends StatefulWidget {
   final Function(Map<String, dynamic>)? onSave;
 
   const AddTaskBottomSheet({
-    Key? key,
+    super.key,
     this.onSave,
-  }) : super(key: key);
+  });
 
   @override
   State<AddTaskBottomSheet> createState() => _AddTaskBottomSheetState();

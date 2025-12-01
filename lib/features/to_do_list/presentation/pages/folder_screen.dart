@@ -10,12 +10,12 @@ class FolderScreen extends StatefulWidget {
   final List<Map<String, dynamic>> folderTasks;
 
   const FolderScreen({
-    Key? key,
+    super.key,
     required this.folderName,
     required this.gradientIndex,
     required this.gradients,
     required this.folderTasks,
-  }) : super(key: key);
+  });
 
   @override
   State<FolderScreen> createState() => _FolderScreenState();
