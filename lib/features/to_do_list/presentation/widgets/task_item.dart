@@ -5,10 +5,10 @@ class TaskItem extends StatelessWidget {
   final VoidCallback onToggle;
 
   const TaskItem({
-    Key? key,
+    super.key,
     required this.task,
     required this.onToggle,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

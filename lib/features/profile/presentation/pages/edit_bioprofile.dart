@@ -1,9 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:image_picker/image_picker.dart';
+//import 'package:image_picker/image_picker.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../../core/widgets/buttons/primary_button.dart';
 
@@ -18,7 +17,7 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
   final _formKey = GlobalKey<FormState>();
   final _fullNameController = TextEditingController();
   final _bioController = TextEditingController();
-  final ImagePicker _picker = ImagePicker();
+  // final ImagePicker _picker = ImagePicker();
 
   bool _isLoading = false;
   bool _isLoadingData = true;
@@ -67,32 +66,32 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
     }
   }
 
-  Future<void> _pickImage(ImageSource source) async {
-    try {
-      final XFile? pickedFile = await _picker.pickImage(
-        source: source,
-        maxWidth: 400,
-        maxHeight: 400,
-        imageQuality: 70,
-      );
-
-      if (pickedFile != null) {
-        setState(() {
-          _imageFile = File(pickedFile.path);
-          _photoChanged = true;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to pick image: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
+  // Future<void> _pickImage(ImageSource source) async {
+  //   try {
+  //     final XFile? pickedFile = await _picker.pickImage(
+  //       source: source,
+  //       maxWidth: 400,
+  //       maxHeight: 400,
+  //       imageQuality: 70,
+  //     );
+  //
+  //     if (pickedFile != null) {
+  //       setState(() {
+  //         _imageFile = File(pickedFile.path);
+  //         _photoChanged = true;
+  //       });
+  //     }
+  //   } catch (e) {
+  //     if (mounted) {
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         SnackBar(
+  //           content: Text('Failed to pick image: ${e.toString()}'),
+  //           backgroundColor: Colors.red,
+  //         ),
+  //       );
+  //     }
+  //   }
+  //}
 
   void _showImageSourceDialog() {
     showModalBottomSheet(
@@ -151,7 +150,7 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
                   ),
                   onTap: () {
                     Navigator.pop(context);
-                    _pickImage(ImageSource.gallery);
+                    //_pickImage(ImageSource.gallery);
                   },
                 ),
                 ListTile(
@@ -175,7 +174,7 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
                   ),
                   onTap: () {
                     Navigator.pop(context);
-                    _pickImage(ImageSource.camera);
+                    //_pickImage(ImageSource.camera);
                   },
                 ),
                 if (_currentImageUrl != null || _imageFile != null)
