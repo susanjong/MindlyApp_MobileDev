@@ -4,14 +4,14 @@ import 'package:google_fonts/google_fonts.dart';
 class IOSDialog extends StatelessWidget {
   final String title;
   final String? message;
-  final Widget? content; // ✅ Tambahan: Untuk menampung TextField atau widget lain
+  final Widget? content;
   final String cancelText;
   final String confirmText;
   final VoidCallback? onCancel;
   final VoidCallback onConfirm;
   final Color? confirmTextColor;
-  final bool autoDismiss; // ✅ Tambahan: Kontrol apakah dialog langsung tutup
-  final bool isLoading;   // ✅ Tambahan: Untuk menampilkan loading di tombol confirm
+  final bool autoDismiss;
+  final bool isLoading;
 
   const IOSDialog({
     super.key,
@@ -29,7 +29,6 @@ class IOSDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Warna separator iOS
     const separatorColor = Color(0xA5545458);
 
     return Dialog(
@@ -46,7 +45,7 @@ class IOSDialog extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // --- HEADER & CONTENT ---
+            // header and content
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
@@ -84,7 +83,7 @@ class IOSDialog extends StatelessWidget {
                     ),
                   ],
 
-                  // Custom Content (TextField, dll)
+                  // custom content
                   if (content != null) ...[
                     const SizedBox(height: 12),
                     content!,
@@ -93,14 +92,21 @@ class IOSDialog extends StatelessWidget {
               ),
             ),
 
-            // --- DIVIDER ---
+            // horizontal divider
             Container(
               width: double.infinity,
               height: 0.5,
               color: separatorColor,
             ),
 
-            // --- BUTTONS ---
+            // vertical divider
+            Container(
+              width: double.infinity,
+              height: 0.5,
+              color: separatorColor,
+            ),
+
+            // buttons
             SizedBox(
               height: 44,
               child: Row(
@@ -141,7 +147,7 @@ class IOSDialog extends StatelessWidget {
                     color: separatorColor,
                   ),
 
-                  // Confirm Button
+                  // confirm button
                   Expanded(
                     child: Material(
                       color: Colors.transparent,
@@ -190,7 +196,7 @@ class IOSDialog extends StatelessWidget {
   }
 }
 
-// Helper untuk alert biasa (Message only)
+// helper for basic alert
 void showIOSDialog({
   required BuildContext context,
   required String title,
@@ -213,7 +219,7 @@ void showIOSDialog({
       onCancel: onCancel,
       onConfirm: onConfirm,
       confirmTextColor: confirmTextColor,
-      autoDismiss: true, // Default alert selalu auto close
+      autoDismiss: true,
     ),
   );
 }

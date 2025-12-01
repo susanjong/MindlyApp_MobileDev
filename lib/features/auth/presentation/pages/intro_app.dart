@@ -319,7 +319,7 @@ class WelcomeScreen extends StatelessWidget {
               baseline: TextBaseline.alphabetic,
               child: GestureDetector(
                 onTap: () {
-                  Navigator.pushNamed(context, AppRoutes.PrivacyPolicy);
+                Navigator.pushNamed(context, AppRoutes.PrivacyPolicy);
                 },
                 child: Text(
                   'Privacy Policy',
