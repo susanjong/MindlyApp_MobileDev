@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 import '../../features/auth/presentation/pages/intro_app.dart';
 import '../../features/auth/presentation/pages/login.dart';
+import '../../features/auth/presentation/pages/privacy_policy.dart';
 import '../../features/auth/presentation/pages/resetpass.dart';
 import '../../features/auth/presentation/pages/signup.dart';
 import '../../features/auth/presentation/pages/splash_screen.dart';
+import '../../features/auth/presentation/pages/terms_of_service.dart';
 import '../../features/home/presentation/pages/home.dart';
 import '../../features/notes/presentation/pages/note_editor_page.dart';
 import '../../features/notes/presentation/pages/notes_main_page.dart';
 import '../../features/to_do_list/presentation/pages/mainTodo.dart';
-import 'package:notesapp/features/calendar/presentation/pages/home_calendar.dart';
+import '../../features/calendar/presentation/pages/calendar_main_page.dart';
 import '../../features/profile/presentation/pages/about_info.dart';
 import '../../features/profile/presentation/pages/help_faq.dart';
 import '../../features/profile/presentation/pages/profile.dart';
-import 'package:notesapp/features/auth/presentation/pages/terms_of_service.dart';
-import 'package:notesapp/features/auth/presentation/pages/privacy_policy.dart';
 
 class AppRoutes {
   AppRoutes._();
@@ -24,6 +24,7 @@ class AppRoutes {
   static const String signIn = '/sign_in';
   static const String home = '/home';
   static const String resetPassword = '/reset_password';
+  static const String forgotPassword = '/forgot_password';
   static const String profile = '/profile';
   static const String notes = '/notes';
   static const String noteEditor = '/note-editor';
@@ -56,18 +57,20 @@ class AppRoutes {
         return _buildRoute(const AccountProfilePage());
       case notes:
         return _buildRoute(const NotesMainPage());
+
       case noteEditor:
         final noteId = settings.arguments as String?;
         return _buildRoute(NoteEditorPage(noteId: noteId));
       case todo:
         return _buildRoute(const MainTodoScreen());
       case calendar:
-        return _buildRoute(const CalendarScreen());
+        return _buildRoute(const CalendarMainPage());
       case helpFaq:
         return _buildRoute(const HelpFaqScreen());
       case aboutUs:
         return _buildRoute(const AboutPage());
 
+    // Default - 404
       default:
         return _buildRoute(_NotFoundPage(routeName: settings.name));
     }
