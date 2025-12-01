@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../../core/widgets/buttons/global_expandable_fab.dart';
 import '../widgets/add_category_dialog.dart';
 import '../../../../config/routes/routes.dart';
 import '../../../../core/widgets/dialog/alert_dialog.dart';
@@ -16,7 +17,6 @@ import '../widgets/categories_tab.dart';
 import '../widgets/favorites_tab.dart';
 import '../widgets/note_search_bar.dart';
 import '../widgets/note_tab_bar.dart';
-import '../widgets/notes_expandable_fab.dart';
 
 class NotesMainPage extends StatefulWidget {
   const NotesMainPage({super.key});
@@ -399,9 +399,20 @@ class _NotesMainPageState extends State<NotesMainPage> {
               ),
               floatingActionButton: (_isSelectionMode || _isCategorySelectionMode)
                   ? null
-                  : NotesExpandableFab(
-                onAddNoteTap: _handleAddNote,
-                onAddCategoryTap: _showAddCategoryDialog,
+                  : GlobalExpandableFab(
+                actions: [
+                  // Urutan: Item pertama muncul paling bawah (dekat tombol +)
+                  FabActionModel(
+                    icon: Icons.edit_outlined,
+                    tooltip: 'Add Note',
+                    onTap: _handleAddNote,
+                  ),
+                  FabActionModel(
+                    icon: Icons.folder,
+                    tooltip: 'Add Category',
+                    onTap: _showAddCategoryDialog,
+                  ),
+                ],
               ),
               floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
               bottomNavigationBar: _buildBottomNavBar(isAllNotesFavorite, allNotes, isCategoryFavorite),
