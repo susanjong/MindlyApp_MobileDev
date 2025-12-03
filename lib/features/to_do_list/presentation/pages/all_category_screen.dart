@@ -1,109 +1,109 @@
 import 'package:flutter/material.dart';
-import '../widgets/task_item.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
+
+// ✅ Import Services & Models (Sesuaikan path jika berbeda)
+import '../../../../core/widgets/dialog/alert_dialog.dart';
+import '../../data/models/todo_model.dart';
+import '../../data/services/todo_services.dart';
+import '../../data/models/category_model.dart';
+import '../../data/services/category_service.dart';
+
+// ✅ Import Widgets
+import '../widgets/task_item.dart';
 import 'folder_screen.dart';
 
 class AllCategoryScreen extends StatefulWidget {
-  const AllCategoryScreen({super.key});
+  const AllCategoryScreen({Key? key}) : super(key: key);
 
   @override
   State<AllCategoryScreen> createState() => _AllCategoryScreenState();
 }
 
 class _AllCategoryScreenState extends State<AllCategoryScreen> {
+  // Services
+  final TodoService _todoService = TodoService();
+  final CategoryService _categoryService = CategoryService();
+
+  // Gradients Static
   final List<List<Color>> availableGradients = [
     [const Color(0xFFBEE973), const Color(0xFFD9D9D9)], // Hijau
     [const Color(0xFF93B7D9), const Color(0xFFD9D9D9)], // Biru
     [const Color(0xFFE2A8D3), const Color(0xFFFFF4FD)], // Pink
   ];
 
-  late List<Map<String, dynamic>> categories;
-  late List<Map<String, dynamic>> uncategorizedTasks;
+  // Selection Mode State (Menggunakan ID Firestore)
+  bool _isSelectMode = false;
+  final Set<String> _selectedTaskIds = {};
 
-  @override
-  void initState() {
-    super.initState();
-    categories = [
-      {
-        'name': 'PKM 2025',
-        'gradientIndex': 0,
-        'taskCount': 2,
-        'completedCount': 0,
-        'tasks': [
-          {
-            'time': '4:50 PM',
-            'title': 'Diskusi project',
-            'completed': false,
-          },
-          {
-            'time': '4:50 PM',
-            'title': 'Meeting persiapan',
-            'completed': false,
-          },
-        ],
-      },
-      {
-        'name': 'semester 5',
-        'gradientIndex': 1,
-        'taskCount': 3,
-        'completedCount': 1,
-        'tasks': [
-          {
-            'time': '2:00 PM',
-            'title': 'Belajar Flutter',
-            'completed': true,
-          },
-          {
-            'time': '3:30 PM',
-            'title': 'Tugas Pemrograman',
-            'completed': false,
-          },
-          {
-            'time': '5:00 PM',
-            'title': 'Review materi',
-            'completed': false,
-          },
-        ],
-      },
-      {
-        'name': 'Internship',
-        'gradientIndex': 2,
-        'taskCount': 2,
-        'completedCount': 0,
-        'tasks': [
-          {
-            'time': '9:00 AM',
-            'title': 'Desain mockup',
-            'completed': false,
-          },
-          {
-            'time': '11:00 AM',
-            'title': 'Presentasi progress',
-            'completed': false,
-          },
-        ],
-      },
-    ];
+  // -- Event Handlers --
 
-    uncategorizedTasks = [
-      {
-        'time': '9:50 PM',
-        'title': 'Projek Pemmob',
-        'date': '01',
-        'month': 'NOV',
-        'completed': false,
+  void _toggleTaskStatus(TodoModel task) {
+    _todoService.toggleTodoStatus(task.id, task.isCompleted);
+  }
+
+  void _toggleSelection(String taskId) {
+    setState(() {
+      if (_selectedTaskIds.contains(taskId)) {
+        _selectedTaskIds.remove(taskId);
+        if (_selectedTaskIds.isEmpty) _isSelectMode = false;
+      } else {
+        _selectedTaskIds.add(taskId);
+      }
+    });
+  }
+
+  // ✅ LOGIC DELETE DENGAN IOS DIALOG & FIREBASE
+  void _deleteSelectedTasks() {
+    if (_selectedTaskIds.isEmpty) return;
+
+    showIOSDialog(
+      context: context,
+      title: 'Delete Tasks',
+      message: 'Are you sure you want to delete these ${_selectedTaskIds.length} tasks?',
+      confirmText: 'Delete',
+      confirmTextColor: const Color(0xFFFF453A),
+      onConfirm: () async {
+        // 1. Hapus dari Firebase
+        for (String id in _selectedTaskIds) {
+          await _todoService.deleteTodo(id);
+        }
+
+        // 2. Reset UI State
+        setState(() {
+          _selectedTaskIds.clear();
+          _isSelectMode = false;
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Tasks deleted successfully")),
+          );
+        }
       },
-      {
-        'time': '4:50 PM',
-        'title': 'Diskusi project',
-        'completed': false,
+    );
+  }
+  void _showAddCategoryDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        return const _IOSAddCategoryDialogContent();
       },
-      {
-        'time': '4:50 PM',
-        'title': 'Beli sayur',
-        'completed': true,
-      },
-    ];
+    );
+  }
+
+  // Format Helper
+  Map<String, dynamic> _mapModelToTaskItem(TodoModel todo) {
+    return {
+      'id': todo.id,
+      'title': todo.title,
+      'time': DateFormat('h:mm a').format(todo.deadline),
+      'date': DateFormat('dd MMM').format(todo.deadline),
+      'deadline': todo.deadline,
+      'completed': todo.isCompleted,
+      'category': todo.category,
+    };
   }
 
   @override
@@ -115,7 +115,16 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            if (_isSelectMode) {
+              setState(() {
+                _isSelectMode = false;
+                _selectedTaskIds.clear();
+              });
+            } else {
+              Navigator.pop(context);
+            }
+          },
         ),
         title: const Text(
           'All Category',
@@ -126,70 +135,144 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
           ),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+      body: StreamBuilder<List<TodoModel>>(
+        stream: _todoService.getTodosStream(),
+        builder: (context, snapshotTasks) {
+          final allTasks = snapshotTasks.data ?? [];
+
+          // Filter Uncategorized Tasks
+          final uncategorizedList = allTasks
+              .where((t) => t.category == 'Uncategorized' || t.category.isEmpty)
+              .toList();
+
+          return StreamBuilder<List<CategoryModel>>(
+            stream: _categoryService.getCategoriesStream(),
+            builder: (context, snapshotCategories) {
+              final categories = snapshotCategories.data ?? [];
+
+              return SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 20),
+
+                    // --- HORIZONTAL CATEGORY LIST ---
+                    SizedBox(
+                      height: 110,
+                      child: categories.isEmpty
+                          ? const Center(child: Text("No categories"))
+                          : ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        itemCount: categories.length,
+                        itemBuilder: (context, index) {
+                          final category = categories[index];
+
+                          // Hitung statistik task
+                          final categoryTasks = allTasks
+                              .where((t) => t.category == category.name)
+                              .toList();
+                          final total = categoryTasks.length;
+                          final completed = categoryTasks.where((t) => t.isCompleted).length;
+
+                          return _buildCategoryCard(
+                            category.name,
+                            total,
+                            completed,
+                            category.gradientIndex,
+                            categoryTasks,
+                          );
+                        },
+                      ),
+                    ),
+
+                    const SizedBox(height: 30),
+
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Column(
+                        children: [
+                          // --- HEADER UNCATEGORIZED ---
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Uncategorized Task',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black,
+                                ),
+                              ),
+                              if (uncategorizedList.isNotEmpty)
+                                _buildPopupMenu(uncategorizedList),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+
+                          // --- TASK LIST (VERTICAL) ---
+                          if (uncategorizedList.isEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 40),
+                              child: Text(
+                                "No uncategorized tasks",
+                                style: GoogleFonts.poppins(color: Colors.grey),
+                              ),
+                            )
+                          else
+                            ListView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: uncategorizedList.length,
+                              itemBuilder: (context, index) {
+                                final task = uncategorizedList[index];
+                                final isSelected = _selectedTaskIds.contains(task.id);
+
+                                return _isSelectMode
+                                    ? _buildSelectableTaskItem(task, isSelected)
+                                    : TaskItem(
+                                  task: _mapModelToTaskItem(task),
+                                  onToggle: () => _toggleTaskStatus(task),
+                                  onDelete: () => _todoService.deleteTodo(task.id),
+                                );
+                              },
+                            ),
+                          const SizedBox(height: 100),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+        },
+      ),
+
+      // ✅ UI & LOGIC SESUAI PERMINTAAN ANDA
+      floatingActionButton: _isSelectMode
+          ? GestureDetector(
+        onTap: _deleteSelectedTasks, // Logic delete firebase ada di method ini
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            SizedBox(
-              height: 110,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: categories.length,
-                itemBuilder: (context, index) {
-                  return _buildCategoryCard(
-                    categories[index]['name'],
-                    categories[index]['taskCount'],
-                    categories[index]['completedCount'],
-                    categories[index]['gradientIndex'],
-                    categories[index]['tasks'] ?? [],
-                  );
-                },
+            const Icon(Icons.delete_outline, color: Colors.red, size: 28),
+            const SizedBox(height: 4),
+            Text(
+              "Delete",
+              style: GoogleFonts.poppins(
+                color: const Color(0xFFB90000),
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
               ),
-            ),
-            const SizedBox(height: 30),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Uncategorized Task',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black,
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.more_horiz),
-                  onPressed: () {},
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: uncategorizedTasks.length,
-              itemBuilder: (context, index) {
-                return TaskItem(
-                  task: uncategorizedTasks[index],
-                  onToggle: () {
-                    setState(() {
-                      bool current = uncategorizedTasks[index]['completed'] ?? false;
-                      uncategorizedTasks[index]['completed'] = !current;
-                    });
-                  },
-                );
-              },
-            ),
-            const SizedBox(height: 100),
+            )
           ],
         ),
-      ),
-      floatingActionButton: Padding(
+      )
+          : Padding(
         padding: const EdgeInsets.only(bottom: 12, right: 8),
         child: FloatingActionButton.extended(
-          onPressed: _showAddCategoryDialog,
+          onPressed: _showAddCategoryDialog, // Logic add firebase ada di method ini
           backgroundColor: const Color(0xFFD732A8),
           icon: const Icon(Icons.add, color: Colors.white, size: 22),
           label: const Text(
@@ -207,14 +290,62 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
     );
   }
 
-  Widget _buildCategoryCard(
-      String name,
-      int taskCount,
-      int completedCount,
-      int gradientIndex,
-      List<Map<String, dynamic>> tasks,
-      ) {
+  // --- WIDGET BUILDERS ---
+
+  Widget _buildPopupMenu(List<TodoModel> tasks) {
+    return Theme(
+      data: Theme.of(context).copyWith(
+        popupMenuTheme: PopupMenuThemeData(
+          color: const Color(0xFFF2F2F2),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          textStyle: GoogleFonts.poppins(color: Colors.black, fontSize: 14),
+        ),
+      ),
+      child: PopupMenuButton<String>(
+        icon: const Icon(Icons.more_horiz, color: Colors.black),
+        offset: const Offset(0, 40),
+        elevation: 2,
+        onSelected: (value) async {
+          if (value == 'select') {
+            setState(() => _isSelectMode = true);
+          } else if (value == 'complete') {
+            for (var t in tasks) {
+              if (!t.isCompleted) {
+                await _todoService.toggleTodoStatus(t.id, false);
+              }
+            }
+          }
+        },
+        itemBuilder: (context) => [
+          PopupMenuItem(
+            value: 'select',
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Select Task', style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
+                const Icon(Icons.list, color: Colors.black54, size: 20),
+              ],
+            ),
+          ),
+          const PopupMenuDivider(height: 1),
+          PopupMenuItem(
+            value: 'complete',
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Complete All', style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
+                const Icon(Icons.check_circle_outline, color: Colors.black54, size: 20),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCategoryCard(String name, int taskCount, int completedCount, int gradientIndex, List<TodoModel> tasks) {
     final gradient = availableGradients[gradientIndex % availableGradients.length];
+    final List<Map<String, dynamic>> folderTasksMap = tasks.map((t) => _mapModelToTaskItem(t)).toList();
 
     return GestureDetector(
       onTap: () {
@@ -225,7 +356,7 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
               folderName: name,
               gradientIndex: gradientIndex,
               gradients: availableGradients,
-              folderTasks: tasks,
+              folderTasks: folderTasksMap,
             ),
           ),
         );
@@ -241,6 +372,14 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
             colors: gradient,
           ),
           borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.25),
+              offset: const Offset(0, 4),
+              blurRadius: 4,
+              spreadRadius: 0,
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -253,11 +392,7 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
                 Expanded(
                   child: Text(
                     name,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.black,
-                    ),
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.black),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -266,16 +401,12 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.4),
+                    color: Colors.white.withOpacity(0.4),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     '$completedCount Completed',
-                    style: const TextStyle(
-                      fontSize: 10,
-                      color: Colors.black87,
-                      fontWeight: FontWeight.w500,
-                    ),
+                    style: const TextStyle(fontSize: 10, color: Colors.black87, fontWeight: FontWeight.w500),
                   ),
                 ),
               ],
@@ -286,17 +417,9 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
               children: [
                 Text(
                   '$taskCount Tasks',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: Colors.black87,
-                    fontWeight: FontWeight.w500,
-                  ),
+                  style: const TextStyle(fontSize: 13, color: Colors.black87, fontWeight: FontWeight.w500),
                 ),
-                const Icon(
-                  Icons.more_horiz,
-                  size: 24,
-                  color: Colors.black87,
-                ),
+                const Icon(Icons.more_horiz, size: 24, color: Colors.black87),
               ],
             ),
           ],
@@ -305,31 +428,65 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
     );
   }
 
-  void _showAddCategoryDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      builder: (BuildContext context) {
-        return const _IOSAddCategoryDialogContent();
-      },
-    ).then((result) {
-      if (result != null && result is Map<String, dynamic>) {
-        setState(() {
-          categories.add({
-            'name': result['name'],
-            'gradientIndex': result['gradientIndex'],
-            'taskCount': 0,
-            'completedCount': 0,
-            'tasks': [],
-          });
-        });
-      }
-    });
+  Widget _buildSelectableTaskItem(TodoModel task, bool isSelected) {
+    return GestureDetector(
+      onTap: () => _toggleSelection(task.id),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFAAAAAA) : Colors.white,
+          borderRadius: BorderRadius.circular(50),
+          border: isSelected ? null : Border.all(color: Colors.black, width: 1.0),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isSelected ? const Color(0xFF1A1A1A) : Colors.transparent,
+                border: isSelected ? null : Border.all(color: Colors.black, width: 1.5),
+              ),
+              child: isSelected ? const Icon(Icons.check, size: 16, color: Colors.white) : null,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.access_time, size: 16, color: isSelected ? Colors.black87 : Colors.grey),
+                      const SizedBox(width: 4),
+                      Text(
+                        DateFormat('h:mm a').format(task.deadline),
+                        style: TextStyle(fontSize: 12, color: isSelected ? Colors.black87 : Colors.grey),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    task.title,
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
+void showIOSDialog({required BuildContext context, required String title, required String message, String cancelText = 'Cancel', String confirmText = 'Confirm', VoidCallback? onCancel, required VoidCallback onConfirm, Color? confirmTextColor}) {
+  showDialog(context: context, barrierDismissible: true, builder: (_) => IOSDialog(title: title, message: message, cancelText: cancelText, confirmText: confirmText, onCancel: onCancel, onConfirm: onConfirm, confirmTextColor: confirmTextColor));
+}
+
 class _IOSAddCategoryDialogContent extends StatefulWidget {
-  const _IOSAddCategoryDialogContent({super.key});
+  const _IOSAddCategoryDialogContent({Key? key}) : super(key: key);
 
   @override
   State<_IOSAddCategoryDialogContent> createState() =>
@@ -339,8 +496,12 @@ class _IOSAddCategoryDialogContent extends StatefulWidget {
 class _IOSAddCategoryDialogContentState
     extends State<_IOSAddCategoryDialogContent> {
   final TextEditingController _nameController = TextEditingController();
+  // Panggil service di sini untuk menyimpan data
+  final CategoryService _categoryService = CategoryService();
+
   int _selectedGradientIndex = 0;
 
+  // Warna sesuai gambar (Hijau, Biru, Pink)
   final List<List<Color>> availableGradients = [
     [const Color(0xFFBEE973), const Color(0xFFD9D9D9)], // Hijau
     [const Color(0xFF93B7D9), const Color(0xFFD9D9D9)], // Biru
@@ -355,7 +516,10 @@ class _IOSAddCategoryDialogContentState
 
   @override
   Widget build(BuildContext context) {
-    const dividerColor = Color(0xA5545458);
+    // Warna garis pembatas
+    const dividerColor = Color(0xFFE0E0E0);
+    // Warna biru khas iOS/Gambar
+    const blueColor = Color(0xFF007AFF);
 
     return Dialog(
       backgroundColor: Colors.transparent,
@@ -369,52 +533,59 @@ class _IOSAddCategoryDialogContentState
             mainAxisSize: MainAxisSize.min,
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+                padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    // --- TITLE ---
                     Text(
                       'Add New Category',
                       textAlign: TextAlign.center,
                       style: GoogleFonts.poppins(
                         color: Colors.black,
-                        fontSize: 17,
+                        fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        height: 1.29,
-                        letterSpacing: -0.41,
                       ),
                     ),
                     const SizedBox(height: 16),
+
                     Container(
+                      height: 40,
                       padding: const EdgeInsets.symmetric(horizontal: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: const Color(0xFF0A84FF)),
-                      ),
                       child: TextField(
                         controller: _nameController,
+                        textAlignVertical: TextAlignVertical.center,
                         style: GoogleFonts.poppins(fontSize: 13),
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           hintText: 'Category Name',
-                          border: InputBorder.none,
-                          isDense: true,
-                          contentPadding: EdgeInsets.symmetric(vertical: 8),
+                          hintStyle: GoogleFonts.poppins(
+                              fontSize: 13, color: Colors.grey),
+                          contentPadding: const EdgeInsets.only(bottom: 12, left: 5),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(color: blueColor, width: 1),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(color: blueColor, width: 1.5),
+                          ),
                         ),
                       ),
                     ),
                     const SizedBox(height: 16),
-                    // Logic pemilihan warna
+
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: [0, 1, 2].map((index) {
+                      children: List.generate(availableGradients.length, (index) {
                         final isSelected = _selectedGradientIndex == index;
+                        // Ambil warna utama dari gradient untuk ditampilkan
+                        final mainColor = availableGradients[index][0];
+
                         return GestureDetector(
-                          onTap: () =>
-                              setState(() => _selectedGradientIndex = index),
+                          onTap: () => setState(() => _selectedGradientIndex = index),
                           child: Container(
-                            width: 36,
-                            height: 36,
+                            width: 32,
+                            height: 32,
                             margin: const EdgeInsets.symmetric(horizontal: 6),
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
@@ -422,79 +593,79 @@ class _IOSAddCategoryDialogContentState
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                               ),
-                              shape: BoxShape.circle,
-                              border: isSelected
-                                  ? Border.all(
-                                  color: Colors.black54, width: 2)
-                                  : Border.all(
-                                  color: Colors.black12, width: 1),
                             ),
                             child: isSelected
-                                ? const Icon(Icons.check,
-                                size: 20, color: Colors.black54)
+                                ? const Icon(Icons.check, size: 18, color: Colors.black54)
                                 : null,
                           ),
                         );
-                      }).toList(),
+                      }),
                     ),
                   ],
                 ),
               ),
 
-              // Garis Pembatas
+              // --- HORIZONTAL DIVIDER ---
               Container(
                 width: double.infinity,
-                height: 0.5,
+                height: 1,
                 color: dividerColor,
               ),
 
+              // --- BUTTONS ROW ---
               SizedBox(
-                height: 44,
+                height: 45,
                 child: Row(
                   children: [
+                    // CANCEL BUTTON
                     Expanded(
-                      child: Material(
-                        color: Colors.white,
-                        child: InkWell(
-                          onTap: () => Navigator.pop(context),
-                          child: Center(
-                            child: Text(
-                              'Cancel',
-                              style: GoogleFonts.poppins(
-                                color: const Color(0xFF0A84FF),
-                                fontSize: 16,
-                                fontWeight: FontWeight.w400,
-                              ),
+                      child: InkWell(
+                        onTap: () => Navigator.pop(context),
+                        child: Center(
+                          child: Text(
+                            'Cancel',
+                            style: GoogleFonts.poppins(
+                              color: blueColor,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w400,
                             ),
                           ),
                         ),
                       ),
                     ),
+
+                    // VERTICAL DIVIDER
                     Container(
-                      width: 0.5,
+                      width: 1,
                       height: double.infinity,
                       color: dividerColor,
                     ),
+
+                    // ADD BUTTON (Dengan Logic Firebase)
                     Expanded(
-                      child: Material(
-                        color: Colors.white,
-                        child: InkWell(
-                          onTap: () {
-                            if (_nameController.text.trim().isNotEmpty) {
-                              Navigator.pop(context, {
-                                'name': _nameController.text.trim(),
-                                'gradientIndex': _selectedGradientIndex,
-                              });
-                            }
-                          },
-                          child: Center(
-                            child: Text(
-                              'Add',
-                              style: GoogleFonts.poppins(
-                                color: const Color(0xFF0A84FF),
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
+                      child: InkWell(
+                        onTap: () async {
+                          final name = _nameController.text.trim();
+
+                          if (name.isNotEmpty) {
+                            // ✅ LOGIC FIREBASE DISINI
+                            // Langsung simpan ke database
+                            await _categoryService.addCategory(
+                              name,
+                              _selectedGradientIndex,
+                            );
+
+                            // Tutup dialog
+                            if (mounted) Navigator.pop(context);
+                          }
+                        },
+                        child: Center(
+                          child: Text(
+                            'Add',
+                            style: GoogleFonts.poppins(
+                              color: blueColor,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600, // Bold sesuai gambar
                             ),
                           ),
                         ),
