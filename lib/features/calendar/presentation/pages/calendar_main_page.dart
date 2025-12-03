@@ -351,7 +351,7 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
     );
   }
 
-  // --- TIMELINE BUILDER ---
+  // timeline builder
   Widget _buildScheduleTimeline() {
     return SizedBox(
       height: 320,
