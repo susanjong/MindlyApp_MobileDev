@@ -1,7 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
+
+// Import Routes & Widgets
 import '../../../../config/routes/routes.dart';
 import '../../../../core/widgets/navigation/custom_navbar_widget.dart';
 import '../widgets/mini_calendar.dart';
@@ -10,6 +14,11 @@ import '../widgets/yearly_view.dart';
 import '../widgets/schedule_card.dart';
 import '../widgets/reminder_card.dart';
 import '../widgets/add_event.dart';
+
+// Import Models & Services
+import '../../data/models/event_model.dart';
+import '../../data/services/category_service.dart';
+import '../../data/services/event_service.dart';
 
 // Enum untuk mengatur Mode Tampilan
 enum CalendarViewMode { daily, monthly, yearly }
@@ -22,26 +31,60 @@ class CalendarMainPage extends StatefulWidget {
 }
 
 class _CalendarMainPageState extends State<CalendarMainPage> {
+  // --- SERVICES & DATA ---
+  final EventService _eventService = EventService();
+  final CategoryService _categoryService = CategoryService();
+  final String userId = FirebaseAuth.instance.currentUser!.uid;
+
   // --- STATE ---
-  CalendarViewMode _currentView = CalendarViewMode.daily;
+  CalendarViewMode _currentView = CalendarViewMode.daily; // Default Daily
   DateTime _selectedDate = DateTime.now();
-  DateTime _focusedMonth = DateTime.now();
+  DateTime _focusedMonth = DateTime.now(); // Untuk Monthly/Yearly navigation
+
+  Map<String, Category> _categories = {};
+  StreamSubscription? _categorySubscription;
   final ScrollController _scrollController = ScrollController();
 
-  // Dummy Data Event
-  final Map<DateTime, List<Map<String, dynamic>>> _events = {
-    DateTime(2025, 12, 21): [{'title': 'Event A', 'color': Colors.blue}],
-  };
+  // Dummy data untuk Yearly View (karena logic yearly complex)
+  // Anda bisa menggantinya nanti dengan logic fetch setahun
+  final Map<DateTime, List<dynamic>> _yearlyEventsDummy = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCategories();
+  }
 
   @override
   void dispose() {
+    _categorySubscription?.cancel();
     _scrollController.dispose();
     super.dispose();
   }
 
-  // --- LOGIC ---
+  // --- LOGIC DATA ---
 
-  // Fungsi Toggle: Daily -> Monthly -> Yearly -> Daily
+  void _loadCategories() {
+    _categorySubscription = _categoryService.getCategories(userId).listen((categories) {
+      if (mounted) {
+        setState(() {
+          _categories = {for (var cat in categories) cat.id!: cat};
+        });
+      }
+    });
+  }
+
+  Color _getColorFromHex(String hexColor) {
+    hexColor = hexColor.replaceAll('#', '');
+    if (hexColor.length == 6) {
+      hexColor = 'FF$hexColor';
+    }
+    return Color(int.parse(hexColor, radix: 16));
+  }
+
+  // --- LOGIC UI & NAVIGASI ---
+
+  // Toggle: Daily -> Monthly -> Yearly -> Daily
   void _toggleViewMode() {
     setState(() {
       if (_currentView == CalendarViewMode.daily) {
@@ -54,11 +97,11 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
     });
   }
 
-  // Dipanggil saat tanggal dipilih (dari Monthly/Yearly)
   void _onDateSelected(DateTime date) {
     setState(() {
       _selectedDate = date;
       _focusedMonth = date;
+      // Jika user memilih tanggal di monthly/yearly, kembali ke daily view
       if (_currentView != CalendarViewMode.daily) {
         _currentView = CalendarViewMode.daily;
       }
@@ -71,6 +114,7 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
     });
   }
 
+  // Navigasi Bottom Bar
   void _handleNavigation(int index) {
     final routes = [
       AppRoutes.home,
@@ -78,6 +122,7 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
       AppRoutes.todo,
       AppRoutes.calendar
     ];
+    // Index 3 adalah halaman ini sendiri
     if (index != 3) {
       Navigator.pushReplacementNamed(context, routes[index]);
     }
@@ -93,9 +138,9 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
   }
 
   void _handleSearch() {
-    showSearch(
-      context: context,
-      delegate: _EventSearchDelegate(_events),
+    // TODO: Implement Real Search with Firebase
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Search feature coming soon!")),
     );
   }
 
@@ -112,7 +157,7 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
         titleSpacing: 20,
         toolbarHeight: 70,
 
-        // BAGIAN KIRI: Logo & Brand
+        // KIRI: Logo
         title: Row(
           children: [
             SizedBox(
@@ -144,7 +189,7 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
           ],
         ),
 
-        // BAGIAN KANAN: Search, Calendar Toggle, Add
+        // KANAN: Actions
         actions: [
           IconButton(
             onPressed: _handleSearch,
@@ -171,10 +216,10 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
         ],
       ),
 
-      // 2. BODY
+      // 2. BODY CONTENT (SWITCHER)
       body: _buildBodyContent(),
 
-      // 3. FAB - Custom Plus Button
+      // 3. FAB
       floatingActionButton: GestureDetector(
         onTap: _showAddEventDialog,
         child: Container(
@@ -201,22 +246,55 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
     );
   }
 
-  // --- HELPERS UNTUK UI ---
+  // --- WIDGET SWITCHER ---
 
   Widget _buildBodyContent() {
     switch (_currentView) {
+
+    // TAMPILAN HARIAN (DEFAULT)
+      case CalendarViewMode.daily:
+        return _buildDailyView();
+
+    // TAMPILAN BULANAN (MENGGUNAKAN LOGIC LAMA/FIREBASE)
       case CalendarViewMode.monthly:
-        return MonthlyViewWidget(
-          focusedDay: _focusedMonth,
-          selectedDay: _selectedDate,
-          events: _events,
-          onDaySelected: (selected, focused) => _onDateSelected(selected),
-          onPageChanged: _onMonthChanged,
+        return StreamBuilder<List<Event>>(
+          stream: _eventService.getEventsForMonth(userId, _focusedMonth),
+          builder: (context, snapshot) {
+            List<Event> monthEvents = [];
+            if (snapshot.hasData) {
+              monthEvents = snapshot.data!;
+            }
+
+            // Konversi List<Event> ke format widget MonthlyView
+            // atau gunakan widget MonthlyView yang sudah support List<Event>
+            return MonthlyViewWidget(
+              currentMonth: _focusedMonth,
+              selectedDate: _selectedDate,
+              events: monthEvents, // Pass real events
+              categories: _categories,
+              onDateSelected: (date) {
+                // Saat tanggal dipilih di monthly view, masuk ke daily view tanggal tsb
+                _onDateSelected(date);
+              },
+              onPreviousMonth: () {
+                setState(() {
+                  _focusedMonth = DateTime(_focusedMonth.year, _focusedMonth.month - 1);
+                });
+              },
+              onNextMonth: () {
+                setState(() {
+                  _focusedMonth = DateTime(_focusedMonth.year, _focusedMonth.month + 1);
+                });
+              },
+            );
+          },
         );
+
+    // TAMPILAN TAHUNAN
       case CalendarViewMode.yearly:
         return YearlyViewWidget(
           currentYear: _focusedMonth.year,
-          events: _events,
+          events: _yearlyEventsDummy, // Sementara dummy/kosong
           onMonthTap: (month) {
             setState(() {
               _focusedMonth = month;
@@ -224,10 +302,132 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
             });
           },
         );
-      case CalendarViewMode.daily:
-        return _buildDailyView();
     }
   }
+
+  // --- DAILY VIEW IMPLEMENTATION ---
+
+  Widget _buildDailyView() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 1. Mini Calendar (Horizontal)
+        MiniCalendarWidget(
+          selectedDate: _selectedDate,
+          onDateSelected: _onDateSelected,
+        ),
+
+        const SizedBox(height: 10),
+
+        // 2. Header Schedule
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Schedule Today',
+                style: GoogleFonts.poppins(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF1E293B),
+                ),
+              ),
+              Text(
+                DateFormat('d MMM yyyy').format(_selectedDate),
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  color: Colors.grey,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        // 3. Timeline / List Event (Real-time Firebase)
+        Expanded(
+          child: StreamBuilder<List<Event>>(
+            stream: _eventService.getEventsForDate(userId, _selectedDate),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              final events = snapshot.data ?? [];
+
+              if (events.isEmpty) {
+                return Column(
+                  children: [
+                    const SizedBox(height: 40),
+                    Center(
+                      child: Text(
+                        'No events for this date',
+                        style: GoogleFonts.poppins(
+                          color: const Color(0xFF94A3B8),
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              }
+
+              // Render Timeline List
+              return ListView.builder(
+                controller: _scrollController,
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                itemCount: events.length,
+                itemBuilder: (context, index) {
+                  final event = events[index];
+                  final category = _categories[event.categoryId];
+                  final color = category != null
+                      ? _getColorFromHex(category.color)
+                      : const Color(0xFF5683EB);
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Time Label
+                        SizedBox(
+                          width: 50,
+                          child: Text(
+                            DateFormat('HH:mm').format(event.startTime),
+                            style: GoogleFonts.poppins(
+                              color: const Color(0xFF94A3B8),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+
+                        // Schedule Card
+                        Expanded(
+                          child: ScheduleCardWidget(
+                            title: event.title,
+                            startTime: DateFormat('HH:mm').format(event.startTime),
+                            endTime: DateFormat('HH:mm').format(event.endTime),
+                            color: color,
+                            height: 80, // Dynamic height if needed
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  // --- HELPERS UI ---
 
   IconData _getToggleIcon() {
     switch (_currentView) {
@@ -250,198 +450,13 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
         return "Switch to Daily";
     }
   }
-
-  // --- WIDGET DAILY VIEW ---
-  Widget _buildDailyView() {
-    return SingleChildScrollView(
-      controller: _scrollController,
-      physics: const BouncingScrollPhysics(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Mini Calendar Horizontal
-          MiniCalendarWidget(
-            selectedDate: _selectedDate,
-            onDateSelected: _onDateSelected,
-          ),
-
-          const SizedBox(height: 24),
-
-          // Header Schedule
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Schedule Today',
-                  style: GoogleFonts.poppins(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF1E293B),
-                  ),
-                ),
-                Text(
-                  DateFormat('d MMM yyyy').format(_selectedDate),
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    color: Colors.grey,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Timeline Widget
-          _buildScheduleTimeline(),
-
-          const SizedBox(height: 32),
-
-          // Reminder Section
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Reminder',
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF1E293B),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Don\'t forget schedule for tomorrow',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w400,
-                    color: const Color(0xFF565A60),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Reminder Cards
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              children: [
-                ReminderCardWidget(
-                  time: '12.00 - 16.00',
-                  title: 'Design new UX flow for Michael',
-                ),
-                SizedBox(height: 12),
-                ReminderCardWidget(
-                  time: '12.00 - 16.00',
-                  title: 'Design new UX flow for Michael',
-                ),
-                SizedBox(height: 100),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // timeline builder
-  Widget _buildScheduleTimeline() {
-    return SizedBox(
-      height: 320,
-      child: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        child: SizedBox(
-          height: 600,
-          child: Stack(
-            children: [
-              // Time Labels
-              Positioned(
-                left: 24,
-                top: 0,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildTimeLabel('08.00'),
-                    const SizedBox(height: 45),
-                    _buildTimeLabel('10.00'),
-                    const SizedBox(height: 45),
-                    _buildTimeLabel('12.00'),
-                    const SizedBox(height: 45),
-                    _buildTimeLabel('14.00'),
-                    const SizedBox(height: 45),
-                    _buildTimeLabel('16.00'),
-                    const SizedBox(height: 45),
-                    _buildTimeLabel('18.00'),
-                    const SizedBox(height: 45),
-                    _buildTimeLabel('20.00'),
-                  ],
-                ),
-              ),
-
-              // Schedule Cards
-              Positioned(
-                left: 70,
-                right: 24,
-                top: 0,
-                child: Column(
-                  children: const [
-                    ScheduleCardWidget(
-                      title: 'Rapat dengan Bruce Wayne',
-                      startTime: '08.00',
-                      endTime: '10.00',
-                      color: Color(0xFFFBAE38),
-                      height: 64,
-                    ),
-                    SizedBox(height: 45),
-                    ScheduleCardWidget(
-                      title: 'Test wawasan kebangasaan di Dusun Wakanda',
-                      startTime: '12.00',
-                      endTime: '14.00',
-                      color: Color(0xFFFBAE38),
-                      height: 100,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTimeLabel(String time) {
-    return Text(
-      time,
-      style: GoogleFonts.poppins(
-        color: const Color(0xFF94A3B8),
-        fontSize: 12,
-        fontWeight: FontWeight.w400,
-        height: 2.17,
-        letterSpacing: 0.30,
-      ),
-    );
-  }
 }
 
-// --- SEARCH DELEGATE ---
+// Delegate Search (Placeholder)
 class _EventSearchDelegate extends SearchDelegate {
-  final Map<DateTime, List<Map<String, dynamic>>> events;
-  _EventSearchDelegate(this.events);
-
   @override
   List<Widget>? buildActions(BuildContext context) => [
-    IconButton(
-      onPressed: () => query = '',
-      icon: const Icon(Icons.clear),
-    ),
+    IconButton(onPressed: () => query = '', icon: const Icon(Icons.clear)),
   ];
 
   @override
@@ -451,16 +466,8 @@ class _EventSearchDelegate extends SearchDelegate {
   );
 
   @override
-  Widget buildResults(BuildContext context) =>
-      Center(child: Text('Results for "$query"'));
+  Widget buildResults(BuildContext context) => Center(child: Text('Results for "$query"'));
 
   @override
-  Widget buildSuggestions(BuildContext context) {
-    return ListView(
-      children: const [
-        ListTile(title: Text('Suggest Event 1')),
-        ListTile(title: Text('Suggest Event 2')),
-      ],
-    );
-  }
+  Widget buildSuggestions(BuildContext context) => const Center(child: Text('Search events...'));
 }
