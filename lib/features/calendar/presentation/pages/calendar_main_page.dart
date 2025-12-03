@@ -8,14 +8,14 @@ import 'package:intl/intl.dart';
 // Import Routes & Widgets
 import '../../../../config/routes/routes.dart';
 import '../../../../core/widgets/navigation/custom_navbar_widget.dart';
+import '../../../../core/widgets/buttons/global_expandable_fab.dart';
+import '../../../../core/widgets/navigation/custom_top_app_bar.dart';
 import '../widgets/mini_calendar.dart';
 import '../widgets/monthly_view.dart';
 import '../widgets/yearly_view.dart';
 import '../widgets/schedule_card.dart';
-import '../widgets/reminder_card.dart';
 import '../widgets/add_event.dart';
-
-// Import Models & Services
+import '../widgets/event_detail_sheet.dart';
 import '../../data/models/event_model.dart';
 import '../../data/services/category_service.dart';
 import '../../data/services/event_service.dart';
@@ -150,91 +150,28 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
       backgroundColor: Colors.white,
 
       // 1. APP BAR
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        automaticallyImplyLeading: false,
-        titleSpacing: 20,
-        toolbarHeight: 70,
-
-        // KIRI: Logo
-        title: Row(
-          children: [
-            SizedBox(
-              width: 32.36,
-              height: 30,
-              child: Center(
-                child: SvgPicture.asset(
-                  'assets/images/Mindly_logo.svg',
-                  width: 32.36,
-                  height: 30,
-                  fit: BoxFit.contain,
-                  placeholderBuilder: (context) => const Icon(
-                    Icons.grid_view_rounded,
-                    color: Color(0xFF004455),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Text(
-              'Mindly',
-              style: GoogleFonts.poppins(
-                fontSize: 30,
-                fontWeight: FontWeight.w800,
-                color: const Color(0xFF004455),
-                letterSpacing: -0.5,
-              ),
-            ),
-          ],
+        appBar: CustomTopAppBar(
+          isCalendarMode: true, // Aktifkan mode kalender
+          isYearView: _currentView == CalendarViewMode.yearly,
+          onSearchTap: _handleSearch,
+          onToggleView: _toggleViewMode,
+          onProfileTap: () => Navigator.pushNamed(context, AppRoutes.profile),
+          onNotificationTap: () {},
         ),
-
-        // KANAN: Actions
-        actions: [
-          IconButton(
-            onPressed: _handleSearch,
-            tooltip: 'Search Events',
-            icon: const Icon(Icons.search, color: Color(0xFF1A1A1A), size: 26),
-          ),
-          IconButton(
-            onPressed: _toggleViewMode,
-            tooltip: _getToggleTooltip(),
-            icon: Icon(
-              _getToggleIcon(),
-              color: const Color(0xFF1A1A1A),
-              size: 26,
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(right: 8.0),
-            child: IconButton(
-              onPressed: _showAddEventDialog,
-              tooltip: 'Add Event',
-              icon: const Icon(Icons.add, color: Color(0xFF1A1A1A), size: 30),
-            ),
-          ),
-        ],
-      ),
 
       // 2. BODY CONTENT (SWITCHER)
       body: _buildBodyContent(),
 
-      // 3. FAB
-      floatingActionButton: GestureDetector(
-        onTap: _showAddEventDialog,
-        child: Container(
-          width: 59,
-          height: 59,
-          decoration: const ShapeDecoration(
-            color: Color(0xFFD732A8),
-            shape: OvalBorder(),
+      // 3. GLOBAL EXPANDABLE FAB (Replaces standard FAB)
+      floatingActionButton: GlobalExpandableFab(
+        actions: [
+          FabActionModel(
+            icon: Icons.edit_calendar_rounded, // Icon untuk Add Event
+            tooltip: 'Add Event',
+            onTap: _showAddEventDialog,
           ),
-          child: const Icon(
-            Icons.add,
-            color: Colors.white,
-            size: 48,
-          ),
-        ),
+          // Anda bisa menambahkan aksi lain di sini jika perlu (misal Add Task)
+        ],
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
 
@@ -250,7 +187,6 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
 
   Widget _buildBodyContent() {
     switch (_currentView) {
-
     // TAMPILAN HARIAN (DEFAULT)
       case CalendarViewMode.daily:
         return _buildDailyView();
@@ -265,8 +201,6 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
               monthEvents = snapshot.data!;
             }
 
-            // Konversi List<Event> ke format widget MonthlyView
-            // atau gunakan widget MonthlyView yang sudah support List<Event>
             return MonthlyViewWidget(
               currentMonth: _focusedMonth,
               selectedDate: _selectedDate,
@@ -389,33 +323,47 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
 
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 16),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Time Label
-                        SizedBox(
-                          width: 50,
-                          child: Text(
-                            DateFormat('HH:mm').format(event.startTime),
-                            style: GoogleFonts.poppins(
-                              color: const Color(0xFF94A3B8),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
+                    child: GestureDetector(
+                      // Tambahkan interaksi tap untuk membuka detail
+                      onTap: () {
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (context) => EventDetailSheet(
+                            event: event,
+                            category: category,
+                          ),
+                        );
+                      },
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Time Label
+                          SizedBox(
+                            width: 50,
+                            child: Text(
+                              DateFormat('HH:mm').format(event.startTime),
+                              style: GoogleFonts.poppins(
+                                color: const Color(0xFF94A3B8),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ),
-                        ),
 
-                        // Schedule Card
-                        Expanded(
-                          child: ScheduleCardWidget(
-                            title: event.title,
-                            startTime: DateFormat('HH:mm').format(event.startTime),
-                            endTime: DateFormat('HH:mm').format(event.endTime),
-                            color: color,
-                            height: 80, // Dynamic height if needed
+                          // Schedule Card
+                          Expanded(
+                            child: ScheduleCardWidget(
+                              title: event.title,
+                              startTime: DateFormat('HH:mm').format(event.startTime),
+                              endTime: DateFormat('HH:mm').format(event.endTime),
+                              color: color,
+                              height: 80,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   );
                 },
