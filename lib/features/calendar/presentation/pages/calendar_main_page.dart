@@ -4,12 +4,12 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
 import '../../../../config/routes/routes.dart';
 import '../../../../core/widgets/navigation/custom_navbar_widget.dart';
-import '../../../../core/widgets/buttons/global_expandable_fab.dart';
 import '../widgets/mini_calendar.dart';
 import '../widgets/monthly_view.dart';
 import '../widgets/yearly_view.dart';
 import '../widgets/schedule_card.dart';
 import '../widgets/reminder_card.dart';
+import '../widgets/add_event.dart';
 
 // Enum untuk mengatur Mode Tampilan
 enum CalendarViewMode { daily, monthly, yearly }
@@ -23,7 +23,7 @@ class CalendarMainPage extends StatefulWidget {
 
 class _CalendarMainPageState extends State<CalendarMainPage> {
   // --- STATE ---
-  CalendarViewMode _currentView = CalendarViewMode.daily; // Default: Daily
+  CalendarViewMode _currentView = CalendarViewMode.daily;
   DateTime _selectedDate = DateTime.now();
   DateTime _focusedMonth = DateTime.now();
   final ScrollController _scrollController = ScrollController();
@@ -32,6 +32,12 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
   final Map<DateTime, List<Map<String, dynamic>>> _events = {
     DateTime(2025, 12, 21): [{'title': 'Event A', 'color': Colors.blue}],
   };
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   // --- LOGIC ---
 
@@ -53,8 +59,6 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
     setState(() {
       _selectedDate = date;
       _focusedMonth = date;
-      // Opsional: Jika user memilih tanggal di Monthly/Yearly,
-      // otomatis kembali ke Daily view untuk melihat detail jam
       if (_currentView != CalendarViewMode.daily) {
         _currentView = CalendarViewMode.daily;
       }
@@ -80,16 +84,18 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
   }
 
   void _showAddEventDialog() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Add Event Clicked')),
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const AddEventBottomSheet(),
     );
   }
 
   void _handleSearch() {
-    // Logika pencarian event
     showSearch(
-        context: context,
-        delegate: _EventSearchDelegate(_events) // Buat class delegate di bawah
+      context: context,
+      delegate: _EventSearchDelegate(_events),
     );
   }
 
@@ -98,15 +104,15 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
     return Scaffold(
       backgroundColor: Colors.white,
 
-      // 1. APP BAR (Desain disamakan dengan CustomTopAppBar)
+      // 1. APP BAR
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
         automaticallyImplyLeading: false,
-        titleSpacing: 20, // Padding kiri disesuaikan
+        titleSpacing: 20,
         toolbarHeight: 70,
 
-        // BAGIAN KIRI: Logo & Brand (Persis CustomTopAppBar)
+        // BAGIAN KIRI: Logo & Brand
         title: Row(
           children: [
             SizedBox(
@@ -118,7 +124,6 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
                   width: 32.36,
                   height: 30,
                   fit: BoxFit.contain,
-                  // Fallback jika aset belum ada
                   placeholderBuilder: (context) => const Icon(
                     Icons.grid_view_rounded,
                     color: Color(0xFF004455),
@@ -141,25 +146,20 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
 
         // BAGIAN KANAN: Search, Calendar Toggle, Add
         actions: [
-          // 1. Search Icon
           IconButton(
             onPressed: _handleSearch,
             tooltip: 'Search Events',
             icon: const Icon(Icons.search, color: Color(0xFF1A1A1A), size: 26),
           ),
-
-          // 2. Calendar Toggle Icon (Berubah icon sesuai mode)
           IconButton(
             onPressed: _toggleViewMode,
             tooltip: _getToggleTooltip(),
             icon: Icon(
-                _getToggleIcon(),
-                color: const Color(0xFF1A1A1A),
-                size: 26
+              _getToggleIcon(),
+              color: const Color(0xFF1A1A1A),
+              size: 26,
             ),
           ),
-
-          // 3. Add Event Icon (+)
           Padding(
             padding: const EdgeInsets.only(right: 8.0),
             child: IconButton(
@@ -171,18 +171,25 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
         ],
       ),
 
-      // 2. BODY (Switch antara Daily, Monthly, Yearly)
+      // 2. BODY
       body: _buildBodyContent(),
 
-      // 3. FAB (Tetap ada di bawah)
-      floatingActionButton: GlobalExpandableFab(
-        actions: [
-          FabActionModel(
-            icon: Icons.edit_outlined,
-            tooltip: 'Quick Note',
-            onTap: () {},
+      // 3. FAB - Custom Plus Button
+      floatingActionButton: GestureDetector(
+        onTap: _showAddEventDialog,
+        child: Container(
+          width: 59,
+          height: 59,
+          decoration: const ShapeDecoration(
+            color: Color(0xFFD732A8),
+            shape: OvalBorder(),
           ),
-        ],
+          child: const Icon(
+            Icons.add,
+            color: Colors.white,
+            size: 48,
+          ),
+        ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
 
@@ -211,7 +218,6 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
           currentYear: _focusedMonth.year,
           events: _events,
           onMonthTap: (month) {
-            // Zoom in: Dari Yearly ke Monthly
             setState(() {
               _focusedMonth = month;
               _currentView = CalendarViewMode.monthly;
@@ -219,135 +225,133 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
           },
         );
       case CalendarViewMode.daily:
-      return _buildDailyView();
+        return _buildDailyView();
     }
   }
 
   IconData _getToggleIcon() {
     switch (_currentView) {
       case CalendarViewMode.daily:
-        return Icons.calendar_month_outlined; // Icon untuk ke Monthly
+        return Icons.calendar_month_outlined;
       case CalendarViewMode.monthly:
-        return Icons.calendar_view_week_outlined; // Icon untuk ke Yearly/Zoom out
+        return Icons.calendar_view_week_outlined;
       case CalendarViewMode.yearly:
-        return Icons.view_day_outlined; // Icon untuk kembali ke Daily
+        return Icons.view_day_outlined;
     }
   }
 
   String _getToggleTooltip() {
     switch (_currentView) {
-      case CalendarViewMode.daily: return "Switch to Monthly";
-      case CalendarViewMode.monthly: return "Switch to Yearly";
-      case CalendarViewMode.yearly: return "Switch to Daily";
+      case CalendarViewMode.daily:
+        return "Switch to Monthly";
+      case CalendarViewMode.monthly:
+        return "Switch to Yearly";
+      case CalendarViewMode.yearly:
+        return "Switch to Daily";
     }
   }
 
-  // --- WIDGET DAILY VIEW (Timeline Stack) ---
+  // --- WIDGET DAILY VIEW ---
   Widget _buildDailyView() {
-    return Stack(
-      children: [
-        SingleChildScrollView(
-          controller: _scrollController,
-          physics: const BouncingScrollPhysics(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Mini Calendar Horizontal
-              MiniCalendarWidget(
-                selectedDate: _selectedDate,
-                onDateSelected: _onDateSelected,
-              ),
-
-              const SizedBox(height: 24),
-
-              // Header Schedule
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Schedule Today',
-                      style: GoogleFonts.poppins(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF1E293B),
-                      ),
-                    ),
-                    // Menampilkan Tanggal terpilih di sebelah kanan
-                    Text(
-                      DateFormat('d MMM yyyy').format(_selectedDate),
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // Timeline Widget
-              _buildScheduleTimeline(),
-
-              const SizedBox(height: 32),
-
-              // Reminder Section
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Reminder',
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF1E293B),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Don\'t forget schedule for tomorrow',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w400,
-                        color: const Color(0xFF565A60),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // Reminder Cards
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  children: [
-                    ReminderCardWidget(
-                      time: '12.00 - 16.00',
-                      title: 'Design new UX flow for Michael',
-                    ),
-                    SizedBox(height: 12),
-                    ReminderCardWidget(
-                      time: '12.00 - 16.00',
-                      title: 'Design new UX flow for Michael',
-                    ),
-                    SizedBox(height: 100), // Spacing bawah
-                  ],
-                ),
-              ),
-            ],
+    return SingleChildScrollView(
+      controller: _scrollController,
+      physics: const BouncingScrollPhysics(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Mini Calendar Horizontal
+          MiniCalendarWidget(
+            selectedDate: _selectedDate,
+            onDateSelected: _onDateSelected,
           ),
-        ),
-      ],
+
+          const SizedBox(height: 24),
+
+          // Header Schedule
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Schedule Today',
+                  style: GoogleFonts.poppins(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF1E293B),
+                  ),
+                ),
+                Text(
+                  DateFormat('d MMM yyyy').format(_selectedDate),
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: Colors.grey,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Timeline Widget
+          _buildScheduleTimeline(),
+
+          const SizedBox(height: 32),
+
+          // Reminder Section
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Reminder',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF1E293B),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Don\'t forget schedule for tomorrow',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
+                    color: const Color(0xFF565A60),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Reminder Cards
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              children: [
+                ReminderCardWidget(
+                  time: '12.00 - 16.00',
+                  title: 'Design new UX flow for Michael',
+                ),
+                SizedBox(height: 12),
+                ReminderCardWidget(
+                  time: '12.00 - 16.00',
+                  title: 'Design new UX flow for Michael',
+                ),
+                SizedBox(height: 100),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  // --- TIMELINE BUILDER ---
+  // timeline builder
   Widget _buildScheduleTimeline() {
     return SizedBox(
       height: 320,
@@ -357,7 +361,7 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
           height: 600,
           child: Stack(
             children: [
-              // A. Time Labels
+              // Time Labels
               Positioned(
                 left: 24,
                 top: 0,
@@ -381,22 +385,22 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
                 ),
               ),
 
-              // B. Schedule Cards
+              // Schedule Cards
               Positioned(
                 left: 70,
                 right: 24,
                 top: 0,
                 child: Column(
-                  children: [
-                    const ScheduleCardWidget(
+                  children: const [
+                    ScheduleCardWidget(
                       title: 'Rapat dengan Bruce Wayne',
                       startTime: '08.00',
                       endTime: '10.00',
                       color: Color(0xFFFBAE38),
                       height: 64,
                     ),
-                    const SizedBox(height: 45),
-                    const ScheduleCardWidget(
+                    SizedBox(height: 45),
+                    ScheduleCardWidget(
                       title: 'Test wawasan kebangasaan di Dusun Wakanda',
                       startTime: '12.00',
                       endTime: '14.00',
@@ -427,24 +431,28 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
   }
 }
 
-// --- SEARCH DELEGATE PLACEHOLDER ---
+// --- SEARCH DELEGATE ---
 class _EventSearchDelegate extends SearchDelegate {
   final Map<DateTime, List<Map<String, dynamic>>> events;
   _EventSearchDelegate(this.events);
 
   @override
   List<Widget>? buildActions(BuildContext context) => [
-    IconButton(onPressed: () => query = '', icon: const Icon(Icons.clear)),
+    IconButton(
+      onPressed: () => query = '',
+      icon: const Icon(Icons.clear),
+    ),
   ];
 
   @override
   Widget? buildLeading(BuildContext context) => IconButton(
-      onPressed: () => close(context, null),
-      icon: const Icon(Icons.arrow_back)
+    onPressed: () => close(context, null),
+    icon: const Icon(Icons.arrow_back),
   );
 
   @override
-  Widget buildResults(BuildContext context) => Center(child: Text('Results for "$query"'));
+  Widget buildResults(BuildContext context) =>
+      Center(child: Text('Results for "$query"'));
 
   @override
   Widget buildSuggestions(BuildContext context) {
