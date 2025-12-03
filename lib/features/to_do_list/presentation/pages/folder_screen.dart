@@ -7,27 +7,29 @@ import '../../../../core/widgets/dialog/alert_dialog.dart';
 import '../widgets/task_item.dart';
 import '../widgets/add_task_bottom_sheet.dart';
 
+
 class FolderScreen extends StatefulWidget {
   final String folderName;
   final int gradientIndex;
   final List<List<Color>> gradients;
-
   final List<Map<String, dynamic>> folderTasks;
 
   const FolderScreen({
-    Key? key,
+    super.key,
+
     required this.folderName,
     required this.gradientIndex,
     required this.gradients,
     required this.folderTasks,
-  }) : super(key: key);
+  });
+
 
   @override
   State<FolderScreen> createState() => _FolderScreenState();
 }
 
 class _FolderScreenState extends State<FolderScreen> {
-  // ✅ Panggil Service
+  // Panggil Service
   final TodoService _todoService = TodoService();
 
   bool _isSelectMode = false;
