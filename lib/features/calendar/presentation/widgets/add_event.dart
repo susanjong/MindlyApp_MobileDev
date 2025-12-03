@@ -1032,7 +1032,7 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
 
                   const SizedBox(height: 20),
 
-                  // Create/Save Button
+                  // create, save or button
                   GestureDetector(
                     onTap: () {
                       if (_hasAnyContent) {
