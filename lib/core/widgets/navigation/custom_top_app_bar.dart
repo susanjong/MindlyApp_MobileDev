@@ -3,10 +3,19 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 class CustomTopAppBar extends StatelessWidget implements PreferredSizeWidget {
+  // Standard Props
   final VoidCallback? onProfileTap;
   final VoidCallback? onNotificationTap;
+
+  // Selection Mode Props
   final bool isSelectionMode;
   final VoidCallback? onSelectAllTap;
+
+  // Calendar Mode Props (NEW)
+  final bool isCalendarMode;
+  final bool isYearView;
+  final VoidCallback? onSearchTap;
+  final VoidCallback? onToggleView;
 
   const CustomTopAppBar({
     super.key,
@@ -14,6 +23,11 @@ class CustomTopAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.onNotificationTap,
     this.isSelectionMode = false,
     this.onSelectAllTap,
+    // Initialize Calendar props
+    this.isCalendarMode = false,
+    this.isYearView = false,
+    this.onSearchTap,
+    this.onToggleView,
   });
 
   @override
@@ -23,12 +37,15 @@ class CustomTopAppBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     return Container(
       color: Colors.white,
+      // Padding ini DIJAMIN SAMA untuk semua halaman
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       child: SafeArea(
         bottom: false,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
+            // --- BAGIAN KIRI (LOGO & TEXT) - SAMA UNTUK SEMUA ---
             Row(
               children: [
                 SizedBox(
@@ -59,10 +76,11 @@ class CustomTopAppBar extends StatelessWidget implements PreferredSizeWidget {
                 ),
               ],
             ),
-            // Toggle Icons based on mode
+
+            // --- BAGIAN KANAN (BERUBAH SESUAI MODE) ---
             if (isSelectionMode)
+            // 1. Mode Seleksi (Select All)
               IconButton(
-                // Simple expand icon (4 arrows outwards)
                 icon: const Icon(
                   Icons.open_in_full_rounded,
                   color: Color(0xFF1A1A1A),
@@ -71,7 +89,35 @@ class CustomTopAppBar extends StatelessWidget implements PreferredSizeWidget {
                 tooltip: 'Select All',
                 onPressed: onSelectAllTap,
               )
+            else if (isCalendarMode)
+            // 2. Mode Calendar (Search + Toggle View)
+              Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(
+                      Icons.search,
+                      color: Color(0xFF1A1A1A),
+                      size: 26, // Ukuran disamakan
+                    ),
+                    tooltip: 'Search Events',
+                    onPressed: onSearchTap,
+                  ),
+                  // Add sedikit jarak antar icon jika perlu, tapi default IconButton punya padding
+                  IconButton(
+                    icon: Icon(
+                      isYearView
+                          ? Icons.calendar_view_month
+                          : Icons.calendar_today_outlined,
+                      color: const Color(0xFF1A1A1A),
+                      size: 26, // Ukuran disamakan
+                    ),
+                    tooltip: isYearView ? 'Show Monthly View' : 'Show Yearly View',
+                    onPressed: onToggleView,
+                  ),
+                ],
+              )
             else
+            // 3. Mode Standard (Profile + Notif) - Default Home/Notes/Todo
               Row(
                 children: [
                   IconButton(

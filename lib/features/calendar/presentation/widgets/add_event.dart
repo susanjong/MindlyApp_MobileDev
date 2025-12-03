@@ -7,7 +7,9 @@ import '../../../../features/calendar/data/services/category_service.dart';
 import '../../../../features/calendar/data/services/event_service.dart';
 
 class AddEventBottomSheet extends StatefulWidget {
-  const AddEventBottomSheet({super.key});
+  final Event? eventToEdit; // Parameter untuk mode edit
+
+  const AddEventBottomSheet({super.key, this.eventToEdit});
 
   @override
   State<AddEventBottomSheet> createState() => _AddEventBottomSheetState();
@@ -27,6 +29,8 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
 
   // State Data
   bool _isLoading = false;
+  bool _isEditMode = false;
+  bool _isDataPopulated = false; // Flag untuk memastikan data hanya diisi sekali
 
   // Date & Time State
   DateTime? _selectedDateObj;
@@ -58,7 +62,40 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
   @override
   void initState() {
     super.initState();
+    _isEditMode = widget.eventToEdit != null;
     _loadCategories();
+    // JANGAN panggil _populateExistingData() di sini karena butuh context
+  }
+
+  // PERBAIKAN UTAMA ADA DI SINI
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Kita jalankan ini saat context sudah siap, dan hanya sekali saja
+    if (_isEditMode && !_isDataPopulated) {
+      _populateExistingData();
+      _isDataPopulated = true;
+    }
+  }
+
+  void _populateExistingData() {
+    final event = widget.eventToEdit!;
+    _eventNameController.text = event.title;
+    _noteController.text = event.description;
+    // _locationController.text = event.location; // Jika nanti ada field location
+
+    // Set Date
+    _selectedDateObj = event.startTime;
+    _selectedDateStr = DateFormat('dd/MM/yyyy').format(event.startTime);
+
+    // Set Time (Menggunakan TimeOfDay.fromDateTime)
+    _startTimeObj = TimeOfDay.fromDateTime(event.startTime);
+    _startTimeStr = _startTimeObj!.format(context); // Sekarang aman memanggil context
+
+    _endTimeObj = TimeOfDay.fromDateTime(event.endTime);
+    _endTimeStr = _endTimeObj!.format(context); // Sekarang aman memanggil context
+
+    _selectedCategoryId = event.categoryId;
   }
 
   @override
@@ -76,7 +113,8 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
       if (mounted) {
         setState(() {
           _categories = categoryList;
-          if (_categories.isNotEmpty && _selectedCategoryId == null) {
+          // Jika mode tambah baru (bukan edit) dan belum ada kategori dipilih
+          if (!_isEditMode && _categories.isNotEmpty && _selectedCategoryId == null) {
             _selectedCategoryId = _categories.first.id;
           }
         });
@@ -116,24 +154,30 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
     setState(() => _isLoading = true);
 
     try {
-      final newEvent = Event(
+      final eventToSave = Event(
+        id: _isEditMode ? widget.eventToEdit!.id : null, // Pakai ID lama jika edit
         title: _eventNameController.text,
         description: _noteController.text,
         startTime: startDateTime,
         endTime: endDateTime,
         categoryId: _selectedCategoryId!,
         userId: _userId,
-        createdAt: DateTime.now(),
+        // Jika edit, pertahankan createdAt lama, jika baru pakai DateTime.now()
+        createdAt: _isEditMode ? widget.eventToEdit!.createdAt : DateTime.now(),
       );
 
-      await _eventService.addEvent(newEvent);
+      if (_isEditMode) {
+        await _eventService.updateEvent(_userId, eventToSave);
+      } else {
+        await _eventService.addEvent(eventToSave);
+      }
 
       if (mounted) {
-        Navigator.pop(context);
+        Navigator.pop(context); // Tutup BottomSheet
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Event created successfully'),
-            backgroundColor: Color(0xFF10B981),
+          SnackBar(
+            content: Text(_isEditMode ? 'Event updated successfully' : 'Event created successfully'),
+            backgroundColor: const Color(0xFF10B981),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -279,7 +323,6 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
 
   // --- WIDGET HELPERS ---
 
-  // 1. WIDGET TEXTFIELD
   Widget _buildTextField({
     required TextEditingController controller,
     required String hint,
@@ -309,7 +352,6 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
     );
   }
 
-  // 2. WIDGET LOCATION FIELD (YANG SEBELUMNYA HILANG)
   Widget _buildLocationField() {
     return Container(
       height: 40,
@@ -354,7 +396,6 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
     );
   }
 
-  // 3. WIDGET DROPDOWN
   Widget _buildDropdownField({
     required String value,
     required VoidCallback onTap,
@@ -386,7 +427,6 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
     );
   }
 
-  // 4. WIDGET CATEGORY CHIP
   Widget _buildCategoryChip({
     required String label,
     required Color color,
@@ -417,7 +457,6 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
     );
   }
 
-  // 5. WIDGET PICKERS
   void _showReminderPicker() {
     showModalBottomSheet(
       context: context,
@@ -525,7 +564,7 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const SizedBox(width: 24),
-                  Text('Add New Event', style: GoogleFonts.poppins(color: const Color(0xFF222B45), fontSize: 20, fontWeight: FontWeight.w600)),
+                  Text(_isEditMode ? 'Edit Event' : 'Add New Event', style: GoogleFonts.poppins(color: const Color(0xFF222B45), fontSize: 20, fontWeight: FontWeight.w600)),
                   GestureDetector(
                     onTap: () => Navigator.pop(context),
                     child: const Icon(Icons.close, size: 24, color: Color(0xFF222B45)),
@@ -616,7 +655,6 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
                     ),
 
                     const SizedBox(height: 14),
-                    // WIDGET LOCATION SEKARANG SUDAH ADA
                     _buildLocationField(),
                     const SizedBox(height: 14),
 
@@ -681,7 +719,7 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
                           child: _isLoading
                               ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                               : Text(
-                            'Create Event',
+                            _isEditMode ? 'Update Event' : 'Create Event',
                             style: GoogleFonts.poppins(color: const Color(0xFFF2F2F2), fontSize: 16, fontWeight: FontWeight.w600),
                           ),
                         ),
