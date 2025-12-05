@@ -1,15 +1,66 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/widgets/dialog/alert_dialog.dart';
-class TaskDetailScreen extends StatelessWidget {
+
+class TaskDetailScreen extends StatefulWidget {
   final Map<String, dynamic> task;
   final VoidCallback onDelete;
+  // Callback opsional jika ingin menyimpan perubahan ke Firebase nantinya
+  final Function(String newTitle)? onTitleChanged;
 
   const TaskDetailScreen({
     Key? key,
     required this.task,
     required this.onDelete,
+    this.onTitleChanged,
   }) : super(key: key);
+
+  @override
+  State<TaskDetailScreen> createState() => _TaskDetailScreenState();
+}
+
+class _TaskDetailScreenState extends State<TaskDetailScreen> {
+  late TextEditingController _titleController;
+  late TextEditingController _descriptionController;
+  late FocusNode _titleFocusNode;
+  bool _isEditingTitle = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _titleController = TextEditingController(text: widget.task['title'] ?? '');
+    _descriptionController = TextEditingController(text: widget.task['description'] ?? '');
+    _titleFocusNode = FocusNode();
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _titleFocusNode.dispose();
+    super.dispose();
+  }
+
+  void _toggleEditing() {
+    setState(() {
+      if (_isEditingTitle) {
+        // LOGIC SAAT SAVE (Icon Centang diklik)
+        // Update title di local map agar UI langsung berubah (optional)
+        widget.task['title'] = _titleController.text.trim();
+
+        // Panggil callback untuk simpan ke Database/Parent (jika ada)
+        if (widget.onTitleChanged != null) {
+          widget.onTitleChanged!(_titleController.text.trim());
+        }
+      }
+
+      _isEditingTitle = !_isEditingTitle;
+
+      // Otomatis focus ke textfield saat mode edit aktif
+      if (_isEditingTitle) {
+        _titleFocusNode.requestFocus();
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,11 +80,11 @@ class TaskDetailScreen extends StatelessWidget {
               showIOSDialog(
                 context: context,
                 title: 'Delete Task',
-                message: 'Are you sure you want to delete "${task['title']}"?',
+                message: 'Are you sure you want to delete "${widget.task['title']}"?',
                 confirmText: 'Delete',
                 confirmTextColor: const Color(0xFFFF453A),
                 onConfirm: () {
-                  onDelete();
+                  widget.onDelete();
                   Navigator.pop(context);
                 },
               );
@@ -57,13 +108,35 @@ class TaskDetailScreen extends StatelessWidget {
               ),
               const SizedBox(height: 8),
 
-              // Title Row
+              // --- TITLE ROW (EDITABLE) ---
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Expanded(
-                    child: Text(
-                      task['title'] ?? 'No Title',
+                    child: _isEditingTitle
+                    // 1. Mode EDIT: Tampilkan TextField
+                        ? TextField(
+                      controller: _titleController,
+                      focusNode: _titleFocusNode,
+                      style: GoogleFonts.poppins(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black,
+                      ),
+                      decoration: const InputDecoration(
+                        border: UnderlineInputBorder(
+                          borderSide: BorderSide(color: Color(0xFF5784EB)),
+                        ),
+                        contentPadding: EdgeInsets.zero,
+                        isDense: true,
+                      ),
+                      // Simpan saat tombol Enter ditekan keyboard
+                      onSubmitted: (_) => _toggleEditing(),
+                    )
+                    // 2. Mode VIEW: Tampilkan Text biasa
+                        : Text(
+                      widget.task['title'] ?? 'No Title',
                       style: GoogleFonts.poppins(
                         fontSize: 22,
                         fontWeight: FontWeight.w600,
@@ -71,9 +144,15 @@ class TaskDetailScreen extends StatelessWidget {
                       ),
                     ),
                   ),
+
+                  // Tombol Toggle Edit/Save
                   IconButton(
-                    icon: const Icon(Icons.edit_outlined, size: 20),
-                    onPressed: () {},
+                    icon: Icon(
+                      _isEditingTitle ? Icons.check_circle : Icons.edit_outlined,
+                      size: 24,
+                      color: _isEditingTitle ? const Color(0xFF5784EB) : Colors.black,
+                    ),
+                    onPressed: _toggleEditing,
                   ),
                 ],
               ),
@@ -100,7 +179,7 @@ class TaskDetailScreen extends StatelessWidget {
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    task['time'] ?? '',
+                    widget.task['time'] ?? '',
                     style: GoogleFonts.poppins(
                       color: Colors.grey[600],
                       fontSize: 14,
@@ -142,8 +221,12 @@ class TaskDetailScreen extends StatelessWidget {
                 ),
                 padding: const EdgeInsets.all(16),
                 child: TextField(
-                  maxLines: null,
-                  controller: TextEditingController(text: "bahas pembagian tugas..."),
+                  maxLines: null, // Allow multiline
+                  controller: _descriptionController,
+                  onChanged: (value) {
+                    // Update local map real-time saat user mengetik
+                    widget.task['description'] = value;
+                  },
                   style: GoogleFonts.poppins(
                     fontSize: 14,
                     color: Colors.black87,
