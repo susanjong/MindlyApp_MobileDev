@@ -5,6 +5,7 @@ import '../../../../core/services/auth_service.dart';
 import '../../../../core/widgets/dialog/alert_dialog.dart';
 import '../../data/models/profile_model.dart';
 import 'package:notesapp/features/profile/presentation/pages/edit_bioprofile.dart';
+import 'dart:convert';
 
 class AccountProfilePage extends StatefulWidget {
   const AccountProfilePage({super.key});
@@ -84,61 +85,60 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
       if (userData != null) {
         if (mounted) {
           setState(() {
-            if (userData['displayName'] != null) {
-              _userProfile = UserProfile(
-                name: userData['displayName'],
-                email: userData['email'] ?? _userProfile.email,
-                bio: userData['bio'] ?? _userProfile.bio,
-                imageUrl: userData['photoURL'] ??
-                    'https://ui-avatars.com/api/?name=${Uri.encodeComponent(userData['displayName'] ?? 'User')}&size=150&background=4CAF50&color=fff',
-              );
-            } else {
-              final displayName = AuthService.getUserDisplayName();
-              final email = AuthService.getCurrentUserEmail();
+            final displayName = userData['displayName'] ?? AuthService.getUserDisplayName() ?? 'User';
+            final email = userData['email'] ?? AuthService.getCurrentUserEmail() ?? 'user@example.com';
+            final bio = userData['bio'] ?? 'Update your bio here.';
 
-              _userProfile = UserProfile(
-                name: displayName ?? 'User',
-                email: email ?? _userProfile.email,
-                bio: userData['bio'] ?? _userProfile.bio,
-                imageUrl: userData['photoURL'] ??
-                    'https://ui-avatars.com/api/?name=${Uri.encodeComponent(displayName ?? 'User')}&size=150&background=4CAF50&color=fff',
-              );
+            // set priority photoURL dari Firestore (support Base64 and removal)
+            String imageUrl;
+            final photoURL = userData['photoURL'];
+            if (photoURL != null && photoURL.toString().isNotEmpty) {
+              imageUrl = photoURL;
+            } else {
+              imageUrl = 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(displayName)}&size=150&background=4CAF50&color=fff';
             }
+
+            _userProfile = UserProfile(
+              name: displayName,
+              email: email,
+              bio: bio,
+              imageUrl: imageUrl,
+            );
+
             _isLoadingProfile = false;
           });
         }
       } else {
-        final displayName = AuthService.getUserDisplayName();
-        final email = AuthService.getCurrentUserEmail();
+        final displayName = AuthService.getUserDisplayName() ?? 'User';
+        final email = AuthService.getCurrentUserEmail() ?? 'user@example.com';
 
         if (mounted) {
           setState(() {
             _userProfile = UserProfile(
-              name: displayName ?? 'User',
-              email: email ?? 'user@example.com',
-              bio: _userProfile.bio,
-              imageUrl: 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(displayName ?? 'User')}&size=150&background=4CAF50&color=fff',
+              name: displayName,
+              email: email,
+              bio: 'Update your bio here.',
+              imageUrl: 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(displayName)}&size=150&background=4CAF50&color=fff',
             );
             _isLoadingProfile = false;
           });
         }
       }
     } catch (e) {
-      final displayName = AuthService.getUserDisplayName();
-      final email = AuthService.getCurrentUserEmail();
+      final displayName = AuthService.getUserDisplayName() ?? 'User';
+      final email = AuthService.getCurrentUserEmail() ?? 'user@example.com';
 
       if (mounted) {
         setState(() {
           _userProfile = UserProfile(
-            name: displayName ?? 'User',
-            email: email ?? 'user@example.com',
-            bio: _userProfile.bio,
-            imageUrl: 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(displayName ?? 'User')}&size=150&background=4CAF50&color=fff',
+            name: displayName,
+            email: email,
+            bio: 'Update your bio here.',
+            imageUrl: 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(displayName)}&size=150&background=4CAF50&color=fff',
           );
           _isLoadingProfile = false;
         });
       }
-
       debugPrint('Error loading user data: $e');
     }
   }
@@ -161,6 +161,7 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
                   profile: _userProfile,
                   isLoading: _isLoadingProfile,
                   onEdit: _navigateToEditProfile,
+                  onRefresh: _loadUserDataFromFirestore, // pass callback
                 ),
                 const SizedBox(height: 24),
                 _buildPreferenceSection(),
@@ -326,8 +327,9 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
       ),
     );
 
+    // refresh data after back again from edit
     if (result == true && mounted) {
-      _loadUserDataFromFirestore();
+      await _loadUserDataFromFirestore();
     }
   }
 
@@ -528,15 +530,18 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
   }
 }
 
+// profileCard with support Base64 dan refresh callback
 class _ProfileCard extends StatelessWidget {
   final UserProfile profile;
   final bool isLoading;
   final VoidCallback onEdit;
+  final VoidCallback onRefresh;
 
   const _ProfileCard({
     required this.profile,
     required this.isLoading,
     required this.onEdit,
+    required this.onRefresh,
   });
 
   @override
@@ -552,14 +557,8 @@ class _ProfileCard extends StatelessWidget {
         children: [
           Stack(
             children: [
-              CircleAvatar(
-                radius: 32,
-                backgroundImage: NetworkImage(profile.imageUrl),
-                backgroundColor: const Color(0xFFE0E0E0),
-                onBackgroundImageError: (exception, stackTrace) {
-                  debugPrint('Error loading profile image: $exception');
-                },
-              ),
+              // support Base64 images
+              _buildProfileImage(),
               if (isLoading)
                 Positioned.fill(
                   child: Container(
@@ -636,7 +635,6 @@ class _ProfileCard extends StatelessWidget {
             icon: const Icon(Icons.edit_outlined),
             splashRadius: 20,
             onPressed: () async {
-              // ✅ Capture context before async gap
               final navigatorContext = context;
 
               final result = await Navigator.push(
@@ -646,13 +644,65 @@ class _ProfileCard extends StatelessWidget {
                 ),
               );
 
-              // ✅ Use navigatorContext.mounted
               if (result == true && navigatorContext.mounted) {
-                navigatorContext.findAncestorStateOfType<_AccountProfilePageState>()?._loadUserDataFromFirestore();
+                onRefresh();
               }
             },
           ),
         ],
+      ),
+    );
+  }
+
+  // build profile image with Base64 support
+  Widget _buildProfileImage() {
+    // Check if it's Base64 data
+    if (profile.imageUrl.startsWith('data:image')) {
+      try {
+        final base64String = profile.imageUrl.split(',')[1];
+        final bytes = base64Decode(base64String);
+        return CircleAvatar(
+          radius: 32,
+          backgroundColor: const Color(0xFFE0E0E0),
+          child: ClipOval(
+            child: Image.memory(
+              bytes,
+              fit: BoxFit.cover,
+              width: 64,
+              height: 64,
+              errorBuilder: (context, error, stackTrace) {
+                return _buildDefaultAvatar();
+              },
+            ),
+          ),
+        );
+      } catch (e) {
+        debugPrint('Error decoding base64 image: $e');
+        return _buildDefaultAvatar();
+      }
+    }
+
+    return CircleAvatar(
+      radius: 32,
+      backgroundImage: NetworkImage(profile.imageUrl),
+      backgroundColor: const Color(0xFFE0E0E0),
+      onBackgroundImageError: (exception, stackTrace) {
+        debugPrint('Error loading profile image: $exception');
+      },
+    );
+  }
+
+  Widget _buildDefaultAvatar() {
+    return CircleAvatar(
+      radius: 32,
+      backgroundColor: const Color(0xFF4CAF50),
+      child: Text(
+        profile.name.isNotEmpty ? profile.name[0].toUpperCase() : 'U',
+        style: GoogleFonts.poppins(
+          fontSize: 24,
+          fontWeight: FontWeight.w600,
+          color: Colors.white,
+        ),
       ),
     );
   }
