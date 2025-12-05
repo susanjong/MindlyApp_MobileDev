@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../pages/taskDetailScreen.dart';
+import '../../../../core/widgets/dialog/alert_dialog.dart';
 
 class TaskItem extends StatelessWidget {
   final Map<String, dynamic> task;
@@ -14,38 +15,67 @@ class TaskItem extends StatelessWidget {
     this.onDelete,
   }) : super(key: key);
 
+  void _showCompletionDialog(BuildContext context) {
+    showIOSDialog(
+      context: context,
+      title: 'Delete completed task',
+      message: 'Do you want to delete this completed task?',
+      cancelText: 'Keep', // Tombol kiri -> Keep
+      confirmText: 'Delete', // Tombol kanan -> Delete (Merah)
+      confirmTextColor: const Color(0xFFFF453A),
+
+      // Action KEEP (Cancel)
+      onCancel: () {
+        // Task tetap di list, tapi tandai selesai
+        // Kita panggil onToggle di sini agar status checkbox berubah jadi checked
+        if (task['completed'] != true) {
+          onToggle();
+        }
+      },
+
+      // Action DELETE (Confirm)
+      onConfirm: () {
+        // Hapus task dari list
+        if (onDelete != null) onDelete!();
+
+        // Optional: Tampilkan snackbar
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Task deleted")),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    // 1. Ambil data deadline
     final DateTime? deadline = task['deadline'] as DateTime?;
 
     // 2. Tentukan Status (Overdue / Urgent)
     bool isOverdue = false;
     bool isUrgent = false;
 
-    if (deadline != null && !task['completed']) {
+    if (deadline != null && task['completed'] != true) {
       final now = DateTime.now();
       final difference = deadline.difference(now);
 
       if (difference.isNegative) {
-        isOverdue = true; // Lewat deadline
+        isOverdue = true;
       } else if (difference.inHours <= 12) {
-        isUrgent = true; // Kurang dari 12 jam
+        isUrgent = true;
       }
     }
 
-    String dateDay = "01";
-    String dateMonth = "Today";
+    // 3. Format Tanggal untuk Lingkaran Biru (Kanan)
+    String dateDay = "--";
+    String dateMonth = "--";
 
     if (deadline != null) {
       dateDay = DateFormat('dd').format(deadline);
-      // Jika tanggal hari ini, tampilkan "Today", jika tidak tampilkan Bulan (misal: "Nov")
-      if (DateUtils.isSameDay(deadline, DateTime.now())) {
-        dateMonth = "Today";
-      } else {
-        dateMonth = DateFormat('MMM').format(deadline);
-      }
+      dateMonth = DateFormat('MMM').format(deadline);
     }
 
+    // 4. Logic Tampilan Jam
     String displayTime = task['time'] ?? '';
     if (displayTime.isEmpty && deadline != null) {
       displayTime = DateFormat('h:mm a').format(deadline);
@@ -65,16 +95,32 @@ class TaskItem extends StatelessWidget {
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), // Padding disesuaikan
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(50),
-          border: Border.all(color: Colors.black, width: 1.5),
+          border: Border.all(color: Colors.grey.shade300, width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            )
+          ],
         ),
         child: Row(
           children: [
+            // --- CHECKBOX ---
             GestureDetector(
-              onTap: onToggle,
+              onTap: () {
+                // Jika task BELUM selesai -> Munculkan Dialog Tanya
+                if (task['completed'] != true) {
+                  _showCompletionDialog(context);
+                } else {
+                  // Jika sudah selesai -> Balikin jadi belum selesai (Toggle biasa)
+                  onToggle();
+                }
+              },
               behavior: HitTestBehavior.opaque,
               child: Container(
                 width: 32,
@@ -97,6 +143,7 @@ class TaskItem extends StatelessWidget {
 
             const SizedBox(width: 16),
 
+            // --- CONTENT TENGAH ---
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -111,15 +158,13 @@ class TaskItem extends StatelessWidget {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        task['time'] ?? '',
+                        displayTime,
                         style: const TextStyle(
                           fontSize: 12,
                           color: Colors.grey,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
-
-                      // logic badge
                       if (isOverdue) ...[
                         const SizedBox(width: 8),
                         _buildBadge('Overdue', const Color(0xFFD4183D)),
@@ -131,12 +176,12 @@ class TaskItem extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    task['title'] ?? '',
+                    task['title'] ?? 'No Title',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 15,
-                      fontWeight: FontWeight.w400,
+                      fontWeight: FontWeight.w600,
                       color: Colors.black87,
                       decoration: task['completed'] == true
                           ? TextDecoration.lineThrough
@@ -149,7 +194,8 @@ class TaskItem extends StatelessWidget {
 
             const SizedBox(width: 12),
 
-            // --- 3. DATE CIRCLE (KANAN) ---
+            // --- DATE CIRCLE (KANAN) ---
+            // Menampilkan Tanggal Deadline yang sebenarnya
             Container(
               width: 45,
               height: 45,
@@ -161,7 +207,7 @@ class TaskItem extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    dateMonth, // "Today" atau "Nov"
+                    dateMonth, // Sekarang menampilkan "Nov", "Dec", dll (Bukan "Today")
                     style: const TextStyle(
                       fontSize: 9,
                       color: Colors.white,
@@ -169,7 +215,7 @@ class TaskItem extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    dateDay, // "01"
+                    dateDay,
                     style: const TextStyle(
                       fontSize: 14,
                       color: Colors.white,
@@ -186,7 +232,6 @@ class TaskItem extends StatelessWidget {
     );
   }
 
-  // Helper widget untuk Badge Kecil (Urgent/Overdue)
   Widget _buildBadge(String text, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -199,7 +244,7 @@ class TaskItem extends StatelessWidget {
         style: const TextStyle(
           fontSize: 10,
           color: Colors.white,
-          fontWeight: FontWeight.w500,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );

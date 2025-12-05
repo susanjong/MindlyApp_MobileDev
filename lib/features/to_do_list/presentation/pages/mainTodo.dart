@@ -30,7 +30,7 @@ class MainTodoScreen extends StatefulWidget {
 }
 
 class _MainTodoScreenState extends State<MainTodoScreen> {
-  int selectedDay = DateTime.now().day;
+  DateTime _selectedDate = DateTime.now();
   String _username = 'User';
 
   // ✅ Panggil Service
@@ -53,7 +53,6 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
     if (index != 2) Navigator.pushReplacementNamed(context, routes[index]);
   }
 
-  // ✅ Helper: Ubah Model ke Map agar cocok dengan TaskItem widget
   Map<String, dynamic> _mapModelToTaskItem(TodoModel todo) {
     return {
       'id': todo.id,
@@ -64,6 +63,12 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
       'completed': todo.isCompleted,
       'category': todo.category,
     };
+  }
+
+  bool _isSameDate(DateTime date1, DateTime date2) {
+    return date1.year == date2.year &&
+        date1.month == date2.month &&
+        date1.day == date2.day;
   }
 
   @override
@@ -99,9 +104,9 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
           }).length;
 
           final allCount = incompleteTodos.length;
-
-          // 3. Filter List untuk ditampilkan di bawah (Task hari ini/semua yang belum selesai)
-          final displayList = incompleteTodos;
+          final displayList = allTodos.where((todo) {
+            return _isSameDate(todo.deadline, _selectedDate);
+          }).toList();
 
           return Column(
             children: [
@@ -150,8 +155,26 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: List.generate(7, (index) {
-                        final date = DateTime.now().subtract(Duration(days: DateTime.now().weekday - 1)).add(Duration(days: index));
-                        return _buildDayItem(DateFormat('E').format(date), date.day, date.day == selectedDay);
+                        // Generate tanggal untuk minggu ini (Senin - Minggu)
+                        final now = DateTime.now();
+                        // Anggap minggu dimulai dari Senin (weekday 1)
+                        final firstDayOfWeek = now.subtract(Duration(days: now.weekday - 1));
+                        final date = firstDayOfWeek.add(Duration(days: index));
+
+                        final isSelected = _isSameDate(date, _selectedDate);
+
+                        return GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _selectedDate = date; // Update tanggal terpilih
+                            });
+                          },
+                          child: _buildDayItem(
+                              DateFormat('E').format(date), // Nama Hari (Mon, Tue)
+                              date.day,
+                              isSelected
+                          ),
+                        );
                       }),
                     ),
                     const SizedBox(height: 20),
