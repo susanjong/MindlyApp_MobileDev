@@ -143,7 +143,6 @@ class TaskDetailScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(16),
                 child: TextField(
                   maxLines: null,
-                  controller: TextEditingController(text: "bahas pembagian tugas..."),
                   style: GoogleFonts.poppins(
                     fontSize: 14,
                     color: Colors.black87,
