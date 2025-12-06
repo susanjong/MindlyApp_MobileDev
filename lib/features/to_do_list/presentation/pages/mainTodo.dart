@@ -1,17 +1,21 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+// Import Services & Models
 import '../../data/models/todo_model.dart';
 import '../../data/services/todo_services.dart';
+// Import Core & Config
 import '../../../../core/services/auth_service.dart';
 import '../../../../config/routes/routes.dart';
 import '../../../../core/widgets/navigation/custom_top_app_bar.dart';
 import '../../../../core/widgets/navigation/custom_navbar_widget.dart';
+// Import Widgets
 import '../widgets/task_item.dart';
 import '../widgets/add_task_bottom_sheet.dart';
+// Import Pages
 import 'all_category_screen.dart';
 import 'overdue_screen.dart';
-import 'package:notesapp/features/to_do_list/presentation/pages/urgent_screen.dart';
+import 'urgent_screen.dart';
 
 class MainTodoScreen extends StatefulWidget {
   final String? username;
@@ -22,9 +26,10 @@ class MainTodoScreen extends StatefulWidget {
 }
 
 class _MainTodoScreenState extends State<MainTodoScreen> {
-  int selectedDay = DateTime.now().day;
+  DateTime _selectedDate = DateTime.now();
   String _username = 'User';
 
+  // Panggil Service
   final TodoService _todoService = TodoService();
 
   @override
@@ -44,7 +49,6 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
     if (index != 2) Navigator.pushReplacementNamed(context, routes[index]);
   }
 
-  // ubah Model ke Map agar cocok dengan TaskItem widget
   Map<String, dynamic> _mapModelToTaskItem(TodoModel todo) {
     return {
       'id': todo.id,
@@ -57,13 +61,20 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
     };
   }
 
+  bool _isSameDate(DateTime date1, DateTime date2) {
+    return date1.year == date2.year &&
+        date1.month == date2.month &&
+        date1.day == date2.day;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: CustomTopAppBar(
         onProfileTap: () => Navigator.pushNamed(context, AppRoutes.profile),
-        onNotificationTap: () {},
+        onNotificationTap: () {Navigator.pushNamed(context, AppRoutes.notification);
+        },
       ),
       // Gunakan StreamBuilder untuk Realtime Update
       body: StreamBuilder<List<TodoModel>>(
@@ -76,7 +87,7 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
 
           final allTodos = snapshot.data ?? [];
 
-          //  2. Logic Hitung Statistik (Urgent, Overdue, All)
+          // 2. Logic Hitung Statistik (Urgent, Overdue, All)
           final now = DateTime.now();
           final incompleteTodos = allTodos.where((t) => !t.isCompleted).toList();
 
@@ -90,9 +101,9 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
           }).length;
 
           final allCount = incompleteTodos.length;
-
-          // 3. Filter List untuk ditampilkan di bawah (Task hari ini/semua yang belum selesai)
-          final displayList = incompleteTodos;
+          final displayList = allTodos.where((todo) {
+            return _isSameDate(todo.deadline, _selectedDate);
+          }).toList();
 
           return Column(
             children: [
@@ -109,7 +120,7 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
                         children: [
                           const TextSpan(text: 'You have '),
                           TextSpan(
-                            text: '$allCount things to do', // ✅ Data Realtime
+                            text: '$allCount things to do', // Data Realtime
                             style: const TextStyle(color: Color(0xFFFFB74D)),
                           ),
                           const TextSpan(text: '\nremaining'),
@@ -141,8 +152,26 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: List.generate(7, (index) {
-                        final date = DateTime.now().subtract(Duration(days: DateTime.now().weekday - 1)).add(Duration(days: index));
-                        return _buildDayItem(DateFormat('E').format(date), date.day, date.day == selectedDay);
+                        // Generate tanggal untuk minggu ini (Senin - Minggu)
+                        final now = DateTime.now();
+                        // Anggap minggu dimulai dari Senin (weekday 1)
+                        final firstDayOfWeek = now.subtract(Duration(days: now.weekday - 1));
+                        final date = firstDayOfWeek.add(Duration(days: index));
+
+                        final isSelected = _isSameDate(date, _selectedDate);
+
+                        return GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _selectedDate = date;
+                            });
+                          },
+                          child: _buildDayItem(
+                              DateFormat('E').format(date),
+                              date.day,
+                              isSelected
+                          ),
+                        );
                       }),
                     ),
                     const SizedBox(height: 20),
@@ -161,13 +190,9 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
                   itemBuilder: (context, index) {
                     final todo = displayList[index];
                     return TaskItem(
-                      // Konversi Model ke Map agar TaskItem widget tidak error
                       task: _mapModelToTaskItem(todo),
 
-                      // Logic Toggle Status ke Firebase
                       onToggle: () => _todoService.toggleTodoStatus(todo.id, todo.isCompleted),
-
-                      // Logic Delete ke Firebase
                       onDelete: () => _todoService.deleteTodo(todo.id),
                     );
                   },
@@ -184,6 +209,7 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
   }
 
   // --- Widget Helpers ---
+
   Widget _buildGreetingStream() {
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
       stream: AuthService.getUserDataStream(),
@@ -230,7 +256,7 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
     );
   }
 
-  //  Logic Simpan ke Firebase saat Add Task
+  // Logic Simpan ke Firebase saat Add Task
   void _showAddTaskDialog() {
     AddTaskBottomSheet.show(
       context,
@@ -268,7 +294,7 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
         decoration: BoxDecoration(
           gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [topColor, bottomColor]),
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 12, offset: const Offset(0, 4))],
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 12, offset: const Offset(0, 4))],
         ),
         child: Padding(
           padding: const EdgeInsets.all(14),
