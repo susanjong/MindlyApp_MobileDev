@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
-import '../../features/auth/presentation/pages/forgotpass.dart';
 import '../../features/auth/presentation/pages/intro_app.dart';
 import '../../features/auth/presentation/pages/login.dart';
+import '../../features/auth/presentation/pages/privacy_policy.dart';
 import '../../features/auth/presentation/pages/resetpass.dart';
 import '../../features/auth/presentation/pages/signup.dart';
 import '../../features/auth/presentation/pages/splash_screen.dart';
+import '../../features/auth/presentation/pages/terms_of_service.dart';
 import '../../features/home/presentation/pages/home.dart';
 import '../../features/notes/presentation/pages/note_editor_page.dart';
 import '../../features/notes/presentation/pages/notes_main_page.dart';
 import '../../features/to_do_list/presentation/pages/mainTodo.dart';
-import '../../features/calendar/presentation/pages/awalcalendar.dart';
+import '../../features/calendar/presentation/pages/calendar_main_page.dart';
 import '../../features/profile/presentation/pages/about_info.dart';
 import '../../features/profile/presentation/pages/help_faq.dart';
 import '../../features/profile/presentation/pages/profile.dart';
@@ -31,6 +32,8 @@ class AppRoutes {
   static const String calendar = '/calendar';
   static const String helpFaq = '/help_faq';
   static const String aboutUs = '/about_info';
+  static const String termsOfService = '/terms-of-service';
+  static const String PrivacyPolicy = '/privacy-policy';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -46,8 +49,10 @@ class AppRoutes {
         return _buildRoute(const HomePage());
       case resetPassword:
         return _buildRoute(const ResetPasswordScreen());
-      case forgotPassword:
-        return _buildRoute(const ForgotPasswordScreen());
+      case AppRoutes.termsOfService:
+        return MaterialPageRoute(builder: (_) => const TermsOfServiceScreen());
+      case AppRoutes.PrivacyPolicy:
+        return MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen());
       case profile:
         return _buildRoute(const AccountProfilePage());
       case notes:
@@ -59,7 +64,7 @@ class AppRoutes {
       case todo:
         return _buildRoute(const MainTodoScreen());
       case calendar:
-        return _buildRoute(const CalendarPage());
+        return _buildRoute(const CalendarMainPage());
       case helpFaq:
         return _buildRoute(const HelpFaqScreen());
       case aboutUs:

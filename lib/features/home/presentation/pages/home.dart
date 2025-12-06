@@ -2,29 +2,25 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:notesapp/features/notes/presentation/pages/notes_main_page.dart';
-import 'package:notesapp/features/to_do_list/presentation/pages/mainTodo.dart';
+import 'package:intl/intl.dart';
+
+// ✅ Import Routes & Auth
 import '../../../../config/routes/routes.dart';
 import '../../../../core/services/auth_service.dart';
+
+// ✅ Import Navigation Widgets
 import '../../../../core/widgets/navigation/custom_navbar_widget.dart';
 import '../../../../core/widgets/navigation/custom_top_app_bar.dart';
+
+// ✅ Import Feature Pages
+import '../../../notes/presentation/pages/notes_main_page.dart';
 import '../../../calendar/data/model/event_model.dart';
 import '../../../profile/presentation/pages/profile.dart';
 
-//TODO: Task item ini masukkin ke modelnya bgian file task ya
-class TaskItem {
-  String title;
-  String time;
-  String priority;
-  bool isCompleted;
-
-  TaskItem({
-    required this.title,
-    required this.time,
-    required this.priority,
-    this.isCompleted = false,
-  });
-}
+// ✅ Import Todo Service, Model, & TaskItem Widget
+import '../../../to_do_list/data/models/todo_model.dart';
+import '../../../to_do_list/data/services/todo_services.dart';
+import '../../../to_do_list/presentation/widgets/task_item.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -36,24 +32,14 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   bool _isNavBarVisible = true;
   final ScrollController _scrollController = ScrollController();
-  String _userName = 'User';
-  bool _isLoadingUserData = false;
 
-  // TODO: ubah data dummy ini berdasarkan firestore
-  List<TaskItem> _tasks = [
-    TaskItem(
-      title: 'Meeting with marketing team',
-      time: 'Today',
-      priority: 'urgent',
-      isCompleted: false,
-    ),
-    TaskItem(
-      title: 'Update website content',
-      time: 'Today',
-      priority: 'normal',
-      isCompleted: false,
-    ),
-  ];
+  // ✅ Service Firebase
+  final TodoService _todoService = TodoService();
+
+  String _userName = 'User';
+
+  // ✅ STATE BARU: Menyimpan ID task yang baru saja diselesaikan di sesi ini
+  final Set<String> _recentlyCompletedIds = {};
 
   @override
   void initState() {
@@ -71,92 +57,60 @@ class _HomePageState extends State<HomePage> {
 
   void _handleNavigation(int index) {
     final routes = [
-      AppRoutes.home,     // Index 0
-      AppRoutes.notes,    // Index 1
-      AppRoutes.todo,     // Index 2
-      AppRoutes.calendar, // Index 3
+      AppRoutes.home,
+      AppRoutes.notes,
+      AppRoutes.todo,
+      AppRoutes.calendar,
     ];
-
     if (index != 0) {
       Navigator.pushReplacementNamed(context, routes[index]);
     }
   }
 
-  // Load user data from Firestore with real-time updates
   Future<void> _loadUserData() async {
-    try {
-      final userData = await AuthService.getUserData();
-
-      if (userData != null && userData['displayName'] != null) {
-        if (mounted) {
-          setState(() {
-            _userName = userData['displayName'];
-          });
-        }
-      } else {
-        final displayName = AuthService.getUserDisplayName();
-        if (mounted) {
-          setState(() {
-            _userName = displayName ?? 'User';
-          });
-        }
-      }
-    } catch (e) {
-      final displayName = AuthService.getUserDisplayName();
-      if (mounted) {
-        setState(() {
-          _userName = displayName ?? 'User';
-        });
-      }
-    }
+    final displayName = AuthService.getUserDisplayName();
+    if (mounted) setState(() => _userName = displayName ?? 'User');
   }
 
   void _onScroll() {
     if (_scrollController.position.userScrollDirection == ScrollDirection.reverse) {
-      if (_isNavBarVisible) {
-        setState(() {
-          _isNavBarVisible = false;
-        });
-      }
+      if (_isNavBarVisible) setState(() => _isNavBarVisible = false);
     } else if (_scrollController.position.userScrollDirection == ScrollDirection.forward) {
-      if (!_isNavBarVisible) {
-        setState(() {
-          _isNavBarVisible = true;
-        });
-      }
+      if (!_isNavBarVisible) setState(() => _isNavBarVisible = true);
     }
   }
 
-  void _toggleTaskCompletion(int index) {
-    setState(() {
-      _tasks[index].isCompleted = !_tasks[index].isCompleted;
-    });
+  // Helper: Convert Model ke Map
+  Map<String, dynamic> _mapModelToTaskItem(TodoModel todo) {
+    return {
+      'id': todo.id,
+      'title': todo.title,
+      'time': DateFormat('h:mm a').format(todo.deadline),
+      'date': DateFormat('dd MMM').format(todo.deadline),
+      'deadline': todo.deadline,
+      'completed': todo.isCompleted,
+      'category': todo.category,
+    };
   }
 
-  void _clearAllCompletedTasks() {
+  // Logic Clear All (Hanya menghapus yang ada di list tampilan)
+  void _clearAllCompletedTasks(List<TodoModel> displayedCompletedTasks) async {
+    for (var task in displayedCompletedTasks) {
+      await _todoService.deleteTodo(task.id);
+    }
+    // Bersihkan local state juga
     setState(() {
-      _tasks.removeWhere((task) => task.isCompleted);
+      _recentlyCompletedIds.clear();
     });
 
-    // show snackbar confirmation
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'All completed tasks cleared',
-            style: GoogleFonts.poppins(),
-          ),
-          duration: const Duration(seconds: 2),
-          behavior: SnackBarBehavior.floating,
-        ),
+        const SnackBar(content: Text('Cleared tasks')),
       );
     }
   }
 
-  List<TaskItem> get _pendingTasks => _tasks.where((task) => !task.isCompleted).toList();
-  List<TaskItem> get _completedTasks => _tasks.where((task) => task.isCompleted).toList();
-
-  List<EventModel> _getEvents() { //TODO: ubah ini ke data dari firestore
+  List<EventModel> _getEvents() {
     return [
       EventModel(
         title: 'Team meeting preparation',
@@ -170,228 +124,170 @@ class _HomePageState extends State<HomePage> {
         location: 'Remote',
         color: const Color(0xFFFFA726),
       ),
-      EventModel(
-        title: 'Review Design Mockup',
-        time: 'Today, 4:00 PM',
-        location: 'Coffee Shop',
-        color: const Color(0xFF66BB6A),
-      ),
     ];
   }
 
-  String _getGreeting() {
-    final hour = DateTime.now().hour;
-
-    if (hour >= 6 && hour < 11) {
-      return 'Good Morning';
-    } else if (hour >= 11 && hour < 15) {
-      return 'Good Afternoon';
-    } else if (hour >= 15 && hour < 18) {
-      return 'Good Evening';
-    } else {
-      return 'Good Night';
-    }
-  }
-
   void _navigateToNotesPage() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => NotesMainPage()),
-    );
+    Navigator.push(context, MaterialPageRoute(builder: (context) => const NotesMainPage()));
   }
 
   void _navigateToEventsPage() {
-    // TODO: Implement navigation to events page
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Events page coming soon!',
-          style: GoogleFonts.poppins(),
-        ),
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    // Navigator.pushNamed(context, AppRoutes.calendar);
   }
 
   @override
   Widget build(BuildContext context) {
     final events = _getEvents();
-    /*final notes = _getNotes();*/
-    final completedTasksCount = _completedTasks.length;
-    final totalTasks = _tasks.length;
-    final progress = totalTasks > 0 ? completedTasksCount / totalTasks : 0.0;
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // App Bar
-            CustomTopAppBar(
-              onProfileTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const AccountProfilePage()),
-                );
-              },
-              onNotificationTap: () {
-                // TODO: Implement notification functionality
-              },
-            ),
+      body: StreamBuilder<List<TodoModel>>(
+        stream: _todoService.getTodosStream(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-            // content with proper padding
-            Expanded(
-              child: RefreshIndicator(
-                onRefresh: _loadUserData,
-                child: SingleChildScrollView(
-                  controller: _scrollController,
-                  physics: const AlwaysScrollableScrollPhysics(
-                    parent: BouncingScrollPhysics(),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // greeting section with StreamBuilder for real-time updates
-                        _buildGreetingSectionWithStream(),
-                        const SizedBox(height: 24),
+          final allTodos = snapshot.data ?? [];
 
-                        // daily progress card
-                        _buildDailyProgressCard(progress, completedTasksCount, totalTasks),
-                        const SizedBox(height: 24),
+          // 1. Needs Attention (Belum Selesai, Ambil 2 Teratas)
+          final pendingTodos = allTodos.where((t) => !t.isCompleted).toList();
+          final topTwoNeedsAttention = pendingTodos.take(2).toList();
 
-                        // Needs Attention Section
-                        if (_pendingTasks.isNotEmpty) ...[
-                          _buildSectionHeader(
-                            icon: Icons.error_outline,
-                            iconColor: const Color(0xFFFF6B6B),
-                            title: 'Needs Attention',
-                          ),
-                          const SizedBox(height: 12),
-                          ..._pendingTasks.asMap().entries.map((entry) {
-                            final index = _tasks.indexOf(entry.value);
-                            final task = entry.value;
-                            return _buildPendingTaskItem(task, index);
-                          }).toList(),
-                          const SizedBox(height: 24),
-                        ],
+          // ✅ 2. Completed (Hanya yang baru saja diklik user di sesi ini)
+          // Logic: Task harus statusnya complete DI DATABASE && ID-nya ada di _recentlyCompletedIds
+          final recentCompletedTodos = allTodos.where((t) {
+            return t.isCompleted && _recentlyCompletedIds.contains(t.id);
+          }).toList();
 
-                        // completed Section
-                        if (_completedTasks.isNotEmpty) ...[
-                          _buildCompletedSectionHeader(),
-                          const SizedBox(height: 12),
-                          ..._completedTasks.asMap().entries.map((entry) {
-                            final index = _tasks.indexOf(entry.value);
-                            final task = entry.value;
-                            return _buildCompletedTaskItem(task, index);
-                          }).toList(),
-                          const SizedBox(height: 24),
-                        ],
+          // Hitung Progress Global (Tetap pakai data asli database)
+          final totalTasks = allTodos.length;
+          // Hitung completed asli dari DB untuk progress bar yang akurat
+          final totalCompletedDB = allTodos.where((t) => t.isCompleted).length;
+          final progress = totalTasks > 0 ? totalCompletedDB / totalTasks : 0.0;
 
-                        // Today's Event Section
-                        _buildSectionHeaderWithAction(
-                          icon: Icons.calendar_today,
-                          iconColor: const Color(0xFF0D5F5F),
-                          title: "Today's Event",
-                          actionText: 'View All →',
-                          onActionTap: _navigateToEventsPage,
+          return SafeArea(
+            child: Column(
+              children: [
+                CustomTopAppBar(
+                  onProfileTap: () => Navigator.pushNamed(context, AppRoutes.profile),
+                  onNotificationTap: () {},
+                ),
+
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: _loadUserData,
+                    child: SingleChildScrollView(
+                      controller: _scrollController,
+                      physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildGreetingSectionWithStream(),
+                            const SizedBox(height: 24),
+
+                            _buildDailyProgressCard(progress, totalCompletedDB, totalTasks),
+                            const SizedBox(height: 24),
+
+                            // --- NEEDS ATTENTION SECTION ---
+                            if (topTwoNeedsAttention.isNotEmpty) ...[
+                              _buildSectionHeader(
+                                icon: Icons.error_outline,
+                                iconColor: const Color(0xFFFF6B6B),
+                                title: 'Needs Attention',
+                              ),
+                              const SizedBox(height: 12),
+                              ...topTwoNeedsAttention.map((todo) => TaskItem(
+                                task: _mapModelToTaskItem(todo),
+                                onToggle: () {
+                                  // ✅ LOGIC PENTING:
+                                  // 1. Update ke Firebase
+                                  _todoService.toggleTodoStatus(todo.id, todo.isCompleted);
+
+                                  // 2. Masukkan ID ke list "Recently Completed" agar tampil di bawah
+                                  if (!todo.isCompleted) { // Jika tadinya belum selesai
+                                    setState(() {
+                                      _recentlyCompletedIds.add(todo.id);
+                                    });
+                                  }
+                                },
+                                onDelete: () => _todoService.deleteTodo(todo.id),
+                              )).toList(),
+                              const SizedBox(height: 24),
+                            ],
+
+                            // --- COMPLETED SECTION (Hanya yang baru diklik) ---
+                            if (recentCompletedTodos.isNotEmpty) ...[
+                              _buildCompletedSectionHeader(recentCompletedTodos),
+                              const SizedBox(height: 12),
+                              ...recentCompletedTodos.map((todo) => TaskItem(
+                                task: _mapModelToTaskItem(todo),
+                                onToggle: () {
+                                  // Kalau di-uncheck, hapus dari recent list dan update DB
+                                  _todoService.toggleTodoStatus(todo.id, todo.isCompleted);
+                                  setState(() {
+                                    _recentlyCompletedIds.remove(todo.id);
+                                  });
+                                },
+                                onDelete: () => _todoService.deleteTodo(todo.id),
+                              )).toList(),
+                              const SizedBox(height: 24),
+                            ],
+
+                            // Events & Notes
+                            _buildSectionHeaderWithAction(
+                              icon: Icons.calendar_today,
+                              iconColor: const Color(0xFF0D5F5F),
+                              title: "Today's Event",
+                              actionText: 'View All →',
+                              onActionTap: _navigateToEventsPage,
+                            ),
+                            const SizedBox(height: 12),
+                            ...events.map((event) => _buildEventCard(event)).toList(),
+                            const SizedBox(height: 24),
+
+                            _buildSectionHeaderWithAction(
+                              icon: Icons.note_outlined,
+                              iconColor: const Color(0xFFFF9800),
+                              title: "Today's Notes",
+                              actionText: 'View All →',
+                              onActionTap: _navigateToNotesPage,
+                            ),
+                            const SizedBox(height: 20),
+                          ],
                         ),
-                        const SizedBox(height: 12),
-                        ...events.map((event) => _buildEventCard(event)).toList(),
-                        const SizedBox(height: 24),
-
-                        // Today's Notes Section
-                        _buildSectionHeaderWithAction(
-                          icon: Icons.note_outlined,
-                          iconColor: const Color(0xFFFF9800),
-                          title: "Today's Notes",
-                          actionText: 'View All →',
-                          onActionTap: _navigateToNotesPage,
-                        ),
-                        const SizedBox(height: 12),
-                        /*...notes.map((note) => _buildNoteCard(note)).toList(),*/
-                        const SizedBox(height: 20),
-                      ],
+                      ),
                     ),
                   ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       ),
       bottomNavigationBar: _buildBottomNavigationBar(),
     );
   }
 
-  // widget builders for better code organization
-  Widget _buildGreetingSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '${_getGreeting()}, $_userName',
-          style: GoogleFonts.poppins(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: const Color(0xFF1A1A1A),
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          "Let's make today productive!",
-          style: GoogleFonts.poppins(
-            fontSize: 14,
-            color: const Color(0xFF6B6B6B),
-          ),
-        ),
-      ],
-    );
-  }
+  // ... (Sisa Widget Helpers tetap sama seperti sebelumnya) ...
+  // _buildGreetingSectionWithStream, _buildDailyProgressCard, dll.
 
-  // NEW: Greeting section with real-time updates using StreamBuilder
   Widget _buildGreetingSectionWithStream() {
-    final userDataStream = AuthService.getUserDataStream();
-
-    if (userDataStream == null) {
-      return _buildGreetingSection();
-    }
-
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      stream: userDataStream,
+      stream: AuthService.getUserDataStream(),
       builder: (context, snapshot) {
         String displayName = _userName;
-
-        if (snapshot.hasData && snapshot.data != null) {
-          final userData = snapshot.data!.data();
-          if (userData != null && userData['displayName'] != null) {
-            displayName = userData['displayName'];
-          }
-        } else if (!snapshot.hasData) {
-          displayName = AuthService.getUserDisplayName() ?? 'User';
+        if (snapshot.hasData && snapshot.data?.data() != null) {
+          displayName = snapshot.data!.data()!['displayName'] ?? _userName;
         }
-
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              '${_getGreeting()}, $displayName',
-              style: GoogleFonts.poppins(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFF1A1A1A),
-              ),
-            ),
+            Text('Hello, $displayName', style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.bold, color: const Color(0xFF1A1A1A))),
             const SizedBox(height: 4),
-            Text(
-              "Let's make today productive!",
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: const Color(0xFF6B6B6B),
-              ),
-            ),
+            Text("Let's make today productive!", style: GoogleFonts.poppins(fontSize: 14, color: const Color(0xFF6B6B6B))),
           ],
         );
       },
@@ -401,433 +297,69 @@ class _HomePageState extends State<HomePage> {
   Widget _buildDailyProgressCard(double progress, int completed, int total) {
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE0E0E0)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFE0E0E0)), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))]),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Daily Progress',
-                style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFF1A1A1A),
-                ),
-              ),
-              Text(
-                '${(progress * 100).toInt()}%',
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFF4CAF50),
-                ),
-              ),
-            ],
-          ),
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            Text('Daily Progress', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: const Color(0xFF1A1A1A))),
+            Text('${(progress * 100).toInt()}%', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFF4CAF50))),
+          ]),
           const SizedBox(height: 16),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: LinearProgressIndicator(
-              value: progress,
-              backgroundColor: const Color(0xFFE8E8E8),
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                Color(0xFF8BC34A),
-              ),
-              minHeight: 12,
-            ),
-          ),
+          ClipRRect(borderRadius: BorderRadius.circular(8), child: LinearProgressIndicator(value: progress, backgroundColor: const Color(0xFFE8E8E8), valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF8BC34A)), minHeight: 12)),
           const SizedBox(height: 12),
-          Text(
-            '$completed of $total tasks completed',
-            style: GoogleFonts.poppins(
-              fontSize: 13,
-              color: const Color(0xFF6B6B6B),
-            ),
-          ),
+          Text('$completed of $total tasks completed', style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF6B6B6B))),
         ],
       ),
     );
   }
 
-  Widget _buildSectionHeader({
-    required IconData icon,
-    required Color iconColor,
-    required String title,
-  }) {
-    return Row(
-      children: [
-        Icon(icon, color: iconColor, size: 20),
-        const SizedBox(width: 8),
-        Text(
-          title,
-          style: GoogleFonts.poppins(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFF1A1A1A),
-          ),
-        ),
-      ],
-    );
+  Widget _buildSectionHeader({required IconData icon, required Color iconColor, required String title}) {
+    return Row(children: [Icon(icon, color: iconColor, size: 20), const SizedBox(width: 8), Text(title, style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: const Color(0xFF1A1A1A)))]);
   }
 
-  Widget _buildSectionHeaderWithAction({
-    required IconData icon,
-    required Color iconColor,
-    required String title,
-    required String actionText,
-    required VoidCallback onActionTap,
-  }) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Row(
-          children: [
-            Icon(icon, color: iconColor, size: 20),
-            const SizedBox(width: 8),
-            Text(
-              title,
-              style: GoogleFonts.poppins(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF1A1A1A),
-              ),
-            ),
-          ],
-        ),
-        TextButton(
-          onPressed: onActionTap,
-          child: Text(
-            actionText,
-            style: GoogleFonts.poppins(
-              fontSize: 13,
-              color: const Color(0xFF0D5F5F),
-            ),
-          ),
-        ),
-      ],
-    );
+  Widget _buildCompletedSectionHeader(List<TodoModel> completedTodos) {
+    return Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+      Row(children: [const Icon(Icons.check_circle, color: Color(0xFF4CAF50), size: 20), const SizedBox(width: 8), Text('Completed', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: const Color(0xFF1A1A1A)))]),
+      TextButton(
+        onPressed: () => _clearAllCompletedTasks(completedTodos),
+        style: TextButton.styleFrom(backgroundColor: Colors.transparent, padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6)),
+        child: Text('Clear All', style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFFFF6B6B), fontWeight: FontWeight.w500)),
+      ),
+    ]);
   }
 
-  Widget _buildCompletedSectionHeader() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Row(
-          children: [
-            const Icon(Icons.check_circle, color: Color(0xFF4CAF50), size: 20),
-            const SizedBox(width: 8),
-            Text(
-              'Completed',
-              style: GoogleFonts.poppins(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF1A1A1A),
-              ),
-            ),
-          ],
-        ),
-        TextButton(
-          onPressed: _clearAllCompletedTasks,
-          style: TextButton.styleFrom(
-            backgroundColor: Colors.transparent,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          ),
-          child: Text(
-            'Clear All',
-            style: GoogleFonts.poppins(
-              fontSize: 13,
-              color: const Color(0xFFFF6B6B),
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPendingTaskItem(TaskItem task, int index) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE0E0E0)),
-      ),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () => _toggleTaskCompletion(index),
-            child: Container(
-              width: 33,
-              height: 33,
-              decoration: const ShapeDecoration(
-                color: Colors.transparent,
-                shape: OvalBorder(
-                  side: BorderSide(
-                    width: 1.50,
-                    color: Color(0xFF5784EB),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.access_time,
-                      size: 14,
-                      color: Color(0xFF6B6B6B),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      task.time,
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: const Color(0xFF6B6B6B),
-                      ),
-                    ),
-                    if (task.priority == 'urgent') ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFF3E0),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          'urgent',
-                          style: GoogleFonts.poppins(
-                            fontSize: 11,
-                            color: const Color(0xFFFF9800),
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  task.title,
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFF1A1A1A),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCompletedTaskItem(TaskItem task, int index) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5F5F5),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE0E0E0)),
-      ),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () => _toggleTaskCompletion(index),
-            child: Container(
-              width: 33,
-              height: 33,
-              decoration: const ShapeDecoration(
-                color: Color(0xFF4CAF50),
-                shape: OvalBorder(
-                  side: BorderSide(
-                    width: 1.50,
-                    color: Color(0xFF4CAF50),
-                  ),
-                ),
-              ),
-              child: const Icon(
-                Icons.check,
-                color: Colors.white,
-                size: 20,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  task.time,
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    color: const Color(0xFF9E9E9E),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  task.title,
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFF9E9E9E),
-                    decoration: TextDecoration.lineThrough,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+  Widget _buildSectionHeaderWithAction({required IconData icon, required Color iconColor, required String title, required String actionText, required VoidCallback onActionTap}) {
+    return Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+      Row(children: [Icon(icon, color: iconColor, size: 20), const SizedBox(width: 8), Text(title, style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: const Color(0xFF1A1A1A)))]),
+      TextButton(onPressed: onActionTap, child: Text(actionText, style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF0D5F5F)))),
+    ]);
   }
 
   Widget _buildEventCard(EventModel event) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE0E0E0)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 8,
-            height: 40,
-            decoration: BoxDecoration(
-              color: event.color,
-              borderRadius: BorderRadius.circular(4),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  event.title,
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF1A1A1A),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.access_time,
-                      size: 12,
-                      color: Color(0xFF6B6B6B),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      event.time,
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: const Color(0xFF6B6B6B),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Icon(
-                      Icons.location_on_outlined,
-                      size: 12,
-                      color: Color(0xFF6B6B6B),
-                    ),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        event.location,
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          color: const Color(0xFF6B6B6B),
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFE0E0E0))),
+      child: Row(children: [
+        Container(width: 8, height: 40, decoration: BoxDecoration(color: event.color, borderRadius: BorderRadius.circular(4))),
+        const SizedBox(width: 12),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(event.title, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFF1A1A1A))),
+          const SizedBox(height: 6),
+          Row(children: [
+            const Icon(Icons.access_time, size: 12, color: Color(0xFF6B6B6B)),
+            const SizedBox(width: 4),
+            Text(event.time, style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF6B6B6B))),
+            const SizedBox(width: 12),
+            const Icon(Icons.location_on_outlined, size: 12, color: Color(0xFF6B6B6B)),
+            const SizedBox(width: 4),
+            Expanded(child: Text(event.location, style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF6B6B6B)), overflow: TextOverflow.ellipsis)),
+          ])
+        ]))
+      ]),
     );
   }
-
-  /*Widget _buildNoteCard(NoteModel note) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE3F2FD),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                note.title,
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFF1A1A1A),
-                ),
-              ),
-              Text(
-                note.timeAgo,
-                style: GoogleFonts.poppins(
-                  fontSize: 11,
-                  color: const Color(0xFF6B6B6B),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            note.content,
-            style: GoogleFonts.poppins(
-              fontSize: 13,
-              color: const Color(0xFF4A4A4A),
-              height: 1.4,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-    );
-  }*/
 
   Widget _buildBottomNavigationBar() {
     return AnimatedContainer(
@@ -839,14 +371,9 @@ class _HomePageState extends State<HomePage> {
         child: Container(
           decoration: BoxDecoration(
             color: Colors.white,
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, -2))],
+            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 8, offset: const Offset(0, -2))],
           ),
-          child: SafeArea(
-            child: CustomNavBar(
-              selectedIndex: 0, // Index 0 untuk Home
-              onItemTapped: _handleNavigation, // ✅ Menggunakan fungsi navigation yang benar
-            ),
-          ),
+          child: SafeArea(child: CustomNavBar(selectedIndex: 0, onItemTapped: _handleNavigation)),
         ),
       ),
     );

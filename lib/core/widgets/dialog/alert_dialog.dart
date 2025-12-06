@@ -3,28 +3,37 @@ import 'package:google_fonts/google_fonts.dart';
 
 class IOSDialog extends StatelessWidget {
   final String title;
-  final String message;
+  final String? message;
+  final Widget? content;
   final String cancelText;
   final String confirmText;
   final VoidCallback? onCancel;
   final VoidCallback onConfirm;
   final Color? confirmTextColor;
+  final bool autoDismiss;
+  final bool isLoading;
 
   const IOSDialog({
-    Key? key,
+    super.key,
     required this.title,
-    required this.message,
+    this.message,
+    this.content,
     this.cancelText = 'Cancel',
     this.confirmText = 'Confirm',
     this.onCancel,
     required this.onConfirm,
     this.confirmTextColor,
-  }) : super(key: key);
+    this.autoDismiss = true,
+    this.isLoading = false,
+  }) : assert(message != null || content != null, 'Message or content must be provided');
 
   @override
   Widget build(BuildContext context) {
+    const separatorColor = Color(0xA5545458);
+
     return Dialog(
       backgroundColor: Colors.transparent,
+      elevation: 0,
       child: Container(
         width: 270,
         decoration: ShapeDecoration(
@@ -36,7 +45,7 @@ class IOSDialog extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Header Section
+            // header and content
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
@@ -44,25 +53,25 @@ class IOSDialog extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const SizedBox(height: 2),
-                  SizedBox(
-                    width: 238,
-                    child: Text(
-                      title,
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.poppins(
-                        color: Colors.black,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w600,
-                        height: 1.29,
-                        letterSpacing: -0.41,
-                      ),
+                  // Title
+                  Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.poppins(
+                      color: Colors.black,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
+                      height: 1.29,
+                      letterSpacing: -0.41,
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  SizedBox(
-                    width: 238,
-                    child: Text(
-                      message,
+                  const SizedBox(height: 4),
+
+                  // Message (Jika ada)
+                  if (message != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      message!,
                       textAlign: TextAlign.center,
                       style: GoogleFonts.poppins(
                         color: Colors.black,
@@ -72,21 +81,32 @@ class IOSDialog extends StatelessWidget {
                         letterSpacing: -0.08,
                       ),
                     ),
-                  ),
+                  ],
+
+                  // custom content
+                  if (content != null) ...[
+                    const SizedBox(height: 12),
+                    content!,
+                  ],
                 ],
               ),
             ),
 
-            // Divider
+            // horizontal divider
             Container(
               width: double.infinity,
-              height: 0.50,
-              decoration: const BoxDecoration(
-                color: Color(0xA5545458),
-              ),
+              height: 0.5,
+              color: separatorColor,
             ),
 
-            // Buttons Section
+            // vertical divider
+            Container(
+              width: double.infinity,
+              height: 0.5,
+              color: separatorColor,
+            ),
+
+            // buttons
             SizedBox(
               height: 44,
               child: Row(
@@ -96,24 +116,22 @@ class IOSDialog extends StatelessWidget {
                     child: Material(
                       color: Colors.transparent,
                       child: InkWell(
-                        onTap: () {
+                        onTap: isLoading ? null : () {
                           Navigator.pop(context);
                           onCancel?.call();
                         },
                         borderRadius: const BorderRadius.only(
                           bottomLeft: Radius.circular(14),
                         ),
-                        child: Container(
-                          height: double.infinity,
-                          alignment: Alignment.center,
+                        child: Center(
                           child: Text(
                             cancelText,
                             textAlign: TextAlign.center,
                             style: GoogleFonts.poppins(
                               color: const Color(0xFF0A84FF),
-                              fontSize: 14,
+                              fontSize: 17,
                               fontWeight: FontWeight.w400,
-                              height: 1.57,
+                              height: 1.29,
                               letterSpacing: -0.41,
                             ),
                           ),
@@ -124,36 +142,43 @@ class IOSDialog extends StatelessWidget {
 
                   // Vertical Divider
                   Container(
-                    width: 0.50,
+                    width: 0.5,
                     height: double.infinity,
-                    decoration: const BoxDecoration(
-                      color: Color(0xA5545458),
-                    ),
+                    color: separatorColor,
                   ),
 
-                  // Confirm Button
+                  // confirm button
                   Expanded(
                     child: Material(
                       color: Colors.transparent,
                       child: InkWell(
-                        onTap: () {
-                          Navigator.pop(context);
+                        onTap: isLoading ? null : () {
+                          if (autoDismiss) {
+                            Navigator.pop(context);
+                          }
                           onConfirm();
                         },
                         borderRadius: const BorderRadius.only(
                           bottomRight: Radius.circular(14),
                         ),
-                        child: Container(
-                          height: double.infinity,
-                          alignment: Alignment.center,
-                          child: Text(
+                        child: Center(
+                          child: isLoading
+                              ? SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation(confirmTextColor ?? const Color(0xFF0A84FF))
+                              )
+                          )
+                              : Text(
                             confirmText,
                             textAlign: TextAlign.center,
                             style: GoogleFonts.poppins(
-                              color: confirmTextColor ?? const Color(0xFFFF453A),
-                              fontSize: 14,
-                              fontWeight: FontWeight.w400,
-                              height: 1.57,
+                              color: confirmTextColor ?? const Color(0xFF0A84FF), // Default Blue for generic, Red for destructive
+                              fontSize: 17,
+                              fontWeight: FontWeight.w600,
+                              height: 1.29,
                               letterSpacing: -0.41,
                             ),
                           ),
@@ -171,7 +196,7 @@ class IOSDialog extends StatelessWidget {
   }
 }
 
-// Helper function untuk menampilkan dialog dengan mudah
+// helper for basic alert
 void showIOSDialog({
   required BuildContext context,
   required String title,
@@ -194,6 +219,7 @@ void showIOSDialog({
       onCancel: onCancel,
       onConfirm: onConfirm,
       confirmTextColor: confirmTextColor,
+      autoDismiss: true,
     ),
   );
 }

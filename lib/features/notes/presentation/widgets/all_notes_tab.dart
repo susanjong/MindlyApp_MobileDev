@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../data/models/note_model.dart';
 import 'note_card.dart';
+import 'package:flutter_quill/flutter_quill.dart' as quill;
 
 class AllNotesTab extends StatelessWidget {
   final List<NoteModel> notes;
@@ -25,10 +27,18 @@ class AllNotesTab extends StatelessWidget {
     this.searchQuery = '',
   });
 
+  // Fungsi helper ini sudah benar
+  String _getPlainText(String jsonContent) {
+    try {
+      final doc = quill.Document.fromJson(jsonDecode(jsonContent));
+      return doc.toPlainText().trim();
+    } catch (e) {
+      return jsonContent;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    // ✅ HANYA TAMPILKAN NOTES DARI FIRESTORE
-    // Jika tidak ada notes, tampilkan empty state
     if (notes.isEmpty) {
       return _buildEmptyState();
     }
@@ -43,14 +53,17 @@ class AllNotesTab extends StatelessWidget {
         mainAxisSpacing: 12,
         childAspectRatio: 0.85,
       ),
-      itemCount: notes.length, // ✅ Gunakan length dari Firestore
+      itemCount: notes.length,
       itemBuilder: (context, index) {
-        final note = notes[index]; // ✅ Data langsung dari Firestore
+        final note = notes[index];
         final isSelected = selectedNoteIds.contains(note.id);
 
         return NoteCard(
           title: note.title,
-          content: note.content,
+          // ⚠️ PERBAIKAN DI SINI:
+          // Gunakan fungsi _getPlainText yang sudah Anda buat di atas
+          content: _getPlainText(note.content),
+
           date: note.formattedDate,
           color: Color(note.color),
           isFavorite: note.isFavorite,
@@ -63,7 +76,6 @@ class AllNotesTab extends StatelessWidget {
     );
   }
 
-  // ✅ Empty State ketika belum ada notes
   Widget _buildEmptyState() {
     return Center(
       child: Column(

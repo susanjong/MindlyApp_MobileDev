@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
-// ✅ Import Services & Models (Sesuaikan path jika berbeda)
-import '../../../../core/widgets/dialog/alert_dialog.dart';
+// ✅ Import Services & Models
 import '../../data/models/todo_model.dart';
 import '../../data/services/todo_services.dart';
 import '../../data/models/category_model.dart';
 import '../../data/services/category_service.dart';
 
-// ✅ Import Widgets
+// ✅ Import Widgets (Termasuk Alert Dialog dari Core)
+import '../../../../core/widgets/dialog/alert_dialog.dart';
 import '../widgets/task_item.dart';
 import 'folder_screen.dart';
 
@@ -32,7 +32,7 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
     [const Color(0xFFE2A8D3), const Color(0xFFFFF4FD)], // Pink
   ];
 
-  // Selection Mode State (Menggunakan ID Firestore)
+  // Selection Mode State
   bool _isSelectMode = false;
   final Set<String> _selectedTaskIds = {};
 
@@ -53,10 +53,11 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
     });
   }
 
-  // ✅ LOGIC DELETE DENGAN IOS DIALOG & FIREBASE
+  // ✅ LOGIC DELETE SELECTED TASKS
   void _deleteSelectedTasks() {
     if (_selectedTaskIds.isEmpty) return;
 
+    // Menggunakan showIOSDialog dari import alert_dialog.dart
     showIOSDialog(
       context: context,
       title: 'Delete Tasks',
@@ -64,12 +65,10 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
       confirmText: 'Delete',
       confirmTextColor: const Color(0xFFFF453A),
       onConfirm: () async {
-        // 1. Hapus dari Firebase
         for (String id in _selectedTaskIds) {
           await _todoService.deleteTodo(id);
         }
 
-        // 2. Reset UI State
         setState(() {
           _selectedTaskIds.clear();
           _isSelectMode = false;
@@ -83,6 +82,26 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
       },
     );
   }
+
+  // ✅ LOGIC DELETE CATEGORY
+  void _deleteCategory(String categoryId, String categoryName) {
+    showIOSDialog(
+      context: context,
+      title: 'Delete Category',
+      message: 'Are you sure you want to delete "$categoryName"? All tasks inside will be moved to Uncategorized.',
+      confirmText: 'Delete',
+      confirmTextColor: const Color(0xFFFF453A),
+      onConfirm: () async {
+        await _categoryService.deleteCategory(categoryId);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Category deleted successfully")),
+          );
+        }
+      },
+    );
+  }
+
   void _showAddCategoryDialog() {
     showDialog(
       context: context,
@@ -176,7 +195,7 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
                           final completed = categoryTasks.where((t) => t.isCompleted).length;
 
                           return _buildCategoryCard(
-                            category.name,
+                            category,
                             total,
                             completed,
                             category.gradientIndex,
@@ -249,10 +268,10 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
         },
       ),
 
-      // ✅ UI & LOGIC SESUAI PERMINTAAN ANDA
+      // FAB Logic
       floatingActionButton: _isSelectMode
           ? GestureDetector(
-        onTap: _deleteSelectedTasks, // Logic delete firebase ada di method ini
+        onTap: _deleteSelectedTasks,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -272,7 +291,7 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
           : Padding(
         padding: const EdgeInsets.only(bottom: 12, right: 8),
         child: FloatingActionButton.extended(
-          onPressed: _showAddCategoryDialog, // Logic add firebase ada di method ini
+          onPressed: _showAddCategoryDialog,
           backgroundColor: const Color(0xFFD732A8),
           icon: const Icon(Icons.add, color: Colors.white, size: 22),
           label: const Text(
@@ -291,7 +310,6 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
   }
 
   // --- WIDGET BUILDERS ---
-
   Widget _buildPopupMenu(List<TodoModel> tasks) {
     return Theme(
       data: Theme.of(context).copyWith(
@@ -343,7 +361,50 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
     );
   }
 
-  Widget _buildCategoryCard(String name, int taskCount, int completedCount, int gradientIndex, List<TodoModel> tasks) {
+  Widget _buildCategoryPopupMenu(CategoryModel category) {
+    return Theme(
+      data: Theme.of(context).copyWith(
+        popupMenuTheme: PopupMenuThemeData(
+          color: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          textStyle: GoogleFonts.poppins(color: Colors.black, fontSize: 14),
+        ),
+      ),
+      child: PopupMenuButton<String>(
+        icon: const Icon(Icons.more_horiz, size: 24, color: Colors.black87),
+
+        // ✅ FIX POSITION: Remove default padding/constraints
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(),
+
+        offset: const Offset(0, 30),
+        elevation: 2,
+        onSelected: (value) {
+          if (value == 'delete') {
+            _deleteCategory(category.id, category.name);
+          }
+        },
+        itemBuilder: (context) => [
+          PopupMenuItem(
+            value: 'delete',
+            height: 35,
+            child: Row(
+              children: [
+                const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                const SizedBox(width: 8),
+                Text(
+                    'Delete',
+                    style: GoogleFonts.poppins(fontSize: 13, color: Colors.red, fontWeight: FontWeight.w500)
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCategoryCard(CategoryModel category, int taskCount, int completedCount, int gradientIndex, List<TodoModel> tasks) {
     final gradient = availableGradients[gradientIndex % availableGradients.length];
     final List<Map<String, dynamic>> folderTasksMap = tasks.map((t) => _mapModelToTaskItem(t)).toList();
 
@@ -353,7 +414,7 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
           context,
           MaterialPageRoute(
             builder: (context) => FolderScreen(
-              folderName: name,
+              folderName: category.name,
               gradientIndex: gradientIndex,
               gradients: availableGradients,
               folderTasks: folderTasksMap,
@@ -385,13 +446,14 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
+            // TOP ROW (Title & Badge) - No changes here
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
                   child: Text(
-                    name,
+                    category.name,
                     style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.black),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -411,15 +473,18 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
                 ),
               ],
             ),
+
+            // BOTTOM ROW (Task Count & Menu)
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.end,
+              // ✅ FIX: Align centers vertically
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Text(
                   '$taskCount Tasks',
                   style: const TextStyle(fontSize: 13, color: Colors.black87, fontWeight: FontWeight.w500),
                 ),
-                const Icon(Icons.more_horiz, size: 24, color: Colors.black87),
+                _buildCategoryPopupMenu(category),
               ],
             ),
           ],
@@ -481,27 +546,18 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
   }
 }
 
-void showIOSDialog({required BuildContext context, required String title, required String message, String cancelText = 'Cancel', String confirmText = 'Confirm', VoidCallback? onCancel, required VoidCallback onConfirm, Color? confirmTextColor}) {
-  showDialog(context: context, barrierDismissible: true, builder: (_) => IOSDialog(title: title, message: message, cancelText: cancelText, confirmText: confirmText, onCancel: onCancel, onConfirm: onConfirm, confirmTextColor: confirmTextColor));
-}
-
+// Widget Dialog Add Category
 class _IOSAddCategoryDialogContent extends StatefulWidget {
   const _IOSAddCategoryDialogContent({Key? key}) : super(key: key);
-
   @override
-  State<_IOSAddCategoryDialogContent> createState() =>
-      _IOSAddCategoryDialogContentState();
+  State<_IOSAddCategoryDialogContent> createState() => _IOSAddCategoryDialogContentState();
 }
 
-class _IOSAddCategoryDialogContentState
-    extends State<_IOSAddCategoryDialogContent> {
+class _IOSAddCategoryDialogContentState extends State<_IOSAddCategoryDialogContent> {
   final TextEditingController _nameController = TextEditingController();
-  // Panggil service di sini untuk menyimpan data
   final CategoryService _categoryService = CategoryService();
 
   int _selectedGradientIndex = 0;
-
-  // Warna sesuai gambar (Hijau, Biru, Pink)
   final List<List<Color>> availableGradients = [
     [const Color(0xFFBEE973), const Color(0xFFD9D9D9)], // Hijau
     [const Color(0xFF93B7D9), const Color(0xFFD9D9D9)], // Biru
@@ -509,46 +565,23 @@ class _IOSAddCategoryDialogContentState
   ];
 
   @override
-  void dispose() {
-    _nameController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    // Warna garis pembatas
     const dividerColor = Color(0xFFE0E0E0);
-    // Warna biru khas iOS/Gambar
     const blueColor = Color(0xFF007AFF);
 
     return Dialog(
-      backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 40),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          width: 270,
-          color: Colors.white,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // --- TITLE ---
-                    Text(
-                      'Add New Category',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.poppins(
-                        color: Colors.black,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 40),
+        child: ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: Container(
+              color: Colors.white,
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
+                  child: Column(children: [
+                    Text("Add New Category", textAlign: TextAlign.center, style: GoogleFonts.poppins(color: Colors.black, fontSize: 16, fontWeight: FontWeight.w600)),
                     const SizedBox(height: 16),
-
                     Container(
                       height: 40,
                       padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -557,127 +590,42 @@ class _IOSAddCategoryDialogContentState
                         textAlignVertical: TextAlignVertical.center,
                         style: GoogleFonts.poppins(fontSize: 13),
                         decoration: InputDecoration(
-                          hintText: 'Category Name',
-                          hintStyle: GoogleFonts.poppins(
-                              fontSize: 13, color: Colors.grey),
+                          hintText: "Category Name",
+                          hintStyle: GoogleFonts.poppins(fontSize: 13, color: Colors.grey),
                           contentPadding: const EdgeInsets.only(bottom: 12, left: 5),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: const BorderSide(color: blueColor, width: 1),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: const BorderSide(color: blueColor, width: 1.5),
-                          ),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: blueColor, width: 1)),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: blueColor, width: 1.5)),
                         ),
                       ),
                     ),
                     const SizedBox(height: 16),
-
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(availableGradients.length, (index) {
-                        final isSelected = _selectedGradientIndex == index;
-                        // Ambil warna utama dari gradient untuk ditampilkan
-                        final mainColor = availableGradients[index][0];
-
-                        return GestureDetector(
-                          onTap: () => setState(() => _selectedGradientIndex = index),
-                          child: Container(
-                            width: 32,
-                            height: 32,
-                            margin: const EdgeInsets.symmetric(horizontal: 6),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: availableGradients[index],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                            ),
-                            child: isSelected
-                                ? const Icon(Icons.check, size: 18, color: Colors.black54)
-                                : null,
-                          ),
-                        );
-                      }),
-                    ),
-                  ],
-                ),
-              ),
-
-              // --- HORIZONTAL DIVIDER ---
-              Container(
-                width: double.infinity,
-                height: 1,
-                color: dividerColor,
-              ),
-
-              // --- BUTTONS ROW ---
-              SizedBox(
-                height: 45,
-                child: Row(
-                  children: [
-                    // CANCEL BUTTON
-                    Expanded(
-                      child: InkWell(
-                        onTap: () => Navigator.pop(context),
-                        child: Center(
-                          child: Text(
-                            'Cancel',
-                            style: GoogleFonts.poppins(
-                              color: blueColor,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
+                    Row(mainAxisAlignment: MainAxisAlignment.center, children: List.generate(availableGradients.length, (index) {
+                      final isSelected = _selectedGradientIndex == index;
+                      return GestureDetector(
+                        onTap: ()=>setState(()=>_selectedGradientIndex=index),
+                        child: Container(
+                          width: 32, height: 32, margin: const EdgeInsets.symmetric(horizontal: 6),
+                          decoration: BoxDecoration(gradient: LinearGradient(colors: availableGradients[index], begin: Alignment.topLeft, end: Alignment.bottomRight), shape: BoxShape.circle, border: Border.all(color: isSelected ? Colors.black87 : Colors.black12, width: isSelected ? 2 : 0.5)),
+                          child: isSelected ? const Icon(Icons.check, size: 18, color: Colors.black54) : null,
                         ),
-                      ),
-                    ),
-
-                    // VERTICAL DIVIDER
-                    Container(
-                      width: 1,
-                      height: double.infinity,
-                      color: dividerColor,
-                    ),
-
-                    // ADD BUTTON (Dengan Logic Firebase)
-                    Expanded(
-                      child: InkWell(
-                        onTap: () async {
-                          final name = _nameController.text.trim();
-
-                          if (name.isNotEmpty) {
-                            // ✅ LOGIC FIREBASE DISINI
-                            // Langsung simpan ke database
-                            await _categoryService.addCategory(
-                              name,
-                              _selectedGradientIndex,
-                            );
-
-                            // Tutup dialog
-                            if (mounted) Navigator.pop(context);
-                          }
-                        },
-                        child: Center(
-                          child: Text(
-                            'Add',
-                            style: GoogleFonts.poppins(
-                              color: blueColor,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600, // Bold sesuai gambar
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                      );
+                    })),
+                  ]),
                 ),
-              ),
-            ],
-          ),
-        ),
-      ),
+                Container(height: 1, color: dividerColor),
+                SizedBox(height: 45, child: Row(children: [
+                  Expanded(child: InkWell(onTap: ()=>Navigator.pop(context), child: Center(child: Text("Cancel", style: GoogleFonts.poppins(color: blueColor, fontSize: 15))))),
+                  Container(width: 1, height: double.infinity, color: dividerColor),
+                  Expanded(child: InkWell(onTap: () async {
+                    if (_nameController.text.trim().isNotEmpty) {
+                      await _categoryService.addCategory(_nameController.text.trim(), _selectedGradientIndex);
+                      if (mounted) Navigator.pop(context);
+                    }
+                  }, child: Center(child: Text("Add", style: GoogleFonts.poppins(color: blueColor, fontSize: 15, fontWeight: FontWeight.w600))))),
+                ]))
+              ]),
+            )
+        )
     );
   }
 }

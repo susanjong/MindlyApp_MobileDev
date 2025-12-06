@@ -4,7 +4,8 @@ import '../../../../config/routes/routes.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../../core/widgets/dialog/alert_dialog.dart';
 import '../../data/models/profile_model.dart';
-import 'edit_bioprofile.dart';
+import 'package:notesapp/features/profile/presentation/pages/edit_bioprofile.dart';
+import 'dart:convert';
 
 class AccountProfilePage extends StatefulWidget {
   const AccountProfilePage({super.key});
@@ -26,17 +27,15 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
     _loadNotificationSetting();
   }
 
-  // load notification setting from Firestore
+  // load notification setting from firestore
   Future<void> _loadNotificationSetting() async {
     try {
       final userData = await AuthService.getUserData();
       if (userData != null && mounted) {
         setState(() {
-          // Only set if value exists in Firestore, otherwise keep as null (default)
           if (userData.containsKey('notificationsEnabled')) {
             _notificationsEnabled = userData['notificationsEnabled'] as bool;
           } else {
-            // if no value in Firestore, set default to true
             _notificationsEnabled = true;
           }
         });
@@ -55,7 +54,7 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
     }
   }
 
-  // save notification setting to Firestore
+  // save notification setting to firestore
   Future<void> _saveNotificationSetting(bool value) async {
     try {
       await AuthService.updateUserData({
@@ -86,61 +85,60 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
       if (userData != null) {
         if (mounted) {
           setState(() {
-            if (userData['displayName'] != null) {
-              _userProfile = UserProfile(
-                name: userData['displayName'],
-                email: userData['email'] ?? _userProfile.email,
-                bio: userData['bio'] ?? _userProfile.bio,
-                imageUrl: userData['photoURL'] ??
-                    'https://ui-avatars.com/api/?name=${Uri.encodeComponent(userData['displayName'] ?? 'User')}&size=150&background=4CAF50&color=fff',
-              );
-            } else {
-              final displayName = AuthService.getUserDisplayName();
-              final email = AuthService.getCurrentUserEmail();
+            final displayName = userData['displayName'] ?? AuthService.getUserDisplayName() ?? 'User';
+            final email = userData['email'] ?? AuthService.getCurrentUserEmail() ?? 'user@example.com';
+            final bio = userData['bio'] ?? 'Update your bio here.';
 
-              _userProfile = UserProfile(
-                name: displayName ?? 'User',
-                email: email ?? _userProfile.email,
-                bio: userData['bio'] ?? _userProfile.bio,
-                imageUrl: userData['photoURL'] ??
-                    'https://ui-avatars.com/api/?name=${Uri.encodeComponent(displayName ?? 'User')}&size=150&background=4CAF50&color=fff',
-              );
+            // set priority photoURL dari Firestore (support Base64 and removal)
+            String imageUrl;
+            final photoURL = userData['photoURL'];
+            if (photoURL != null && photoURL.toString().isNotEmpty) {
+              imageUrl = photoURL;
+            } else {
+              imageUrl = 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(displayName)}&size=150&background=4CAF50&color=fff';
             }
+
+            _userProfile = UserProfile(
+              name: displayName,
+              email: email,
+              bio: bio,
+              imageUrl: imageUrl,
+            );
+
             _isLoadingProfile = false;
           });
         }
       } else {
-        final displayName = AuthService.getUserDisplayName();
-        final email = AuthService.getCurrentUserEmail();
+        final displayName = AuthService.getUserDisplayName() ?? 'User';
+        final email = AuthService.getCurrentUserEmail() ?? 'user@example.com';
 
         if (mounted) {
           setState(() {
             _userProfile = UserProfile(
-              name: displayName ?? 'User',
-              email: email ?? 'user@example.com',
-              bio: _userProfile.bio,
-              imageUrl: 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(displayName ?? 'User')}&size=150&background=4CAF50&color=fff',
+              name: displayName,
+              email: email,
+              bio: 'Update your bio here.',
+              imageUrl: 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(displayName)}&size=150&background=4CAF50&color=fff',
             );
             _isLoadingProfile = false;
           });
         }
       }
     } catch (e) {
-      final displayName = AuthService.getUserDisplayName();
-      final email = AuthService.getCurrentUserEmail();
+      final displayName = AuthService.getUserDisplayName() ?? 'User';
+      final email = AuthService.getCurrentUserEmail() ?? 'user@example.com';
 
       if (mounted) {
         setState(() {
           _userProfile = UserProfile(
-            name: displayName ?? 'User',
-            email: email ?? 'user@example.com',
-            bio: _userProfile.bio,
-            imageUrl: 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(displayName ?? 'User')}&size=150&background=4CAF50&color=fff',
+            name: displayName,
+            email: email,
+            bio: 'Update your bio here.',
+            imageUrl: 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(displayName)}&size=150&background=4CAF50&color=fff',
           );
           _isLoadingProfile = false;
         });
       }
-
       debugPrint('Error loading user data: $e');
     }
   }
@@ -163,6 +161,7 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
                   profile: _userProfile,
                   isLoading: _isLoadingProfile,
                   onEdit: _navigateToEditProfile,
+                  onRefresh: _loadUserDataFromFirestore, // pass callback
                 ),
                 const SizedBox(height: 24),
                 _buildPreferenceSection(),
@@ -265,7 +264,7 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
           icon: Icons.lock_outline,
           title: 'Reset Password',
           subtitle: 'Change your account password',
-          onTap: () => _showResetDialog(context),
+          onTap: _showResetDialog,
         ),
       ],
     );
@@ -280,14 +279,14 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
           title: 'Logout',
           subtitle: 'Sign out from your account',
           iconColor: const Color(0xFFFF6B6B),
-          onTap: () => _showLogoutDialog(context),
+          onTap: _showLogoutDialog,
         ),
         SettingItem(
           icon: Icons.delete_outline,
           title: 'Delete Account',
           subtitle: 'Permanently remove your account data',
           iconColor: const Color(0xFFFF6B6B),
-          onTap: () => _showDeleteAccountDialog(context),
+          onTap: _showDeleteAccountDialog,
         ),
       ],
     );
@@ -328,23 +327,26 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
       ),
     );
 
-    if (result == true) {
-      _loadUserDataFromFirestore();
+    // refresh data after back again from edit
+    if (result == true && mounted) {
+      await _loadUserDataFromFirestore();
     }
   }
 
-  void _showResetDialog(BuildContext context) {
+  void _showResetDialog() {
+    if (!mounted) return;
+    final navigatorContext = context;
+
     showIOSDialog(
-      context: context,
+      context: navigatorContext,
       title: 'Reset Password',
       message: 'Are you sure you want to \nreset your password ?',
       cancelText: 'Cancel',
       confirmText: 'Reset',
       confirmTextColor: const Color(0xFFFF453A),
       onConfirm: () {
-        Navigator.of(context).pop();
+        Navigator.of(navigatorContext).pop();
         _showSuccessAndNavigate(
-          context: context,
           title: 'Success !',
           message: 'Your password has been\nsuccessfully reset.',
           routeName: AppRoutes.resetPassword,
@@ -354,23 +356,25 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
     );
   }
 
-  void _showLogoutDialog(BuildContext context) {
+  void _showLogoutDialog() {
+    if (!mounted) return;
+    final navigatorContext = context;
+
     showIOSDialog(
-      context: context,
+      context: navigatorContext,
       title: 'Logout',
       message: 'Are you sure you want to \nlogout this account?',
       cancelText: 'Cancel',
       confirmText: 'Logout',
       confirmTextColor: const Color(0xFFFF453A),
       onConfirm: () async {
-        Navigator.of(context).pop();
+        Navigator.of(navigatorContext).pop();
 
         try {
           await AuthService.signOut();
 
           if (mounted) {
             _showSuccessAndNavigate(
-              context: context,
               title: 'Success !',
               message: 'Your account was\nsuccessfully logout.',
               routeName: AppRoutes.signIn,
@@ -394,19 +398,21 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
     );
   }
 
-  void _showDeleteAccountDialog(BuildContext context) {
+  void _showDeleteAccountDialog() {
+    if (!mounted) return;
+    final navigatorContext = context;
+
     showIOSDialog(
-      context: context,
+      context: navigatorContext,
       title: 'Delete Account',
       message: 'This action cannot be undone.\nAre you sure?',
       cancelText: 'Cancel',
       confirmText: 'Delete',
       confirmTextColor: const Color(0xFFFF453A),
       onConfirm: () {
-        Navigator.of(context).pop();
+        Navigator.of(navigatorContext).pop();
 
         _showSuccessAndNavigate(
-          context: context,
           title: 'Success !',
           message: 'Your account has been\nsuccessfully deleted.',
           routeName: AppRoutes.signUp,
@@ -420,22 +426,24 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
     );
   }
 
-  Future<void> _showSuccessAndNavigate({
-    required BuildContext context,
+  void _showSuccessAndNavigate({
     required String title,
     required String message,
     required String routeName,
     bool useReplacement = true,
-  }) async {
-    final navigator = Navigator.of(context);
+  }) {
+    if (!mounted) return;
 
-    await showDialog(
-      context: context,
+    final dialogContext = context;
+    final navigator = Navigator.of(dialogContext);
+
+    showDialog(
+      context: dialogContext,
       barrierDismissible: false,
-      builder: (BuildContext dialogContext) {
+      builder: (BuildContext innerContext) {
         Future.delayed(const Duration(seconds: 2), () {
-          if (Navigator.canPop(dialogContext)) {
-            Navigator.of(dialogContext).pop();
+          if (Navigator.canPop(innerContext)) {
+            Navigator.of(innerContext).pop();
 
             Future.delayed(const Duration(milliseconds: 100), () {
               if (useReplacement) {
@@ -522,15 +530,18 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
   }
 }
 
+// profileCard with support Base64 dan refresh callback
 class _ProfileCard extends StatelessWidget {
   final UserProfile profile;
   final bool isLoading;
   final VoidCallback onEdit;
+  final VoidCallback onRefresh;
 
   const _ProfileCard({
     required this.profile,
     required this.isLoading,
     required this.onEdit,
+    required this.onRefresh,
   });
 
   @override
@@ -546,14 +557,8 @@ class _ProfileCard extends StatelessWidget {
         children: [
           Stack(
             children: [
-              CircleAvatar(
-                radius: 32,
-                backgroundImage: NetworkImage(profile.imageUrl),
-                backgroundColor: const Color(0xFFE0E0E0),
-                onBackgroundImageError: (exception, stackTrace) {
-                  debugPrint('Error loading profile image: $exception');
-                },
-              ),
+              // support Base64 images
+              _buildProfileImage(),
               if (isLoading)
                 Positioned.fill(
                   child: Container(
@@ -610,7 +615,7 @@ class _ProfileCard extends StatelessWidget {
                     : Text(
                   profile.email,
                   style: GoogleFonts.poppins(
-                    fontSize: 12,
+                    fontSize: 11,
                     color: const Color(0xFF6B6B6B),
                   ),
                 ),
@@ -630,19 +635,74 @@ class _ProfileCard extends StatelessWidget {
             icon: const Icon(Icons.edit_outlined),
             splashRadius: 20,
             onPressed: () async {
+              final navigatorContext = context;
+
               final result = await Navigator.push(
-                context,
+                navigatorContext,
                 MaterialPageRoute(
                   builder: (context) => const EditAccountInformationScreen(),
                 ),
               );
 
-              if (result == true && context.mounted) {
-                context.findAncestorStateOfType<_AccountProfilePageState>()?._loadUserDataFromFirestore();
+              if (result == true && navigatorContext.mounted) {
+                onRefresh();
               }
             },
           ),
         ],
+      ),
+    );
+  }
+
+  // build profile image with Base64 support
+  Widget _buildProfileImage() {
+    // Check if it's Base64 data
+    if (profile.imageUrl.startsWith('data:image')) {
+      try {
+        final base64String = profile.imageUrl.split(',')[1];
+        final bytes = base64Decode(base64String);
+        return CircleAvatar(
+          radius: 32,
+          backgroundColor: const Color(0xFFE0E0E0),
+          child: ClipOval(
+            child: Image.memory(
+              bytes,
+              fit: BoxFit.cover,
+              width: 64,
+              height: 64,
+              errorBuilder: (context, error, stackTrace) {
+                return _buildDefaultAvatar();
+              },
+            ),
+          ),
+        );
+      } catch (e) {
+        debugPrint('Error decoding base64 image: $e');
+        return _buildDefaultAvatar();
+      }
+    }
+
+    return CircleAvatar(
+      radius: 32,
+      backgroundImage: NetworkImage(profile.imageUrl),
+      backgroundColor: const Color(0xFFE0E0E0),
+      onBackgroundImageError: (exception, stackTrace) {
+        debugPrint('Error loading profile image: $exception');
+      },
+    );
+  }
+
+  Widget _buildDefaultAvatar() {
+    return CircleAvatar(
+      radius: 32,
+      backgroundColor: const Color(0xFF4CAF50),
+      child: Text(
+        profile.name.isNotEmpty ? profile.name[0].toUpperCase() : 'U',
+        style: GoogleFonts.poppins(
+          fontSize: 24,
+          fontWeight: FontWeight.w600,
+          color: Colors.white,
+        ),
       ),
     );
   }
@@ -769,4 +829,22 @@ class _SettingItemWidget extends StatelessWidget {
       ),
     );
   }
+}
+
+class SettingItem {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Widget? trailing;
+  final VoidCallback? onTap;
+  final Color? iconColor;
+
+  SettingItem({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    this.trailing,
+    this.onTap,
+    this.iconColor,
+  });
 }

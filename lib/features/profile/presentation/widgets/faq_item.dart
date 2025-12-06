@@ -6,10 +6,10 @@ class FaqItem extends StatefulWidget {
   final String answer;
 
   const FaqItem({
-    Key? key,
+    super.key,
     required this.question,
     required this.answer,
-  }) : super(key: key);
+  });
 
   @override
   State<FaqItem> createState() => _FaqItemState();
@@ -102,10 +102,10 @@ class FaqSection extends StatelessWidget {
   final List<Widget> children;
 
   const FaqSection({
-    Key? key,
+    super.key,
     required this.title,
     required this.children,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

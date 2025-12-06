@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'dart:convert';
+import 'package:flutter_quill/flutter_quill.dart' as quill;
 
 class NoteCard extends StatelessWidget {
   final String title;
@@ -24,6 +26,15 @@ class NoteCard extends StatelessWidget {
     this.onLongPress,
     this.onFavoriteTap,
   });
+
+  String get plainTextContent {
+    try {
+      final doc = quill.Document.fromJson(jsonDecode(content));
+      return doc.toPlainText().trim();
+    } catch (e) {
+      return content; // Fallback jika masih format lama
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-
 import '../../../../config/routes/routes.dart';
 
 // app colors
@@ -299,7 +298,7 @@ class WelcomeScreen extends StatelessWidget {
               baseline: TextBaseline.alphabetic,
               child: GestureDetector(
                 onTap: () {
-                  // todo: change this Navigator.pushNamed(context, AppRoutes.termsOfService);
+                  Navigator.pushNamed(context, AppRoutes.termsOfService);
                 },
                 child: Text(
                   'Terms of Service',
@@ -320,7 +319,7 @@ class WelcomeScreen extends StatelessWidget {
               baseline: TextBaseline.alphabetic,
               child: GestureDetector(
                 onTap: () {
-                  // todo: change this Navigator.pushNamed(context, AppRoutes.privacyPolicy);
+                Navigator.pushNamed(context, AppRoutes.PrivacyPolicy);
                 },
                 child: Text(
                   'Privacy Policy',

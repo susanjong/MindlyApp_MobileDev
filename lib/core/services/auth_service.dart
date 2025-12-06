@@ -12,14 +12,11 @@ class AuthService {
   // getters
   static User? get currentUser => _auth.currentUser;
   static Stream<User?> get authStateChanges => _auth.authStateChanges();
-
   static bool isSignedIn() => _auth.currentUser != null;
   static bool isEmailVerified() => _auth.currentUser?.emailVerified ?? false;
   static String? getUserDisplayName() => _auth.currentUser?.displayName;
   static String? getUserEmail() => _auth.currentUser?.email;
   static String? getUserPhotoURL() => _auth.currentUser?.photoURL;
-
-  // Method untuk mendapatkan email current user
   static String? getCurrentUserEmail() => _auth.currentUser?.email;
 
   static String? getAuthProvider() {
@@ -28,7 +25,7 @@ class AuthService {
     return user.providerData.first.providerId;
   }
 
-  //  FIRESTORE: Create / Update User
+  // create or update (firestore)
   static Future<void> _createOrUpdateUserInFirestore(
       User user, {
         String? displayName,
@@ -38,16 +35,32 @@ class AuthService {
     try {
       final userRef = _firestore.collection('users').doc(user.uid);
 
-      final data = {
+      final data = <String, dynamic>{
         'uid': user.uid,
         'email': user.email ?? '',
         'displayName': displayName ?? user.displayName ?? '',
-        'photoURL': photoURL ?? user.photoURL ?? '',
         'emailVerified': user.emailVerified,
         'updatedAt': FieldValue.serverTimestamp(),
       };
 
-      // Add bio if provided
+      // add photoURL only if provided (can be null, Base64, or regular URL)
+      if (photoURL != null) {
+        data['photoURL'] = photoURL;
+      } else {
+        // Keep existing photoURL if not updating
+        final existingDoc = await userRef.get();
+        if (existingDoc.exists) {
+          final existingData = existingDoc.data();
+          if (existingData != null && existingData.containsKey('photoURL')) {
+            data['photoURL'] = existingData['photoURL'];
+          } else {
+            data['photoURL'] = user.photoURL ?? '';
+          }
+        } else {
+          data['photoURL'] = user.photoURL ?? '';
+        }
+      }
+
       if (bio != null) {
         data['bio'] = bio;
       }
@@ -55,33 +68,31 @@ class AuthService {
       final doc = await userRef.get();
 
       if (!doc.exists) {
-        // NEW USER: Set default bio and notification setting
+        // for new user, set default bio and notification setting
         data['createdAt'] = FieldValue.serverTimestamp();
         data['provider'] = user.providerData.isNotEmpty
             ? user.providerData.first.providerId
             : 'password';
-
-        // Set default bio for new users
         if (!data.containsKey('bio')) {
           data['bio'] = 'Update bio in here';
         }
-
-        // Set default notification setting to true for new users
         data['notificationsEnabled'] = true;
 
         await userRef.set(data);
       } else {
+        // For existing user, only update provided fields
         await userRef.update(data);
       }
-    } catch (_) {
-      // Silent fail
+    } catch (e) {
+      print('Error in _createOrUpdateUserInFirestore: $e');
+      rethrow;
     }
   }
 
   // for google sign in
   static Future<UserCredential?> signInWithGoogle() async {
     try {
-      await _googleSignIn.signOut(); // Clear cache
+      await _googleSignIn.signOut();
 
       final googleUser = await _googleSignIn.signIn();
       if (googleUser == null) return null;
@@ -118,7 +129,7 @@ class AuthService {
     }
   }
 
-  //  email dan password sign in
+  //  input field with email dan password sign in manually
   static Future<UserCredential?> signInWithEmailPassword(
       String email,
       String password,
@@ -152,7 +163,6 @@ class AuthService {
     }
   }
 
-  //  create account
   static Future<UserCredential?> createAccountWithEmailPassword(
       String email,
       String password, {
@@ -178,7 +188,6 @@ class AuthService {
         await _createOrUpdateUserInFirestore(
           credential.user!,
           displayName: displayName,
-          // NEW: Set default bio for new account
           bio: 'Update bio in here',
         );
       }
@@ -214,7 +223,7 @@ class AuthService {
     }
   }
 
-  //  RE-AUTHENTICATE USER
+  //  re-authen for user
   static Future<void> reauthenticateUser(String password) async {
     final user = _auth.currentUser;
     if (user == null || user.email == null) {
@@ -267,8 +276,6 @@ class AuthService {
       if (user == null) throw Exception('No user signed in');
 
       final uid = user.uid;
-
-      // Delete Firestore data
       try {
         await _firestore.collection('users').doc(uid).delete();
       } catch (_) {}
@@ -279,7 +286,6 @@ class AuthService {
         }
       } catch (_) {}
 
-      // delete firebase auth account
       await user.delete();
     } on FirebaseAuthException catch (e) {
       switch (e.code) {
@@ -293,7 +299,7 @@ class AuthService {
     }
   }
 
-  //  update profile
+  //  update profile with support base64 and remove photo
   static Future<void> updateUserProfile({
     String? displayName,
     String? photoURL,
@@ -303,29 +309,68 @@ class AuthService {
       final user = _auth.currentUser;
       if (user == null) throw Exception('No user signed in');
 
-      // Update Firebase Auth profile
+      print('=== Starting profile update ===');
+      print('DisplayName: $displayName');
+      print('Bio: $bio');
+      print('PhotoURL: ${photoURL == null ? "null (no change)" : photoURL.isEmpty ? "empty string (REMOVED)" : photoURL.startsWith("data:image") ? "Base64 (length ${photoURL.length})" : "URL: $photoURL"}');
+
+      // Update Firebase Auth profile (ONLY if not Base64)
       if (displayName != null) {
         await user.updateDisplayName(displayName);
+        print('Display name updated in Firebase Auth');
       }
+
+      // handle photo in Firebase Auth
       if (photoURL != null) {
-        await user.updatePhotoURL(photoURL);
+        if (photoURL.isEmpty) {
+          // photo was removed, set to null in Firebase Auth
+          await user.updatePhotoURL(null);
+          print('Photo REMOVED from Firebase Auth (set to null)');
+        } else if (!photoURL.startsWith('data:image')) {
+          // regular URL - update Firebase Auth
+          await user.updatePhotoURL(photoURL);
+          print('Photo URL updated in Firebase Auth');
+        } else {
+          // base64 - skip Firebase Auth (doesn't support Base64)
+          print('⏭ Skipping Firebase Auth for Base64 image');
+        }
       }
 
       await user.reload();
+      print(' Firebase Auth user reloaded');
 
-      // Update Firestore with all fields including bio
-      await _createOrUpdateUserInFirestore(
-        user,
-        displayName: displayName,
-        photoURL: photoURL,
-        bio: bio,
-      );
-    } catch (_) {
-      throw Exception('Failed to update profile');
+      // update Firestore (supports everything including empty string)
+      final userRef = _firestore.collection('users').doc(user.uid);
+
+      final updateData = <String, dynamic>{
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+      if (displayName != null) {
+        updateData['displayName'] = displayName;
+      }
+
+      if (bio != null) {
+        updateData['bio'] = bio;
+      }
+
+      // always update photoURL in Firestore when provided
+      // empty string = photo removed, Base64 = new photo, URL = photo URL
+      if (photoURL != null) {
+        updateData['photoURL'] = photoURL;
+        print('Storing photoURL in Firestore: ${photoURL.isEmpty ? "EMPTY (removed)" : photoURL.startsWith("data:image") ? "Base64" : "URL"}');
+      }
+
+      await userRef.update(updateData);
+      print('Firestore updated successfully');
+      print('=== Profile update completed ===');
+
+    } catch (e) {
+      print('Error in updateUserProfile: $e');
+      throw Exception('Failed to update profile: ${e.toString()}');
     }
   }
 
-  // update only bio in firestore
   static Future<void> updateUserBio(String bio) async {
     try {
       final user = _auth.currentUser;
@@ -340,32 +385,34 @@ class AuthService {
     }
   }
 
-  // update only photo URL in Firestore
+  // update only photo URL in Firestore - SUPPORT BASE64
   static Future<void> updateUserPhotoURL(String photoURL) async {
     try {
       final user = _auth.currentUser;
       if (user == null) throw Exception('No user signed in');
 
-      // update both Firebase Auth and Firestore
-      await user.updatePhotoURL(photoURL);
-      await user.reload();
+      // only update Firebase Auth if it's not base64
+      if (!photoURL.startsWith('data:image')) {
+        await user.updatePhotoURL(photoURL);
+        await user.reload();
+      }
 
+      // always update Firestore (supports Base64)
       await _firestore.collection('users').doc(user.uid).update({
         'photoURL': photoURL,
         'updatedAt': FieldValue.serverTimestamp(),
       });
-    } catch (_) {
-      throw Exception('Failed to update photo');
+    } catch (e) {
+      throw Exception('Failed to update photo: ${e.toString()}');
     }
   }
 
-  // NEW: Update user data (general purpose for settings like notifications)
+  // update user data (general purpose for settings like notifications)
   static Future<void> updateUserData(Map<String, dynamic> data) async {
     try {
       final user = _auth.currentUser;
       if (user == null) throw Exception('No user signed in');
 
-      // Add timestamp to track when data was updated
       data['updatedAt'] = FieldValue.serverTimestamp();
 
       await _firestore.collection('users').doc(user.uid).set(
@@ -400,7 +447,6 @@ class AuthService {
     return _firestore.collection('users').doc(user.uid).snapshots();
   }
 
-  // other function
   static Future<void> sendEmailVerification() async {
     try {
       final user = _auth.currentUser;
