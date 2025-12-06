@@ -1,9 +1,7 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 class CategoryModel {
   final String id;
   final String name;
-  final int gradientIndex; // Menyimpan warna yang dipilih
+  final int gradientIndex;
 
   CategoryModel({
     required this.id,
