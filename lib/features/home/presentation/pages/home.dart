@@ -198,7 +198,7 @@ class _HomePageState extends State<HomePage> {
                 Navigator.pushNamed(context, AppRoutes.profile);
               },
               onNotificationTap: () {
-                // TODO: Implement notification functionality
+                Navigator.pushNamed(context, AppRoutes.notification);
               },
             ),
 
