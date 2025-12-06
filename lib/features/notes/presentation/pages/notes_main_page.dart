@@ -315,7 +315,8 @@ class _NotesMainPageState extends State<NotesMainPage> {
                 isSelectionMode: _isSelectionMode || _isCategorySelectionMode,
                 onSelectAllTap: _selectAll,
                 onProfileTap: () => Navigator.pushNamed(context, AppRoutes.profile),
-                onNotificationTap: () {},
+                onNotificationTap: () {Navigator.pushNamed(context, AppRoutes.notification);
+                },
               ),
               body: Column(
                 children: [
