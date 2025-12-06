@@ -7,6 +7,7 @@ import '../../features/auth/presentation/pages/signup.dart';
 import '../../features/auth/presentation/pages/splash_screen.dart';
 import '../../features/auth/presentation/pages/terms_of_service.dart';
 import '../../features/home/presentation/pages/home.dart';
+import '../../features/home/presentation/pages/notification.dart';
 import '../../features/notes/presentation/pages/note_editor_page.dart';
 import '../../features/notes/presentation/pages/notes_main_page.dart';
 import '../../features/to_do_list/presentation/pages/mainTodo.dart';
@@ -30,6 +31,7 @@ class AppRoutes {
   static const String noteEditor = '/note-editor';
   static const String todo = '/todo';
   static const String calendar = '/calendar';
+  static const String notification = '/notification';
   static const String helpFaq = '/help_faq';
   static const String aboutUs = '/about_info';
   static const String termsOfService = '/terms-of-service';
@@ -57,7 +59,6 @@ class AppRoutes {
         return _buildRoute(const AccountProfilePage());
       case notes:
         return _buildRoute(const NotesMainPage());
-
       case noteEditor:
         final noteId = settings.arguments as String?;
         return _buildRoute(NoteEditorPage(noteId: noteId));
@@ -65,6 +66,8 @@ class AppRoutes {
         return _buildRoute(const MainTodoScreen());
       case calendar:
         return _buildRoute(const CalendarMainPage());
+      case notification:
+        return _buildRoute(const NotificationPage());
       case helpFaq:
         return _buildRoute(const HelpFaqScreen());
       case aboutUs:
