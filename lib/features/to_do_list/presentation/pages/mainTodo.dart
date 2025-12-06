@@ -166,11 +166,11 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
                         return GestureDetector(
                           onTap: () {
                             setState(() {
-                              _selectedDate = date; // Update tanggal terpilih
+                              _selectedDate = date;
                             });
                           },
                           child: _buildDayItem(
-                              DateFormat('E').format(date), // Nama Hari (Mon, Tue)
+                              DateFormat('E').format(date),
                               date.day,
                               isSelected
                           ),
@@ -193,13 +193,9 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
                   itemBuilder: (context, index) {
                     final todo = displayList[index];
                     return TaskItem(
-                      // Konversi Model ke Map agar TaskItem widget tidak error
                       task: _mapModelToTaskItem(todo),
 
-                      // Logic Toggle Status ke Firebase
                       onToggle: () => _todoService.toggleTodoStatus(todo.id, todo.isCompleted),
-
-                      // Logic Delete ke Firebase
                       onDelete: () => _todoService.deleteTodo(todo.id),
                     );
                   },
