@@ -126,7 +126,7 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
                             text: '$allCount things to do', // ✅ Data Realtime
                             style: const TextStyle(color: Color(0xFFFFB74D)),
                           ),
-                          const TextSpan(text: '\nremaining'),
+                          const TextSpan(text: ' for today'),
                         ],
                       ),
                     ),
@@ -297,7 +297,7 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
         decoration: BoxDecoration(
           gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [topColor, bottomColor]),
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 12, offset: const Offset(0, 4))],
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 12, offset: const Offset(0, 4))],
         ),
         child: Padding(
           padding: const EdgeInsets.all(14),

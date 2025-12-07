@@ -210,7 +210,7 @@ class _AddTaskBottomSheetState extends State<AddTaskBottomSheet> {
                       Expanded(
                         child: _buildDropdown(
                           value: _selectedYear,
-                          items: ['Year', '2024', '2025', '2026'],
+                          items: ['Year', '2025', '2026', '2027'],
                           onChanged: (val) => setState(() => _selectedYear = val!),
                         ),
                       ),
