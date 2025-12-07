@@ -1,17 +1,21 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-// Import Services & Models
+
+// ✅ Import Services & Models (Pastikan path sesuai)
 import '../../data/models/todo_model.dart';
 import '../../data/services/todo_services.dart';
+
 // Import Core & Config
 import '../../../../core/services/auth_service.dart';
 import '../../../../config/routes/routes.dart';
 import '../../../../core/widgets/navigation/custom_top_app_bar.dart';
 import '../../../../core/widgets/navigation/custom_navbar_widget.dart';
+
 // Import Widgets
 import '../widgets/task_item.dart';
 import '../widgets/add_task_bottom_sheet.dart';
+
 // Import Pages
 import 'all_category_screen.dart';
 import 'overdue_screen.dart';
@@ -29,7 +33,7 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
   DateTime _selectedDate = DateTime.now();
   String _username = 'User';
 
-  // Panggil Service
+  // ✅ Panggil Service
   final TodoService _todoService = TodoService();
 
   @override
@@ -53,6 +57,7 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
     return {
       'id': todo.id,
       'title': todo.title,
+      'description': todo.description,
       'time': DateFormat('h:mm a').format(todo.deadline),
       'date': DateFormat('dd MMM').format(todo.deadline),
       'deadline': todo.deadline,
@@ -73,7 +78,8 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
       backgroundColor: Colors.white,
       appBar: CustomTopAppBar(
         onProfileTap: () => Navigator.pushNamed(context, AppRoutes.profile),
-        onNotificationTap: () {Navigator.pushNamed(context, AppRoutes.notification);
+        onNotificationTap: () {
+          Navigator.pushNamed(context, AppRoutes.notification);
         },
       ),
       // Gunakan StreamBuilder untuk Realtime Update
@@ -87,7 +93,7 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
 
           final allTodos = snapshot.data ?? [];
 
-          // 2. Logic Hitung Statistik (Urgent, Overdue, All)
+          // ✅ 2. Logic Hitung Statistik (Urgent, Overdue, All)
           final now = DateTime.now();
           final incompleteTodos = allTodos.where((t) => !t.isCompleted).toList();
 
@@ -120,10 +126,10 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
                         children: [
                           const TextSpan(text: 'You have '),
                           TextSpan(
-                            text: '$allCount things to do', // Data Realtime
+                            text: '$allCount things to do', // ✅ Data Realtime
                             style: const TextStyle(color: Color(0xFFFFB74D)),
                           ),
-                          const TextSpan(text: '\nremaining'),
+                          const TextSpan(text: ' for today'),
                         ],
                       ),
                     ),
@@ -179,7 +185,7 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
                 ),
               ),
 
-              // Task List Realtime (Firebase)
+              // ✅ Task List Realtime (Firebase)
               Expanded(
                 child: displayList.isEmpty
                     ? const Center(child: Text("No tasks yet!"))
@@ -256,20 +262,18 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
     );
   }
 
-  // Logic Simpan ke Firebase saat Add Task
+  // ✅ Logic Simpan ke Firebase saat Add Task
   void _showAddTaskDialog() {
     AddTaskBottomSheet.show(
       context,
       onSave: (taskData) async {
-        final now = DateTime.now();
-        // Default deadline: Hari ini jam 23:59 (atau sesuaikan dengan inputan user jika ada)
-        // Jika bottom sheet memberikan data tanggal, parse di sini.
-        DateTime deadline = DateTime(now.year, now.month, now.day, 23, 59);
+        DateTime deadline = taskData['deadline'] ?? DateTime.now();
 
-        // Panggil Service Firebase
+        String category = taskData['category'] ?? 'Uncategorized';
+
         await _todoService.addTodo(
-            taskData['name'],
-            'Uncategorized', // Default category
+            taskData['title'],
+            category,
             deadline
         );
 
@@ -294,7 +298,7 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
         decoration: BoxDecoration(
           gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [topColor, bottomColor]),
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 12, offset: const Offset(0, 4))],
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 12, offset: const Offset(0, 4))],
         ),
         child: Padding(
           padding: const EdgeInsets.all(14),
