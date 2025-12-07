@@ -95,12 +95,26 @@ class TaskItem extends StatelessWidget {
       }
     }
 
-    // 3. Format Tanggal
     String dateDay = "--";
     String dateMonth = "--";
+    bool isToday = false; // Flag penanda hari ini
+
     if (deadline != null) {
-      dateDay = DateFormat('dd').format(deadline);
-      dateMonth = DateFormat('MMM').format(deadline);
+      final now = DateTime.now();
+      // Cek apakah Tahun, Bulan, dan Hari sama
+      isToday = deadline.year == now.year &&
+          deadline.month == now.month &&
+          deadline.day == now.day;
+
+      if (isToday) {
+        // Jika hari ini, set text khusus
+        dateMonth = ""; // Kosongkan bulan
+        dateDay = "Today";
+      } else {
+        // Jika bukan hari ini, format biasa
+        dateDay = DateFormat('dd').format(deadline);
+        dateMonth = DateFormat('MMM').format(deadline);
+      }
     }
 
     String displayTime = task['time'] ?? '';
@@ -256,13 +270,21 @@ class TaskItem extends StatelessWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(
-                        dateMonth,
-                        style: const TextStyle(fontSize: 9, color: Colors.white, fontWeight: FontWeight.w500),
-                      ),
+                      // Hanya tampilkan Bulan jika BUKAN hari ini
+                      if (!isToday)
+                        Text(
+                          dateMonth,
+                          style: const TextStyle(fontSize: 9, color: Colors.white, fontWeight: FontWeight.w500),
+                        ),
                       Text(
                         dateDay,
-                        style: const TextStyle(fontSize: 14, color: Colors.white, fontWeight: FontWeight.bold, height: 1.0),
+                        style: TextStyle(
+                          // Jika "Today", kecilkan font sedikit agar muat
+                            fontSize: isToday ? 11 : 14,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            height: 1.0
+                        ),
                       ),
                     ],
                   ),

@@ -265,15 +265,13 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
     AddTaskBottomSheet.show(
       context,
       onSave: (taskData) async {
-        final now = DateTime.now();
-        // Default deadline: Hari ini jam 23:59 (atau sesuaikan dengan inputan user jika ada)
-        // Jika bottom sheet memberikan data tanggal, parse di sini.
-        DateTime deadline = DateTime(now.year, now.month, now.day, 23, 59);
+        DateTime deadline = taskData['deadline'] ?? DateTime.now();
 
-        // Panggil Service Firebase
+        String category = taskData['category'] ?? 'Uncategorized';
+
         await _todoService.addTodo(
-            taskData['name'],
-            'Uncategorized', // Default category
+            taskData['title'],
+            category,
             deadline
         );
 

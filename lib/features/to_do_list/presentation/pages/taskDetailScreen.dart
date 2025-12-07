@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/widgets/dialog/alert_dialog.dart';
+import 'package:intl/intl.dart';
 
 class TaskDetailScreen extends StatefulWidget {
   final Map<String, dynamic> task; // Data awal (bisa usang)
@@ -124,6 +125,31 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+
+    DateTime? deadline;
+    if (widget.task['deadline'] is DateTime) {
+      deadline = widget.task['deadline'];
+    } else if (widget.task['deadline'] is Timestamp) {
+      deadline = (widget.task['deadline'] as Timestamp).toDate();
+    }
+
+    // ✅ 2. FORMAT TANGGAL UNTUK TAMPILAN
+    String dateText = "No Deadline";
+    if (deadline != null) {
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final checkDate = DateTime(deadline.year, deadline.month, deadline.day);
+
+      if (checkDate == today) {
+        dateText = "Today";
+      } else if (checkDate == today.add(const Duration(days: 1))) {
+        dateText = "Tomorrow";
+      } else {
+        // Format contoh: 12 Oct 2025
+        dateText = DateFormat('d MMM yyyy').format(deadline);
+      }
+    }
+
     return PopScope(
       canPop: true,
       onPopInvoked: (didPop) {
@@ -233,7 +259,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        'Today', // Bisa disesuaikan logic tanggalnya jika perlu
+                        dateText,
                         style: GoogleFonts.poppins(
                           color: Colors.white,
                           fontWeight: FontWeight.w500,

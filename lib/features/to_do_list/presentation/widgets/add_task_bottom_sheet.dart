@@ -50,6 +50,14 @@ class _AddTaskBottomSheetState extends State<AddTaskBottomSheet> {
   String _selectedYear = 'Year';
   String? _selectedCategory;
 
+  int _getMonthNumber(String monthName) {
+    const months = {
+      'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
+      'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12
+    };
+    return months[monthName] ?? 1; // Default Januari jika error
+  }
+
   // ✅ DATA SEMENTARA (Belum di-save ke Firebase)
   Map<String, dynamic>? _tempNewCategory;
 
@@ -89,15 +97,31 @@ class _AddTaskBottomSheetState extends State<AddTaskBottomSheet> {
       );
     }
 
+    // ✅ LOGIC MEMBUAT DATETIME
+    DateTime? finalDeadline;
+
+    // Cek apakah user sudah memilih tanggal lengkap
+    if (_selectedDay != 'Day' && _selectedMonth != 'Month' && _selectedYear != 'Year') {
+      try {
+        final int day = int.parse(_selectedDay);
+        final int month = _getMonthNumber(_selectedMonth);
+        final int year = int.parse(_selectedYear);
+
+        // Buat object DateTime
+        finalDeadline = DateTime(year, month, day);
+      } catch (e) {
+        debugPrint("Error parsing date: $e");
+      }
+    }
+
     // 3. Siapkan Data Task
     final taskData = {
-      'name': _nameController.text.trim(),
+      'title': _nameController.text.trim(), // Pastikan key konsisten 'title' bukan 'name' agar sesuai model
       'description': _descriptionController.text.trim(),
-      'day': _selectedDay,
-      'month': _selectedMonth,
-      'year': _selectedYear,
       'category': finalCategory,
+      'deadline': finalDeadline, // ✅ Simpan sebagai DateTime Object
       'completed': false,
+      'createdAt': DateTime.now(), // Tambahan best practice
     };
 
     // 4. Kirim ke Parent (MainTodo/FolderScreen) untuk disimpan
