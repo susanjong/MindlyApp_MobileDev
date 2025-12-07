@@ -68,6 +68,20 @@ class TodoService {
     }
   }
 
+  // 3a. UPDATE: Mengubah Judul Task
+  Future<void> updateTaskTitle(String id, String newTitle) async {
+    await _todosCollection.doc(id).update({
+      'title': newTitle,
+    });
+  }
+
+  // 3b. UPDATE: Mengubah Deskripsi Task
+  Future<void> updateTaskDescription(String id, String newDescription) async {
+    await _todosCollection.doc(id).update({
+      'description': newDescription, // Pastikan field 'description' ada di model/firebase
+    });
+  }
+
   // Helper: Create notification when task is completed
   Future<void> _createCompletionNotification(String taskTitle) async {
     try {
