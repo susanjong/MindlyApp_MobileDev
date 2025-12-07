@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../pages/taskDetailScreen.dart';
 import '../../../../core/widgets/dialog/alert_dialog.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
+import '../../data/services/todo_services.dart';
 
 class TaskItem extends StatelessWidget {
   final Map<String, dynamic> task;
@@ -17,12 +18,24 @@ class TaskItem extends StatelessWidget {
   }) : super(key: key);
 
   void _navigateToDetail(BuildContext context) {
+    final TodoService _todoService = TodoService(); // Instance service
+
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => TaskDetailScreen(
           task: task,
           onDelete: onDelete ?? () {},
+          onTitleChanged: (newTitle) async {
+            if (task['id'] != null) {
+              await _todoService.updateTaskTitle(task['id'], newTitle);
+            }
+          },
+          onDescriptionChanged: (newDescription) async {
+            if (task['id'] != null) {
+              await _todoService.updateTaskDescription(task['id'], newDescription);
+            }
+          },
         ),
       ),
     );
@@ -46,25 +59,16 @@ class TaskItem extends StatelessWidget {
       context: context,
       title: 'Delete completed task',
       message: 'Do you want to delete this completed task?',
-      cancelText: 'Keep', // Tombol kiri -> Keep
-      confirmText: 'Delete', // Tombol kanan -> Delete (Merah)
+      cancelText: 'Keep',
+      confirmText: 'Delete',
       confirmTextColor: const Color(0xFFFF453A),
-
-      // Action KEEP (Cancel)
       onCancel: () {
-        // Task tetap di list, tapi tandai selesai
-        // Kita panggil onToggle di sini agar status checkbox berubah jadi checked
         if (task['completed'] != true) {
           onToggle();
         }
       },
-
-      // Action DELETE (Confirm)
       onConfirm: () {
-        // Hapus task dari list
         if (onDelete != null) onDelete!();
-
-        // Optional: Tampilkan snackbar
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Task deleted")),
         );
@@ -74,17 +78,16 @@ class TaskItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 1. Ambil data deadline
+    // 1. Data Deadline
     final DateTime? deadline = task['deadline'] as DateTime?;
 
-    // 2. Tentukan Status (Overdue / Urgent)
+    // 2. Status Overdue/Urgent
     bool isOverdue = false;
     bool isUrgent = false;
 
     if (deadline != null && task['completed'] != true) {
       final now = DateTime.now();
       final difference = deadline.difference(now);
-
       if (difference.isNegative) {
         isOverdue = true;
       } else if (difference.inHours <= 12) {
@@ -92,16 +95,28 @@ class TaskItem extends StatelessWidget {
       }
     }
 
-    // 3. Format Tanggal untuk Lingkaran Biru (Kanan)
     String dateDay = "--";
     String dateMonth = "--";
+    bool isToday = false; // Flag penanda hari ini
 
     if (deadline != null) {
-      dateDay = DateFormat('dd').format(deadline);
-      dateMonth = DateFormat('MMM').format(deadline);
+      final now = DateTime.now();
+      // Cek apakah Tahun, Bulan, dan Hari sama
+      isToday = deadline.year == now.year &&
+          deadline.month == now.month &&
+          deadline.day == now.day;
+
+      if (isToday) {
+        // Jika hari ini, set text khusus
+        dateMonth = ""; // Kosongkan bulan
+        dateDay = "Today";
+      } else {
+        // Jika bukan hari ini, format biasa
+        dateDay = DateFormat('dd').format(deadline);
+        dateMonth = DateFormat('MMM').format(deadline);
+      }
     }
 
-    // 4. Logic Tampilan Jam
     String displayTime = task['time'] ?? '';
     if (displayTime.isEmpty && deadline != null) {
       displayTime = DateFormat('h:mm a').format(deadline);
@@ -109,67 +124,64 @@ class TaskItem extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      // ✅ Bungkus dengan Slidable
       child: Slidable(
         key: ValueKey(task['id'] ?? task['title']),
 
-        // Action Pane (Kanan)
+        // ✅ ACTION PANE SESUAI GAMBAR
         endActionPane: ActionPane(
           motion: const ScrollMotion(),
-          extentRatio: 0.5,
+          extentRatio: 0.6, // Lebar area geser
           children: [
-            // Tombol Edit (Kuning)
-            SlidableAction(
+            const SizedBox(width: 8), // Spasi antara item dan tombol
+
+            // Tombol EDIT (Kuning)
+            CustomSlidableAction(
               onPressed: (context) => _navigateToDetail(context),
               backgroundColor: const Color(0xFFFFA726),
               foregroundColor: Colors.white,
-              icon: Icons.edit,
-              label: 'Edit',
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(50),
-                bottomLeft: Radius.circular(50),
+              borderRadius: BorderRadius.circular(50), // Bulat Penuh
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Icon(Icons.edit, size: 20),
+                  SizedBox(height: 4),
+                  Text("Edit", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                ],
               ),
             ),
 
-            // Tombol Delete (Merah)
-            SlidableAction(
-              onPressed: (context) {
-                _showDeleteDialog(context);
-              },
-              backgroundColor: const Color(0xFFD32F2F), // Merah
+            const SizedBox(width: 8), // Spasi antar tombol
+
+            // Tombol DELETE (Merah)
+            CustomSlidableAction(
+              onPressed: (context) => _showDeleteDialog(context),
+              backgroundColor: const Color(0xFFD32F2F),
               foregroundColor: Colors.white,
-              icon: Icons.delete,
-              label: 'Delete',
-              borderRadius: const BorderRadius.only(
-                topRight: Radius.circular(50),
-                bottomRight: Radius.circular(50),
+              borderRadius: BorderRadius.circular(50), // Bulat Penuh
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Icon(Icons.delete, size: 20),
+                  SizedBox(height: 4),
+                  Text("Delete", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                ],
               ),
             ),
           ],
         ),
 
-        // Child Utama (Tampilan Task Item)
+        // TAMPILAN ITEM UTAMA
         child: GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => TaskDetailScreen(
-                  task: task,
-                  onDelete: onDelete ?? () {},
-                ),
-              ),
-            );
-          },
+          onTap: () => _navigateToDetail(context),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: const Color(0xFFF4F7FF),
               borderRadius: BorderRadius.circular(50),
-              border: Border.all(color: Colors.grey.shade300, width: 1),
+              border: Border.all(color: Colors.black, width: 1),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
+                  color: Colors.black.withOpacity(0.05),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 )
@@ -192,8 +204,7 @@ class TaskItem extends StatelessWidget {
                     height: 32,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      border: Border.all(
-                          color: const Color(0xFF5784EB), width: 2),
+                      border: Border.all(color: const Color(0xFF5784EB), width: 2),
                       color: task['completed'] == true
                           ? const Color(0xFF5784EB)
                           : Colors.transparent,
@@ -205,7 +216,7 @@ class TaskItem extends StatelessWidget {
                 ),
                 const SizedBox(width: 16),
 
-                // Info
+                // Info Task
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -217,8 +228,7 @@ class TaskItem extends StatelessWidget {
                           const SizedBox(width: 4),
                           Text(
                             displayTime,
-                            style: const TextStyle(
-                                fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w500),
+                            style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w500),
                           ),
                           if (isOverdue) ...[
                             const SizedBox(width: 8),
@@ -260,13 +270,21 @@ class TaskItem extends StatelessWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(
-                        dateMonth,
-                        style: const TextStyle(fontSize: 9, color: Colors.white, fontWeight: FontWeight.w500),
-                      ),
+                      // Hanya tampilkan Bulan jika BUKAN hari ini
+                      if (!isToday)
+                        Text(
+                          dateMonth,
+                          style: const TextStyle(fontSize: 9, color: Colors.white, fontWeight: FontWeight.w500),
+                        ),
                       Text(
                         dateDay,
-                        style: const TextStyle(fontSize: 14, color: Colors.white, fontWeight: FontWeight.bold, height: 1.0),
+                        style: TextStyle(
+                          // Jika "Today", kecilkan font sedikit agar muat
+                            fontSize: isToday ? 11 : 14,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            height: 1.0
+                        ),
                       ),
                     ],
                   ),
