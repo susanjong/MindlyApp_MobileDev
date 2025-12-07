@@ -57,6 +57,7 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
     return {
       'id': todo.id,
       'title': todo.title,
+      'description': todo.description,
       'time': DateFormat('h:mm a').format(todo.deadline),
       'date': DateFormat('dd MMM').format(todo.deadline),
       'deadline': todo.deadline,

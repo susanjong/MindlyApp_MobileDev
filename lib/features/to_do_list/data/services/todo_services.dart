@@ -45,6 +45,18 @@ class TodoService {
     });
   }
 
+  Future<void> updateTaskTitle(String id, String newTitle) async {
+    await _todosCollection.doc(id).update({
+      'title': newTitle,
+    });
+  }
+
+  Future<void> updateTaskDescription(String id, String newDescription) async {
+    await _todosCollection.doc(id).update({
+      'description': newDescription, // Pastikan field 'description' ada di model/firebase
+    });
+  }
+
   // 4. DELETE: Menghapus Task
   Future<void> deleteTodo(String id) async {
     await _todosCollection.doc(id).delete();

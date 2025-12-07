@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../pages/taskDetailScreen.dart';
 import '../../../../core/widgets/dialog/alert_dialog.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
+import '../../data/services/todo_services.dart';
 
 class TaskItem extends StatelessWidget {
   final Map<String, dynamic> task;
@@ -17,12 +18,24 @@ class TaskItem extends StatelessWidget {
   }) : super(key: key);
 
   void _navigateToDetail(BuildContext context) {
+    final TodoService _todoService = TodoService(); // Instance service
+
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => TaskDetailScreen(
           task: task,
           onDelete: onDelete ?? () {},
+          onTitleChanged: (newTitle) async {
+            if (task['id'] != null) {
+              await _todoService.updateTaskTitle(task['id'], newTitle);
+            }
+          },
+          onDescriptionChanged: (newDescription) async {
+            if (task['id'] != null) {
+              await _todoService.updateTaskDescription(task['id'], newDescription);
+            }
+          },
         ),
       ),
     );
@@ -145,17 +158,7 @@ class TaskItem extends StatelessWidget {
 
         // TAMPILAN ITEM UTAMA
         child: GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => TaskDetailScreen(
-                  task: task,
-                  onDelete: onDelete ?? () {},
-                ),
-              ),
-            );
-          },
+          onTap: () => _navigateToDetail(context),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
