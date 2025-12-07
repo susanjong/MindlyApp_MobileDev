@@ -57,7 +57,6 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
   void _deleteSelectedTasks() {
     if (_selectedTaskIds.isEmpty) return;
 
-    // Menggunakan showIOSDialog dari import alert_dialog.dart
     showIOSDialog(
       context: context,
       title: 'Delete Tasks',
@@ -176,13 +175,17 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
                     const SizedBox(height: 20),
 
                     // --- HORIZONTAL CATEGORY LIST ---
+                    // --- HORIZONTAL CATEGORY LIST ---
                     SizedBox(
-                      height: 110,
+                      // 1. TINGKATKAN TINGGI AGAR SHADOW TIDAK TERPOTONG
+                      height: 130, // Sebelumnya 110, tambah jadi 130 atau lebih
                       child: categories.isEmpty
                           ? const Center(child: Text("No categories"))
                           : ListView.builder(
                         scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        // 2. TAMBAHKAN PADDING VERTIKAL
+                        // Agar ada ruang untuk shadow di atas dan bawah
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                         itemCount: categories.length,
                         itemBuilder: (context, index) {
                           final category = categories[index];
@@ -205,7 +208,7 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
                       ),
                     ),
 
-                    const SizedBox(height: 30),
+                    const SizedBox(height: 20),
 
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -293,6 +296,7 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
         child: FloatingActionButton.extended(
           onPressed: _showAddCategoryDialog,
           backgroundColor: const Color(0xFFD732A8),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
           icon: const Icon(Icons.add, color: Colors.white, size: 22),
           label: const Text(
             'Add new category',
@@ -310,6 +314,7 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
   }
 
   // --- WIDGET BUILDERS ---
+
   Widget _buildPopupMenu(List<TodoModel> tasks) {
     return Theme(
       data: Theme.of(context).copyWith(
@@ -373,7 +378,7 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
       child: PopupMenuButton<String>(
         icon: const Icon(Icons.more_horiz, size: 24, color: Colors.black87),
 
-        // ✅ FIX POSITION: Remove default padding/constraints
+        // Hapus padding default
         padding: EdgeInsets.zero,
         constraints: const BoxConstraints(),
 
@@ -404,6 +409,7 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
     );
   }
 
+  // ✅ WIDGET CATEGORY CARD (UPDATED WITH TRANSFORM)
   Widget _buildCategoryCard(CategoryModel category, int taskCount, int completedCount, int gradientIndex, List<TodoModel> tasks) {
     final gradient = availableGradients[gradientIndex % availableGradients.length];
     final List<Map<String, dynamic>> folderTasksMap = tasks.map((t) => _mapModelToTaskItem(t)).toList();
@@ -446,7 +452,6 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            // TOP ROW (Title & Badge) - No changes here
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -474,17 +479,19 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
               ],
             ),
 
-            // BOTTOM ROW (Task Count & Menu)
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              // ✅ FIX: Align centers vertically
-              crossAxisAlignment: CrossAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
                   '$taskCount Tasks',
                   style: const TextStyle(fontSize: 13, color: Colors.black87, fontWeight: FontWeight.w500),
                 ),
-                _buildCategoryPopupMenu(category),
+
+                Transform.translate(
+                  offset: const Offset(0, 13),
+                  child: _buildCategoryPopupMenu(category),
+                ),
               ],
             ),
           ],
@@ -546,7 +553,6 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
   }
 }
 
-// Widget Dialog Add Category
 class _IOSAddCategoryDialogContent extends StatefulWidget {
   const _IOSAddCategoryDialogContent({Key? key}) : super(key: key);
   @override
@@ -556,19 +562,16 @@ class _IOSAddCategoryDialogContent extends StatefulWidget {
 class _IOSAddCategoryDialogContentState extends State<_IOSAddCategoryDialogContent> {
   final TextEditingController _nameController = TextEditingController();
   final CategoryService _categoryService = CategoryService();
-
   int _selectedGradientIndex = 0;
   final List<List<Color>> availableGradients = [
-    [const Color(0xFFBEE973), const Color(0xFFD9D9D9)], // Hijau
-    [const Color(0xFF93B7D9), const Color(0xFFD9D9D9)], // Biru
-    [const Color(0xFFE2A8D3), const Color(0xFFFFF4FD)], // Pink
+    [const Color(0xFFBEE973), const Color(0xFFD9D9D9)],
+    [const Color(0xFF93B7D9), const Color(0xFFD9D9D9)],
+    [const Color(0xFFE2A8D3), const Color(0xFFFFF4FD)],
   ];
 
   @override
   Widget build(BuildContext context) {
-    const dividerColor = Color(0xFFE0E0E0);
     const blueColor = Color(0xFF007AFF);
-
     return Dialog(
         backgroundColor: Colors.transparent,
         insetPadding: const EdgeInsets.symmetric(horizontal: 40),
@@ -577,45 +580,29 @@ class _IOSAddCategoryDialogContentState extends State<_IOSAddCategoryDialogConte
             child: Container(
               color: Colors.white,
               child: Column(mainAxisSize: MainAxisSize.min, children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
-                  child: Column(children: [
-                    Text("Add New Category", textAlign: TextAlign.center, style: GoogleFonts.poppins(color: Colors.black, fontSize: 16, fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 16),
-                    Container(
-                      height: 40,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      child: TextField(
-                        controller: _nameController,
-                        textAlignVertical: TextAlignVertical.center,
-                        style: GoogleFonts.poppins(fontSize: 13),
-                        decoration: InputDecoration(
-                          hintText: "Category Name",
-                          hintStyle: GoogleFonts.poppins(fontSize: 13, color: Colors.grey),
-                          contentPadding: const EdgeInsets.only(bottom: 12, left: 5),
-                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: blueColor, width: 1)),
-                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: blueColor, width: 1.5)),
-                        ),
+                Padding(padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
+                    child: Column(children: [
+                      Text("Add New Category", style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 16),
+                      Container(
+                          height: 40, padding: const EdgeInsets.symmetric(horizontal: 8),
+                          child: TextField(
+                              controller: _nameController,
+                              style: GoogleFonts.poppins(fontSize: 13),
+                              decoration: InputDecoration(hintText: "Category Name", contentPadding: const EdgeInsets.only(bottom: 12, left: 5), enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: blueColor)), focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: blueColor, width: 1.5)))
+                          )
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(mainAxisAlignment: MainAxisAlignment.center, children: List.generate(availableGradients.length, (index) {
-                      final isSelected = _selectedGradientIndex == index;
-                      return GestureDetector(
-                        onTap: ()=>setState(()=>_selectedGradientIndex=index),
-                        child: Container(
-                          width: 32, height: 32, margin: const EdgeInsets.symmetric(horizontal: 6),
-                          decoration: BoxDecoration(gradient: LinearGradient(colors: availableGradients[index], begin: Alignment.topLeft, end: Alignment.bottomRight), shape: BoxShape.circle, border: Border.all(color: isSelected ? Colors.black87 : Colors.black12, width: isSelected ? 2 : 0.5)),
-                          child: isSelected ? const Icon(Icons.check, size: 18, color: Colors.black54) : null,
-                        ),
-                      );
-                    })),
-                  ]),
+                      const SizedBox(height: 16),
+                      Row(mainAxisAlignment: MainAxisAlignment.center, children: List.generate(3, (index) => GestureDetector(
+                          onTap: ()=>setState(()=>_selectedGradientIndex=index),
+                          child: Container(width: 32, height: 32, margin: const EdgeInsets.symmetric(horizontal: 6), decoration: BoxDecoration(gradient: LinearGradient(colors: availableGradients[index], begin: Alignment.topLeft, end: Alignment.bottomRight), shape: BoxShape.circle, border: Border.all(color: _selectedGradientIndex==index ? Colors.black87 : Colors.black12, width: _selectedGradientIndex==index ? 2 : 0.5)), child: _selectedGradientIndex==index ? const Icon(Icons.check, size: 18, color: Colors.black54) : null)
+                      ))),
+                    ])
                 ),
-                Container(height: 1, color: dividerColor),
+                Container(height: 1, color: const Color(0xFFE0E0E0)),
                 SizedBox(height: 45, child: Row(children: [
                   Expanded(child: InkWell(onTap: ()=>Navigator.pop(context), child: Center(child: Text("Cancel", style: GoogleFonts.poppins(color: blueColor, fontSize: 15))))),
-                  Container(width: 1, height: double.infinity, color: dividerColor),
+                  Container(width: 1, color: const Color(0xFFE0E0E0)),
                   Expanded(child: InkWell(onTap: () async {
                     if (_nameController.text.trim().isNotEmpty) {
                       await _categoryService.addCategory(_nameController.text.trim(), _selectedGradientIndex);
