@@ -4,6 +4,7 @@ import '../pages/taskDetailScreen.dart';
 import '../../../../core/widgets/dialog/alert_dialog.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import '../../data/services/todo_services.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class TaskItem extends StatelessWidget {
   final Map<String, dynamic> task;
@@ -78,8 +79,9 @@ class TaskItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 1. Data Deadline
-    final DateTime? deadline = task['deadline'] as DateTime?;
+    final DateTime? deadline = task['deadline'] is Timestamp
+        ? (task['deadline'] as Timestamp).toDate()
+        : task['deadline'] as DateTime?;
 
     // 2. Status Overdue/Urgent
     bool isOverdue = false;
@@ -117,9 +119,9 @@ class TaskItem extends StatelessWidget {
       }
     }
 
-    String displayTime = task['time'] ?? '';
-    if (displayTime.isEmpty && deadline != null) {
-      displayTime = DateFormat('h:mm a').format(deadline);
+    String displayTime = "--:--";
+    if (deadline != null) {
+      displayTime = DateFormat('HH:mm').format(deadline); // Format 24 jam (misal 14:30)
     }
 
     return Container(

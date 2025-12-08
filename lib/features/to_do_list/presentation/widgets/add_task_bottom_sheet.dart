@@ -50,6 +50,9 @@ class _AddTaskBottomSheetState extends State<AddTaskBottomSheet> {
   String _selectedYear = 'Year';
   String? _selectedCategory;
 
+  String _selectedHour = '23';
+  String _selectedMinute = '59';
+
   int _getMonthNumber(String monthName) {
     const months = {
       'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
@@ -96,40 +99,40 @@ class _AddTaskBottomSheetState extends State<AddTaskBottomSheet> {
           _tempNewCategory!['gradientIndex']
       );
     }
-
-    // ✅ LOGIC MEMBUAT DATETIME
     DateTime? finalDeadline;
+    final now = DateTime.now();
 
-    // Cek apakah user sudah memilih tanggal lengkap
-    if (_selectedDay != 'Day' && _selectedMonth != 'Month' && _selectedYear != 'Year') {
-      try {
-        final int day = int.parse(_selectedDay);
-        final int month = _getMonthNumber(_selectedMonth);
-        final int year = int.parse(_selectedYear);
+    try {
+      // Default ke hari ini jika tidak dipilih
+      int day = _selectedDay != 'Day' ? int.parse(_selectedDay) : now.day;
+      int month = _selectedMonth != 'Month' ? _getMonthNumber(_selectedMonth) : now.month;
+      int year = _selectedYear != 'Year' ? int.parse(_selectedYear) : now.year;
 
-        // Buat object DateTime
-        finalDeadline = DateTime(year, month, day);
-      } catch (e) {
-        debugPrint("Error parsing date: $e");
-      }
+      int hour = int.parse(_selectedHour);
+      int minute = int.parse(_selectedMinute);
+
+      // Gabungkan menjadi satu objek DateTime
+      finalDeadline = DateTime(year, month, day, hour, minute);
+
+    } catch (e) {
+      debugPrint("Error parsing date: $e");
+      // Fallback ke sekarang + 1 jam jika error
+      finalDeadline = DateTime.now().add(const Duration(hours: 1));
     }
 
-    // 3. Siapkan Data Task
     final taskData = {
-      'title': _nameController.text.trim(), // Pastikan key konsisten 'title' bukan 'name' agar sesuai model
+      'title': _nameController.text.trim(),
       'description': _descriptionController.text.trim(),
       'category': finalCategory,
-      'deadline': finalDeadline, // ✅ Simpan sebagai DateTime Object
+      'deadline': finalDeadline, // DateTime lengkap dengan jam
       'completed': false,
-      'createdAt': DateTime.now(), // Tambahan best practice
+      'createdAt': DateTime.now(),
     };
 
-    // 4. Kirim ke Parent (MainTodo/FolderScreen) untuk disimpan
     widget.onSave?.call(taskData);
     if (mounted) Navigator.pop(context);
   }
 
-  // ✅ Dialog hanya mengembalikan data, TIDAK save ke firebase
   void _showAddCategoryDialog() async {
     final result = await showDialog(
       context: context,
@@ -152,7 +155,7 @@ class _AddTaskBottomSheetState extends State<AddTaskBottomSheet> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: MediaQuery.of(context).size.height * 0.75,
+      height: MediaQuery.of(context).size.height * 0.85,
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.only(
@@ -211,7 +214,11 @@ class _AddTaskBottomSheetState extends State<AddTaskBottomSheet> {
                   _buildTextField(controller: _descriptionController, hintText: 'Enter a detail of the task', maxLines: 3),
 
                   const SizedBox(height: 24),
-                  _buildLabel('DEADLINE'),
+
+                  // ==========================================
+                  // 1. BAGIAN DEADLINE DATE (Sekarang diatas)
+                  // ==========================================
+                  _buildLabel('DEADLINE DATE'),
                   const SizedBox(height: 8),
                   Row(
                     children: [
@@ -236,6 +243,36 @@ class _AddTaskBottomSheetState extends State<AddTaskBottomSheet> {
                           value: _selectedYear,
                           items: ['Year', '2025', '2026', '2027'],
                           onChanged: (val) => setState(() => _selectedYear = val!),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // ==========================================
+                  // 2. BAGIAN TIME (Sekarang dibawahnya)
+                  // ==========================================
+                  _buildLabel('TIME'),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildDropdown(
+                          value: _selectedHour,
+                          items: List.generate(24, (i) => i.toString().padLeft(2, '0')),
+                          onChanged: (val) => setState(() => _selectedHour = val!),
+                        ),
+                      ),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        child: Text(":", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                      ),
+                      Expanded(
+                        child: _buildDropdown(
+                          value: _selectedMinute,
+                          items: List.generate(60, (i) => i.toString().padLeft(2, '0')),
+                          onChanged: (val) => setState(() => _selectedMinute = val!),
                         ),
                       ),
                     ],
@@ -271,9 +308,7 @@ class _AddTaskBottomSheetState extends State<AddTaskBottomSheet> {
                         List<String> categoryNames = ['Uncategorized'];
                         categoryNames.addAll(categories.map((c) => c.name).toList());
 
-                        // ✅ Tambahkan Kategori Sementara (Jika ada)
                         if (_tempNewCategory != null) {
-                          // Cek biar gak duplikat visual
                           if (!categoryNames.contains(_tempNewCategory!['name'])) {
                             categoryNames.add(_tempNewCategory!['name']);
                           }
@@ -282,7 +317,6 @@ class _AddTaskBottomSheetState extends State<AddTaskBottomSheet> {
                         const String addNewOption = '➕ Add New Category';
                         categoryNames.add(addNewOption);
 
-                        // Fallback selection
                         if (_selectedCategory == null || (!categoryNames.contains(_selectedCategory))) {
                           if (widget.initialCategory != null && categoryNames.contains(widget.initialCategory)) {
                             _selectedCategory = widget.initialCategory;
@@ -304,6 +338,9 @@ class _AddTaskBottomSheetState extends State<AddTaskBottomSheet> {
                         );
                       },
                     ),
+
+                  // Tambahan space di bawah agar tidak terlalu mepet saat scroll
+                  const SizedBox(height: 40),
                 ],
               ),
             ),
