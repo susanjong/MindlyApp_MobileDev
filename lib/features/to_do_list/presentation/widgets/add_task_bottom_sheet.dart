@@ -50,18 +50,20 @@ class _AddTaskBottomSheetState extends State<AddTaskBottomSheet> {
   String _selectedYear = 'Year';
   String? _selectedCategory;
 
-  String _selectedHour = '23';
-  String _selectedMinute = '59';
+  String _selectedHour = '09';
+  String _selectedMinute = '00';
+
+  bool _isFormValid = false;
 
   int _getMonthNumber(String monthName) {
     const months = {
       'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
       'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12
     };
-    return months[monthName] ?? 1; // Default Januari jika error
+    return months[monthName] ?? 1;
   }
 
-  // ✅ DATA SEMENTARA (Belum di-save ke Firebase)
+  // ✅ DATA SEMENTARA
   Map<String, dynamic>? _tempNewCategory;
 
   @override
@@ -70,18 +72,36 @@ class _AddTaskBottomSheetState extends State<AddTaskBottomSheet> {
     if (widget.initialCategory != null) {
       _selectedCategory = widget.initialCategory;
     }
+
+    // Tambahkan listener untuk validasi realtime saat mengetik
+    _nameController.addListener(_validateForm);
   }
 
   @override
   void dispose() {
+    _nameController.removeListener(_validateForm);
     _nameController.dispose();
     _descriptionController.dispose();
     super.dispose();
   }
 
+  void _validateForm() {
+    final isNameFilled = _nameController.text.trim().isNotEmpty;
+    final isDateFilled = _selectedDay != 'Day' && _selectedMonth != 'Month' && _selectedYear != 'Year';
+    final isCategoryFilled = _selectedCategory != null;
+
+    final isValid = isNameFilled && isDateFilled && isCategoryFilled;
+
+    if (_isFormValid != isValid) {
+      setState(() {
+        _isFormValid = isValid;
+      });
+    }
+  }
+
   // ✅ LOGIC SAVE UTAMA
   void _handleSave() async {
-    if (_nameController.text.trim().isEmpty) return;
+    if (!_isFormValid) return; // Mencegah save jika tidak valid
 
     // 1. Tentukan Kategori Final
     String finalCategory;
@@ -92,31 +112,25 @@ class _AddTaskBottomSheetState extends State<AddTaskBottomSheet> {
     }
 
     // 2. CEK: Apakah kategori yang dipilih adalah kategori BARU (sementara)?
-    // Jika ya, kita harus simpan dulu kategori ini ke Firebase sekarang.
     if (_tempNewCategory != null && finalCategory == _tempNewCategory!['name']) {
       await _categoryService.addCategory(
           _tempNewCategory!['name'],
           _tempNewCategory!['gradientIndex']
       );
     }
+
     DateTime? finalDeadline;
-    final now = DateTime.now();
 
     try {
-      // Default ke hari ini jika tidak dipilih
-      int day = _selectedDay != 'Day' ? int.parse(_selectedDay) : now.day;
-      int month = _selectedMonth != 'Month' ? _getMonthNumber(_selectedMonth) : now.month;
-      int year = _selectedYear != 'Year' ? int.parse(_selectedYear) : now.year;
+      final int day = int.parse(_selectedDay);
+      final int month = _getMonthNumber(_selectedMonth);
+      final int year = int.parse(_selectedYear);
+      final int hour = int.parse(_selectedHour);
+      final int minute = int.parse(_selectedMinute);
 
-      int hour = int.parse(_selectedHour);
-      int minute = int.parse(_selectedMinute);
-
-      // Gabungkan menjadi satu objek DateTime
       finalDeadline = DateTime(year, month, day, hour, minute);
-
     } catch (e) {
       debugPrint("Error parsing date: $e");
-      // Fallback ke sekarang + 1 jam jika error
       finalDeadline = DateTime.now().add(const Duration(hours: 1));
     }
 
@@ -124,7 +138,7 @@ class _AddTaskBottomSheetState extends State<AddTaskBottomSheet> {
       'title': _nameController.text.trim(),
       'description': _descriptionController.text.trim(),
       'category': finalCategory,
-      'deadline': finalDeadline, // DateTime lengkap dengan jam
+      'deadline': finalDeadline,
       'completed': false,
       'createdAt': DateTime.now(),
     };
@@ -144,10 +158,9 @@ class _AddTaskBottomSheetState extends State<AddTaskBottomSheet> {
 
     if (result != null && result is Map<String, dynamic>) {
       setState(() {
-        // Simpan di memori lokal dulu
         _tempNewCategory = result;
-        // Langsung pilih kategori baru tersebut
         _selectedCategory = result['name'];
+        _validateForm(); // Validasi ulang setelah pilih kategori baru
       });
     }
   }
@@ -190,8 +203,15 @@ class _AddTaskBottomSheetState extends State<AddTaskBottomSheet> {
                   child: const Text('Cancel', style: TextStyle(color: Colors.black54, fontSize: 16)),
                 ),
                 TextButton(
-                  onPressed: _handleSave,
-                  child: const Text('Save', style: TextStyle(color: Color(0xFF5784EB), fontSize: 16, fontWeight: FontWeight.w600)),
+                  onPressed: _isFormValid ? _handleSave : null, // Disable jika form tidak valid
+                  child: Text(
+                    'Save',
+                    style: TextStyle(
+                        color: _isFormValid ? const Color(0xFF5784EB) : Colors.grey, // Warna abu jika disable
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -216,7 +236,7 @@ class _AddTaskBottomSheetState extends State<AddTaskBottomSheet> {
                   const SizedBox(height: 24),
 
                   // ==========================================
-                  // 1. BAGIAN DEADLINE DATE (Sekarang diatas)
+                  // 1. BAGIAN DEADLINE DATE (Wajib)
                   // ==========================================
                   _buildLabel('DEADLINE DATE'),
                   const SizedBox(height: 8),
@@ -226,7 +246,10 @@ class _AddTaskBottomSheetState extends State<AddTaskBottomSheet> {
                         child: _buildDropdown(
                           value: _selectedDay,
                           items: ['Day', ...List.generate(31, (i) => '${i + 1}')],
-                          onChanged: (val) => setState(() => _selectedDay = val!),
+                          onChanged: (val) {
+                            setState(() => _selectedDay = val!);
+                            _validateForm(); // Validasi ulang
+                          },
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -234,7 +257,10 @@ class _AddTaskBottomSheetState extends State<AddTaskBottomSheet> {
                         child: _buildDropdown(
                           value: _selectedMonth,
                           items: ['Month', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-                          onChanged: (val) => setState(() => _selectedMonth = val!),
+                          onChanged: (val) {
+                            setState(() => _selectedMonth = val!);
+                            _validateForm(); // Validasi ulang
+                          },
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -242,7 +268,10 @@ class _AddTaskBottomSheetState extends State<AddTaskBottomSheet> {
                         child: _buildDropdown(
                           value: _selectedYear,
                           items: ['Year', '2025', '2026', '2027'],
-                          onChanged: (val) => setState(() => _selectedYear = val!),
+                          onChanged: (val) {
+                            setState(() => _selectedYear = val!);
+                            _validateForm(); // Validasi ulang
+                          },
                         ),
                       ),
                     ],
@@ -251,7 +280,7 @@ class _AddTaskBottomSheetState extends State<AddTaskBottomSheet> {
                   const SizedBox(height: 24),
 
                   // ==========================================
-                  // 2. BAGIAN TIME (Sekarang dibawahnya)
+                  // 2. BAGIAN TIME (Wajib karena default sudah terisi)
                   // ==========================================
                   _buildLabel('TIME'),
                   const SizedBox(height: 8),
@@ -317,12 +346,15 @@ class _AddTaskBottomSheetState extends State<AddTaskBottomSheet> {
                         const String addNewOption = '➕ Add New Category';
                         categoryNames.add(addNewOption);
 
+                        // Fallback selection & Auto validation trigger
                         if (_selectedCategory == null || (!categoryNames.contains(_selectedCategory))) {
                           if (widget.initialCategory != null && categoryNames.contains(widget.initialCategory)) {
                             _selectedCategory = widget.initialCategory;
                           } else {
                             _selectedCategory = categoryNames.first;
                           }
+                          // Trigger validation karena kategori mungkin baru terisi otomatis
+                          WidgetsBinding.instance.addPostFrameCallback((_) => _validateForm());
                         }
 
                         return _buildDropdown(
@@ -333,13 +365,13 @@ class _AddTaskBottomSheetState extends State<AddTaskBottomSheet> {
                               _showAddCategoryDialog();
                             } else {
                               setState(() => _selectedCategory = val);
+                              _validateForm(); // Validasi ulang
                             }
                           },
                         );
                       },
                     ),
 
-                  // Tambahan space di bawah agar tidak terlalu mepet saat scroll
                   const SizedBox(height: 40),
                 ],
               ),
