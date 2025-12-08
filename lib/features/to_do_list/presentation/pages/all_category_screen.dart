@@ -164,6 +164,8 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
               .where((t) => t.category == 'Uncategorized' || t.category.isEmpty)
               .toList();
 
+          uncategorizedList.sort((a, b) => b.deadline.compareTo(a.deadline));
+
           return StreamBuilder<List<CategoryModel>>(
             stream: _categoryService.getCategoriesStream(),
             builder: (context, snapshotCategories) {
