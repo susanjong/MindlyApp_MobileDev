@@ -1,21 +1,29 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
+// ✅ Import Services & Models (Pastikan path sesuai)
 import '../../data/models/todo_model.dart';
 import '../../data/services/todo_services.dart';
+
+// Import Core & Config
 import '../../../../core/services/auth_service.dart';
 import '../../../../config/routes/routes.dart';
 import '../../../../core/widgets/navigation/custom_top_app_bar.dart';
 import '../../../../core/widgets/navigation/custom_navbar_widget.dart';
+
+// Import Widgets
 import '../widgets/task_item.dart';
 import '../widgets/add_task_bottom_sheet.dart';
+
+// Import Pages
 import 'all_category_screen.dart';
 import 'overdue_screen.dart';
-import 'package:notesapp/features/to_do_list/presentation/pages/urgent_screen.dart';
+import 'urgent_screen.dart';
 
 class MainTodoScreen extends StatefulWidget {
   final String? username;
-  const MainTodoScreen({super.key, this.username});
+  const MainTodoScreen({Key? key, this.username}) : super(key: key);
 
   @override
   State<MainTodoScreen> createState() => _MainTodoScreenState();
@@ -25,6 +33,7 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
   int selectedDay = DateTime.now().day;
   String _username = 'User';
 
+  // ✅ Panggil Service
   final TodoService _todoService = TodoService();
 
   @override
@@ -44,7 +53,7 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
     if (index != 2) Navigator.pushReplacementNamed(context, routes[index]);
   }
 
-  // ubah Model ke Map agar cocok dengan TaskItem widget
+  // ✅ Helper: Ubah Model ke Map agar cocok dengan TaskItem widget
   Map<String, dynamic> _mapModelToTaskItem(TodoModel todo) {
     return {
       'id': todo.id,
@@ -65,7 +74,7 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
         onProfileTap: () => Navigator.pushNamed(context, AppRoutes.profile),
         onNotificationTap: () {},
       ),
-      // Gunakan StreamBuilder untuk Realtime Update
+      // ✅ Gunakan StreamBuilder untuk Realtime Update
       body: StreamBuilder<List<TodoModel>>(
         stream: _todoService.getTodosStream(),
         builder: (context, snapshot) {
@@ -76,7 +85,7 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
 
           final allTodos = snapshot.data ?? [];
 
-          //  2. Logic Hitung Statistik (Urgent, Overdue, All)
+          // ✅ 2. Logic Hitung Statistik (Urgent, Overdue, All)
           final now = DateTime.now();
           final incompleteTodos = allTodos.where((t) => !t.isCompleted).toList();
 
@@ -150,7 +159,7 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
                 ),
               ),
 
-              // Task List Realtime (Firebase)
+              // ✅ Task List Realtime (Firebase)
               Expanded(
                 child: displayList.isEmpty
                     ? const Center(child: Text("No tasks yet!"))
@@ -184,6 +193,7 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
   }
 
   // --- Widget Helpers ---
+
   Widget _buildGreetingStream() {
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
       stream: AuthService.getUserDataStream(),
@@ -230,7 +240,7 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
     );
   }
 
-  //  Logic Simpan ke Firebase saat Add Task
+  // ✅ Logic Simpan ke Firebase saat Add Task
   void _showAddTaskDialog() {
     AddTaskBottomSheet.show(
       context,
@@ -259,22 +269,9 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
   Widget _buildStatusCard(String count, String label, Color topColor, Color bottomColor) {
     return GestureDetector(
       onTap: () {
-        if (label == 'All') {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const AllCategoryScreen()),
-          );
-        } else if (label == 'Urgent') {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const UrgentTaskScreen()),
-          );
-        } else if (label == 'Overdue') {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const OverdueTaskScreen()),
-          );
-        }
+        if (label == 'All') Navigator.push(context, MaterialPageRoute(builder: (context) => const AllCategoryScreen()));
+        else if (label == 'Urgent') Navigator.push(context, MaterialPageRoute(builder: (context) => const UrgentTaskScreen()));
+        else if (label == 'Overdue') Navigator.push(context, MaterialPageRoute(builder: (context) => const OverdueTaskScreen()));
       },
       child: Container(
         height: 120,
