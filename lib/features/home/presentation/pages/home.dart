@@ -1,12 +1,16 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../../core/widgets/navigation/custom_navbar_widget.dart';
 import '../../../../core/widgets/navigation/custom_top_app_bar.dart';
-import '../../../calendar/data/model/event_model.dart';
 import '../../../../config/routes/routes.dart';
+import 'package:notesapp/features/calendar/data/model/event_model.dart';
+import '../../../calendar/data/services/event_service.dart';
+import '../../../calendar/data/services/category_service.dart';
 
 class TaskItem {
   String title;
@@ -34,6 +38,12 @@ class _HomePageState extends State<HomePage> {
   final ScrollController _scrollController = ScrollController();
   String _userName = 'User';
 
+  // services for calendar
+  final EventService _eventService = EventService();
+  final CategoryService _categoryService = CategoryService();
+  Map<String, Category> _categories = {};
+  String? _currentUserId;
+
   final List<TaskItem> _tasks = [
     TaskItem(
       title: 'Meeting with marketing team',
@@ -54,6 +64,7 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _scrollController.addListener(_onScroll);
     _loadUserData();
+    _initCalendarData();
   }
 
   @override
@@ -61,6 +72,22 @@ class _HomePageState extends State<HomePage> {
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
+  }
+
+  // Inisialisasi data user dan kategori untuk event
+  void _initCalendarData() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      _currentUserId = user.uid;
+      // Load categories untuk mapping warna
+      _categoryService.getCategories(_currentUserId!).listen((categories) {
+        if (mounted) {
+          setState(() {
+            _categories = {for (var cat in categories) cat.id!: cat};
+          });
+        }
+      });
+    }
   }
 
   Future<void> _loadUserData() async {
@@ -135,32 +162,8 @@ class _HomePageState extends State<HomePage> {
   List<TaskItem> get _pendingTasks => _tasks.where((task) => !task.isCompleted).toList();
   List<TaskItem> get _completedTasks => _tasks.where((task) => task.isCompleted).toList();
 
-  List<EventModel> _getEvents() {
-    return [
-      EventModel(
-        title: 'Team meeting preparation',
-        time: 'Today, 3:00 PM',
-        location: 'PT XYZ (Office)',
-        color: const Color(0xFFFF6B6B),
-      ),
-      EventModel(
-        title: 'Update Website Client',
-        time: 'Today, 2:00 PM',
-        location: 'Remote',
-        color: const Color(0xFFFFA726),
-      ),
-      EventModel(
-        title: 'Review Design Mockup',
-        time: 'Today, 4:00 PM',
-        location: 'Coffee Shop',
-        color: const Color(0xFF66BB6A),
-      ),
-    ];
-  }
-
   String _getGreeting() {
     final hour = DateTime.now().hour;
-
     if (hour >= 6 && hour < 11) {
       return 'Good Morning';
     } else if (hour >= 11 && hour < 15) {
@@ -180,9 +183,17 @@ class _HomePageState extends State<HomePage> {
     Navigator.pushNamed(context, AppRoutes.calendar);
   }
 
+  // Helper untuk convert Hex string ke Color object
+  Color _getColorFromHex(String hexColor) {
+    hexColor = hexColor.replaceAll('#', '');
+    if (hexColor.length == 6) {
+      hexColor = 'FF$hexColor';
+    }
+    return Color(int.parse(hexColor, radix: 16));
+  }
+
   @override
   Widget build(BuildContext context) {
-    final events = _getEvents();
     final completedTasksCount = _completedTasks.length;
     final totalTasks = _tasks.length;
     final progress = totalTasks > 0 ? completedTasksCount / totalTasks : 0.0;
@@ -202,7 +213,7 @@ class _HomePageState extends State<HomePage> {
               },
             ),
 
-            // content with proper padding
+            // Content
             Expanded(
               child: RefreshIndicator(
                 onRefresh: _loadUserData,
@@ -216,15 +227,15 @@ class _HomePageState extends State<HomePage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // greeting section with StreamBuilder for real-time updates
+                        // Greeting Section
                         _buildGreetingSectionWithStream(),
                         const SizedBox(height: 24),
 
-                        // daily progress card
+                        // Daily Progress Card
                         _buildDailyProgressCard(progress, completedTasksCount, totalTasks),
                         const SizedBox(height: 24),
 
-                        // Needs Attention Section
+                        // Needs Attention Section (Static Tasks)
                         if (_pendingTasks.isNotEmpty) ...[
                           _buildSectionHeader(
                             icon: Icons.error_outline,
@@ -237,7 +248,7 @@ class _HomePageState extends State<HomePage> {
                           const SizedBox(height: 24),
                         ],
 
-                        // completed Section
+                        // Completed Section (Static Tasks)
                         if (_completedTasks.isNotEmpty) ...[
                           _buildCompletedSectionHeader(),
                           const SizedBox(height: 12),
@@ -246,7 +257,7 @@ class _HomePageState extends State<HomePage> {
                           const SizedBox(height: 24),
                         ],
 
-                        // Today's Event Section
+                        // --- TODAY'S EVENT SECTION (UPDATED WITH FIRESTORE STREAM) ---
                         _buildSectionHeaderWithAction(
                           icon: Icons.calendar_today,
                           iconColor: const Color(0xFF0D5F5F),
@@ -255,7 +266,10 @@ class _HomePageState extends State<HomePage> {
                           onActionTap: _navigateToEventsPage,
                         ),
                         const SizedBox(height: 12),
-                        for (var event in events) _buildEventCard(event),
+
+                        // StreamBuilder untuk menampilkan Event Real-time
+                        _buildEventsStream(),
+
                         const SizedBox(height: 24),
 
                         // Today's Notes Section
@@ -280,6 +294,145 @@ class _HomePageState extends State<HomePage> {
       bottomNavigationBar: _buildBottomNavigationBar(),
     );
   }
+
+  // --- WIDGETS ---
+
+  Widget _buildEventsStream() {
+    if (_currentUserId == null) {
+      return const Center(child: Text("Please sign in to view events"));
+    }
+
+    return StreamBuilder<List<Event>>(
+      stream: _eventService.getEventsForDate(_currentUserId!, DateTime.now()),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+        }
+
+        if (snapshot.hasError) {
+          return Text('Error loading events', style: GoogleFonts.poppins(color: Colors.red));
+        }
+
+        final events = snapshot.data ?? [];
+
+        if (events.isEmpty) {
+          return Container(
+            padding: const EdgeInsets.all(16),
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF5F5F5),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              "No events scheduled for today",
+              style: GoogleFonts.poppins(color: Colors.grey),
+              textAlign: TextAlign.center,
+            ),
+          );
+        }
+
+        // Batasi tampilan hanya 3 event teratas di Home
+        final displayEvents = events.take(3).toList();
+
+        return Column(
+          children: displayEvents.map((event) {
+            final category = _categories[event.categoryId];
+            return _buildRealEventCard(event, category);
+          }).toList(),
+        );
+      },
+    );
+  }
+
+  // Widget Event Card yang disesuaikan dengan Model Firestore & Style CalendarMainPage
+  Widget _buildRealEventCard(Event event, Category? category) {
+    final categoryColor = category != null
+        ? _getColorFromHex(category.color)
+        : const Color(0xFF5683EB); // Default color
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE0E0E0)),
+      ),
+      child: Row(
+        children: [
+          // Warna Indikator Vertikal (Style Home Lama) atau Box (Style Calendar)
+          // Disini kita gabungkan stylenya: Tetap pakai strip vertikal agar konsisten dengan desain Home,
+          // tapi warnanya dinamis dari kategori.
+          Container(
+            width: 8,
+            height: 40,
+            decoration: BoxDecoration(
+              color: categoryColor,
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  event.title,
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF1A1A1A),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.access_time,
+                      size: 12,
+                      color: Color(0xFF6B6B6B),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${DateFormat('HH:mm').format(event.startTime)} - ${DateFormat('HH:mm').format(event.endTime)}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: const Color(0xFF6B6B6B),
+                      ),
+                    ),
+                    // Jika ada deskripsi yang bisa dianggap lokasi, tampilkan
+                    if (event.description.isNotEmpty) ...[
+                      const SizedBox(width: 12),
+                      const Icon(
+                        Icons.description_outlined,
+                        size: 12,
+                        color: Color(0xFF6B6B6B),
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          event.description,
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            color: const Color(0xFF6B6B6B),
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ]
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- EXISTING WIDGETS (Unchanged) ---
 
   Widget _buildGreetingSection() {
     return Column(
@@ -660,81 +813,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildEventCard(EventModel event) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE0E0E0)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 8,
-            height: 40,
-            decoration: BoxDecoration(
-              color: event.color,
-              borderRadius: BorderRadius.circular(4),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  event.title,
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF1A1A1A),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.access_time,
-                      size: 12,
-                      color: Color(0xFF6B6B6B),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      event.time,
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: const Color(0xFF6B6B6B),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Icon(
-                      Icons.location_on_outlined,
-                      size: 12,
-                      color: Color(0xFF6B6B6B),
-                    ),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        event.location,
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          color: const Color(0xFF6B6B6B),
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildBottomNavigationBar() {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
@@ -742,8 +820,11 @@ class _HomePageState extends State<HomePage> {
       child: AnimatedOpacity(
         duration: const Duration(milliseconds: 300),
         opacity: _isNavBarVisible ? 1.0 : 0.0,
-        child: const CustomNavBar(
+        child: CustomNavBar(
           selectedIndex: 0, // Home selected
+          onItemTapped: (index) {
+            // Logic navigasi sudah di handle di CustomNavBar widget (berdasarkan codingan navbar yang diberikan)
+          },
         ),
       ),
     );

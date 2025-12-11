@@ -15,7 +15,7 @@ import 'package:notesapp/features/to_do_list/presentation/pages/urgent_screen.da
 
 class MainTodoScreen extends StatefulWidget {
   final String? username;
-  const MainTodoScreen({Key? key, this.username}) : super(key: key);
+  const MainTodoScreen({super.key, this.username});
 
   @override
   State<MainTodoScreen> createState() => _MainTodoScreenState();
@@ -259,16 +259,29 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
   Widget _buildStatusCard(String count, String label, Color topColor, Color bottomColor) {
     return GestureDetector(
       onTap: () {
-        if (label == 'All') Navigator.push(context, MaterialPageRoute(builder: (context) => const AllCategoryScreen()));
-        else if (label == 'Urgent') Navigator.push(context, MaterialPageRoute(builder: (context) => const UrgentTaskScreen()));
-        else if (label == 'Overdue') Navigator.push(context, MaterialPageRoute(builder: (context) => const OverdueTaskScreen()));
+        if (label == 'All') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const AllCategoryScreen()),
+          );
+        } else if (label == 'Urgent') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const UrgentTaskScreen()),
+          );
+        } else if (label == 'Overdue') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const OverdueTaskScreen()),
+          );
+        }
       },
       child: Container(
         height: 120,
         decoration: BoxDecoration(
           gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [topColor, bottomColor]),
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 12, offset: const Offset(0, 4))],
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 12, offset: const Offset(0, 4))],
         ),
         child: Padding(
           padding: const EdgeInsets.all(14),

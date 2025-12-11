@@ -9,7 +9,7 @@ import '../../features/auth/presentation/pages/terms_of_service.dart';
 import '../../features/home/presentation/pages/home.dart';
 import '../../features/notes/presentation/pages/note_editor_page.dart';
 import '../../features/notes/presentation/pages/notes_main_page.dart';
-import '../../features/to_do_list/presentation/pages/mainTodo.dart';
+import '../../features/to_do_list/presentation/pages/main_todo.dart';
 import '../../features/calendar/presentation/pages/calendar_main_page.dart';
 import '../../features/profile/presentation/pages/about_info.dart';
 import '../../features/profile/presentation/pages/help_faq.dart';

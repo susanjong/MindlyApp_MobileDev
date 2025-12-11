@@ -6,15 +6,15 @@ class UrgentOverdueTaskItem extends StatelessWidget {
   final Map<String, dynamic> task;
   final Color themeColor; // Warna tema (Orange utk Urgent, Merah utk Overdue)
   final String timeText; // Text waktu (ex: "30 Mins left" atau "overdue by...")
-  final VoidCallback onTapArrow; // Aksi saat panah diklik
+  final VoidCallback onTapArrow;
 
   const UrgentOverdueTaskItem({
-    Key? key,
+    super.key,
     required this.task,
     required this.themeColor,
     required this.timeText,
     required this.onTapArrow,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

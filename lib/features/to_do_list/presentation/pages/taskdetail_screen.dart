@@ -6,10 +6,10 @@ class TaskDetailScreen extends StatelessWidget {
   final VoidCallback onDelete;
 
   const TaskDetailScreen({
-    Key? key,
+    super.key,
     required this.task,
     required this.onDelete,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -143,7 +143,7 @@ class TaskDetailScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(16),
                 child: TextField(
                   maxLines: null,
-                  controller: TextEditingController(text: "bahas pembagian tugas..."),
+                  controller: TextEditingController(text: "discuss the division of tasks..."),
                   style: GoogleFonts.poppins(
                     fontSize: 14,
                     color: Colors.black87,

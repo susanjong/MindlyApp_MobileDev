@@ -335,6 +335,7 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
 
         // Wait a bit then return
         await Future.delayed(const Duration(milliseconds: 500));
+        if (!context.mounted) return;
         Navigator.pop(context, true);
       }
     } catch (e) {
