@@ -86,7 +86,7 @@ class EventSearchDelegate extends SearchDelegate {
               Text(
                 '${DateFormat('dd MMM yyyy').format(date)} • ${item['time']}',
                 style: GoogleFonts.poppins(
-                  color: Colors.white.withOpacity(0.9),
+                  color: Colors.white.withValues(alpha: 0.9),
                   fontSize: 12,
                 ),
               ),
