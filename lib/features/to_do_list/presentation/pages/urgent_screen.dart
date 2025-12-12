@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../data/models/todo_model.dart';
 import '../../data/services/todo_services.dart';
-import '../widgets/urgent_overdue_taskitem.dart';
+import '../widgets/urgent_overdue_taskItem.dart';
 import 'folder_screen.dart';
 
 class UrgentTaskScreen extends StatefulWidget {
@@ -17,9 +17,9 @@ class _UrgentTaskScreenState extends State<UrgentTaskScreen> {
   final TodoService _todoService = TodoService();
 
   final List<List<Color>> availableGradients = [
-    [const Color(0xFFBEE973), const Color(0xFFD9D9D9)],
-    [const Color(0xFF93B7D9), const Color(0xFFD9D9D9)],
-    [const Color(0xFFE2A8D3), const Color(0xFFFFF4FD)],
+    [const Color(0xFFBEE973), const Color(0xFFD9D9D9)], // Hijau
+    [const Color(0xFF93B7D9), const Color(0xFFD9D9D9)], // Biru
+    [const Color(0xFFE2A8D3), const Color(0xFFFFF4FD)], // Pink
   ];
 
   String _getTimeLeft(DateTime deadline) {
