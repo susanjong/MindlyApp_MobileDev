@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:image_picker/image_picker.dart';
+//import 'package:image_picker/image_picker.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../../core/widgets/buttons/primary_button.dart';
 
@@ -17,7 +17,7 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
   final _formKey = GlobalKey<FormState>();
   final _fullNameController = TextEditingController();
   final _bioController = TextEditingController();
-  final ImagePicker _picker = ImagePicker();
+  // final ImagePicker _picker = ImagePicker();
 
   bool _isLoading = false;
   bool _isLoadingData = true;
@@ -66,32 +66,32 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
     }
   }
 
-  Future<void> _pickImage(ImageSource source) async {
-    try {
-      final XFile? pickedFile = await _picker.pickImage(
-        source: source,
-        maxWidth: 400,
-        maxHeight: 400,
-        imageQuality: 70,
-      );
-
-      if (pickedFile != null) {
-        setState(() {
-          _imageFile = File(pickedFile.path);
-          _photoChanged = true;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to pick image: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
+  // Future<void> _pickImage(ImageSource source) async {
+  //   try {
+  //     final XFile? pickedFile = await _picker.pickImage(
+  //       source: source,
+  //       maxWidth: 400,
+  //       maxHeight: 400,
+  //       imageQuality: 70,
+  //     );
+  //
+  //     if (pickedFile != null) {
+  //       setState(() {
+  //         _imageFile = File(pickedFile.path);
+  //         _photoChanged = true;
+  //       });
+  //     }
+  //   } catch (e) {
+  //     if (mounted) {
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         SnackBar(
+  //           content: Text('Failed to pick image: ${e.toString()}'),
+  //           backgroundColor: Colors.red,
+  //         ),
+  //       );
+  //     }
+  //   }
+  //}
 
   void _showImageSourceDialog() {
     showModalBottomSheet(
@@ -150,7 +150,7 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
                   ),
                   onTap: () {
                     Navigator.pop(context);
-                    _pickImage(ImageSource.gallery);
+                    //_pickImage(ImageSource.gallery);
                   },
                 ),
                 ListTile(
@@ -174,12 +174,10 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
                   ),
                   onTap: () {
                     Navigator.pop(context);
-                    _pickImage(ImageSource.camera);
+                    //_pickImage(ImageSource.camera);
                   },
                 ),
-
-                // show remove option only if there's a photo
-                if (_currentImageUrl != null && _currentImageUrl!.isNotEmpty || _imageFile != null)
+                if (_currentImageUrl != null || _imageFile != null)
                   ListTile(
                     leading: Container(
                       padding: const EdgeInsets.all(8),
@@ -204,10 +202,9 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
                       Navigator.pop(context);
                       setState(() {
                         _imageFile = null;
-                        _currentImageUrl = '';
+                        _currentImageUrl = null;
                         _photoChanged = true;
                       });
-
                     },
                   ),
                 const SizedBox(height: 16),
@@ -219,20 +216,20 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
     );
   }
 
-  // convert image to Base64 string with compression
-  // uses ImagePicker's built-in compression (maxWidth, maxHeight, imageQuality)
+  /// Convert image to Base64 string with compression
+  /// Uses ImagePicker's built-in compression (maxWidth, maxHeight, imageQuality)
   Future<String?> _convertImageToBase64() async {
     if (_imageFile == null) return null;
 
     try {
-      // read compressed image bytes (already compressed by ImagePicker)
+      // Read compressed image bytes (already compressed by ImagePicker)
       final bytes = await _imageFile!.readAsBytes();
 
-      // convert
+      // Convert to base64
       final base64String = base64Encode(bytes);
       final fullBase64 = 'data:image/jpeg;base64,$base64String';
 
-      // check size (Firestore has 1MB limit per field)
+      // Check size (Firestore has 1MB limit per field)
       final sizeInKB = (fullBase64.length * 0.75) / 1024;
       debugPrint('Image size: ${sizeInKB.toStringAsFixed(2)} KB');
 
@@ -247,7 +244,6 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
     }
   }
 
-  // save profile with proper photo removal handling
   Future<void> _saveProfile() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -271,54 +267,47 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
     });
 
     try {
-      String? photoData;
+      String? photoData = _currentImageUrl;
 
-      // handle photo changes
-      if (_photoChanged) {
-        if (_imageFile != null) {
-
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Row(
-                  children: [
-                    const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
+      // Convert new image to Base64 if user selected one
+      if (_photoChanged && _imageFile != null) {
+        // Show processing message
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                     ),
-                    const SizedBox(width: 16),
-                    Text(
-                      'Processing image...',
-                      style: GoogleFonts.poppins(),
-                    ),
-                  ],
-                ),
-                duration: const Duration(seconds: 30),
-                backgroundColor: const Color(0xFF5784EB),
+                  ),
+                  const SizedBox(width: 16),
+                  Text(
+                    'Processing image...',
+                    style: GoogleFonts.poppins(),
+                  ),
+                ],
               ),
-            );
-          }
-
-          photoData = await _convertImageToBase64();
-          if (photoData == null) {
-            throw Exception('Failed to process image');
-          }
-        } else if (_currentImageUrl == '') {
-          // user removed photo
-          photoData = '';
-          debugPrint('Photo removed - setting photoData to empty string');
+              duration: const Duration(seconds: 30),
+              backgroundColor: const Color(0xFF5784EB),
+            ),
+          );
         }
-      } else {
-        photoData = _currentImageUrl;
+
+        photoData = await _convertImageToBase64();
+        if (photoData == null) {
+          throw Exception('Failed to process image');
+        }
+      } else if (_photoChanged && _imageFile == null) {
+        // User removed photo
+        photoData = null;
       }
 
-      debugPrint('Saving profile with photoURL: ${photoData == null ? "null" : photoData.isEmpty ? "empty (removed)" : "length ${photoData.length}"}');
-
-      // update profile in Firebase Auth and Firestore
+      // Update profile in Firebase Auth and Firestore
       await AuthService.updateUserProfile(
         displayName: _fullNameController.text.trim(),
         bio: _bioController.text.trim(),
@@ -330,7 +319,7 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
           _isLoading = false;
         });
 
-        // clear any previous snackbars
+        // Clear any previous snackbars
         ScaffoldMessenger.of(context).clearSnackBars();
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -344,11 +333,11 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
           ),
         );
 
-        // wait a bit then return with success alert
+        // Wait a bit then return
         await Future.delayed(const Duration(milliseconds: 500));
-        if (mounted) {
-          Navigator.pop(context, true); // return for auto direct into profile
-        }
+        if (!mounted) return;
+        Navigator.pop(context, true);
+
       }
     } catch (e) {
       if (mounted) {
@@ -418,7 +407,7 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
               children: [
                 const SizedBox(height: 49),
 
-                // profile Picture with Edit Button
+                // Profile Picture with Edit Button
                 Stack(
                   children: [
                     GestureDetector(
@@ -488,15 +477,26 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
 
                 const SizedBox(height: 44),
 
+                // Full Name Input
                 Center(
-                  child: SizedBox(
+                  child: Container(
                     width: inputWidth,
+                    height: 40,
+                    decoration: ShapeDecoration(
+                      color: const Color(0xFFFFFCFC),
+                      shape: RoundedRectangleBorder(
+                        side: const BorderSide(
+                            width: 1, color: Colors.black),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
                     child: TextFormField(
                       controller: _fullNameController,
                       style: GoogleFonts.poppins(
                         fontSize: 12,
                         color: Colors.black,
                         fontWeight: FontWeight.w400,
+                        height: 1,
                       ),
                       decoration: InputDecoration(
                         hintText: "What's your full name?",
@@ -504,57 +504,18 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
                           color: const Color(0xFF6A6E76),
                           fontSize: 12,
                           fontWeight: FontWeight.w400,
+                          height: 1,
                         ),
-                        filled: true,
-                        fillColor: const Color(0xFFFFFCFC),
+                        border: InputBorder.none,
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 11,
                           vertical: 14,
                         ),
                         isDense: true,
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: const BorderSide(
-                            width: 1,
-                            color: Colors.black,
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: const BorderSide(
-                            width: 2,
-                            color: Color(0xFF5784EB),
-                          ),
-                        ),
-                        // border if error
-                        errorBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: const BorderSide(
-                            width: 1.5,
-                            color: Color(0xFFFF6B6B),
-                          ),
-                        ),
-                        focusedErrorBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: const BorderSide(
-                            width: 2,
-                            color: Color(0xFFFF6B6B),
-                          ),
-                        ),
-                        // for error text
-                        errorStyle: GoogleFonts.poppins(
-                          fontSize: 11,
-                          color: const Color(0xFFFF6B6B),
-                          fontWeight: FontWeight.w400,
-                        ),
-                        errorMaxLines: 2,
                       ),
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
-                          return 'Full name is required';
-                        }
-                        if (value.trim().length < 2) {
-                          return 'Name must be at least 2 characters';
+                          return 'Full name cannot be empty';
                         }
                         return null;
                       },
@@ -564,16 +525,26 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
 
                 const SizedBox(height: 14),
 
-                // bio input
+                // Bio Input
                 Center(
-                  child: SizedBox(
+                  child: Container(
                     width: inputWidth,
+                    height: 40,
+                    decoration: ShapeDecoration(
+                      color: const Color(0xFFFFFCFC),
+                      shape: RoundedRectangleBorder(
+                        side: const BorderSide(
+                            width: 1, color: Colors.black),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
                     child: TextFormField(
                       controller: _bioController,
                       style: GoogleFonts.poppins(
                         fontSize: 12,
                         color: Colors.black,
                         fontWeight: FontWeight.w400,
+                        height: 1,
                       ),
                       decoration: InputDecoration(
                         hintText: "Edit bio in here.....",
@@ -581,9 +552,9 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
                           color: const Color(0xFF6A6E76),
                           fontSize: 12,
                           fontWeight: FontWeight.w400,
+                          height: 1,
                         ),
-                        filled: true,
-                        fillColor: const Color(0xFFFFFCFC),
+                        border: InputBorder.none,
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 11,
                           vertical: 14,
@@ -600,20 +571,6 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
                         suffixIconConstraints: const BoxConstraints(
                           minWidth: 30,
                           minHeight: 40,
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: const BorderSide(
-                            width: 1,
-                            color: Colors.black,
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: const BorderSide(
-                            width: 2,
-                            color: Color(0xFF5784EB),
-                          ),
                         ),
                       ),
                     ),
@@ -645,9 +602,9 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
     );
   }
 
-  // build profile image widget with proper empty string handling
+  // Build profile image widget
   Widget _buildProfileImage() {
-
+    // Priority: Local file > Current Base64/URL > Default avatar
     if (_imageFile != null) {
       return Image.file(
         _imageFile!,
@@ -655,7 +612,6 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
       );
     }
 
-    // check if image URL exists and is not empty
     if (_currentImageUrl != null && _currentImageUrl!.isNotEmpty) {
       // Check if it's Base64 data
       if (_currentImageUrl!.startsWith('data:image')) {
@@ -675,7 +631,7 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
         }
       }
 
-      // ff it's a regular URL
+      // If it's a regular URL
       return Image.network(
         _currentImageUrl!,
         fit: BoxFit.cover,
@@ -696,7 +652,6 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
       );
     }
 
-    // mo image or empty string - show default avatar
     return _buildDefaultAvatar();
   }
 

@@ -159,7 +159,7 @@ class _FolderScreenState extends State<FolderScreen> {
 
           // 4. TAMPILKAN SNACKBAR ERROR (Supaya kita tahu salahnya dimana)
           if (mounted) {
-            print("Error saving task: $e"); // Cek console debug
+            debugPrint("Error saving task: $e");
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('Failed to add task: $e'),
@@ -320,17 +320,20 @@ class _FolderScreenState extends State<FolderScreen> {
           ],
         ),
       )
-          : FloatingActionButton(
+      : FloatingActionButton(
         backgroundColor: const Color(0xFFD732A8),
         shape: const CircleBorder(),
-        child: const Icon(Icons.add, color: Colors.white, size: 28),
         onPressed: _showAddTaskDialog,
+        child: const Icon(
+          Icons.add,
+          color: Colors.white,
+          size: 28,
+        ),
       ),
     );
   }
 
-  // --- Widget Helpers ---
-
+  // Widget Helpers
   Widget _buildPopupMenu() {
     return PopupMenuButton<String>(
       icon: const Icon(Icons.more_horiz, color: Colors.black),

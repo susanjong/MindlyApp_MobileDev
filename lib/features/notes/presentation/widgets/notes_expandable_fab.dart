@@ -925,7 +925,7 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
         decoration: BoxDecoration(
           border: Border.all(color: color),
           borderRadius: BorderRadius.circular(15),
-          color: isSelected ? color.withOpacity(0.1) : Colors.transparent,
+          color: isSelected ? color.withValues(alpha: 0.1) : Colors.transparent,
         ),
         child: Center(
           child: Text(
@@ -953,7 +953,7 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
           topRight: Radius.circular(32),
         ),
         border: Border.all(
-          color: Colors.black.withOpacity(0.15),
+          color: Colors.black.withValues(alpha: 0.15),
           width: 1,
         ),
       ),
@@ -965,7 +965,7 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
             width: 80,
             height: 3,
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.7),
+              color: Colors.black.withValues(alpha: 0.7),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
