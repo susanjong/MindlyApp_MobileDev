@@ -161,7 +161,7 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
                   profile: _userProfile,
                   isLoading: _isLoadingProfile,
                   onEdit: _navigateToEditProfile,
-                  onRefresh: _loadUserDataFromFirestore, // pass callback
+                  onRefresh: _loadUserDataFromFirestore,
                 ),
                 const SizedBox(height: 24),
                 _buildPreferenceSection(),
@@ -319,9 +319,11 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
     );
   }
 
+  // ✅ FIXED: Save navigator before async operation
   void _navigateToEditProfile() async {
-    final result = await Navigator.push(
-      context,
+    final navigator = Navigator.of(context);
+
+    final result = await navigator.push(
       MaterialPageRoute(
         builder: (context) => const EditAccountInformationScreen(),
       ),
@@ -333,19 +335,22 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
     }
   }
 
+  // ✅ FIXED: Async gap in reset dialog
   void _showResetDialog() {
     if (!mounted) return;
-    final navigatorContext = context;
+    final dialogContext = context;
 
     showIOSDialog(
-      context: navigatorContext,
+      context: dialogContext,
       title: 'Reset Password',
       message: 'Are you sure you want to \nreset your password ?',
       cancelText: 'Cancel',
       confirmText: 'Reset',
       confirmTextColor: const Color(0xFFFF453A),
       onConfirm: () {
-        Navigator.of(navigatorContext).pop();
+        final navigator = Navigator.of(dialogContext);
+
+        navigator.pop();
         _showSuccessAndNavigate(
           title: 'Success !',
           message: 'Your password has been\nsuccessfully reset.',
@@ -356,19 +361,23 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
     );
   }
 
+  // ✅ FIXED: Async gap in logout dialog
   void _showLogoutDialog() {
     if (!mounted) return;
-    final navigatorContext = context;
+    final dialogContext = context;
 
     showIOSDialog(
-      context: navigatorContext,
+      context: dialogContext,
       title: 'Logout',
       message: 'Are you sure you want to \nlogout this account?',
       cancelText: 'Cancel',
       confirmText: 'Logout',
       confirmTextColor: const Color(0xFFFF453A),
       onConfirm: () async {
-        Navigator.of(navigatorContext).pop();
+        final navigator = Navigator.of(dialogContext);
+        final messenger = ScaffoldMessenger.of(dialogContext);
+
+        navigator.pop();
 
         try {
           await AuthService.signOut();
@@ -382,35 +391,36 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
             );
           }
         } catch (e) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  'Logout failed: ${e.toString()}',
-                  style: GoogleFonts.poppins(),
-                ),
-                backgroundColor: Colors.red,
+          messenger.showSnackBar(
+            SnackBar(
+              content: Text(
+                'Logout failed: ${e.toString()}',
+                style: GoogleFonts.poppins(),
               ),
-            );
-          }
+              backgroundColor: Colors.red,
+            ),
+          );
         }
       },
     );
   }
 
+  // ✅ FIXED: Async gap in delete account dialog
   void _showDeleteAccountDialog() {
     if (!mounted) return;
-    final navigatorContext = context;
+    final dialogContext = context;
 
     showIOSDialog(
-      context: navigatorContext,
+      context: dialogContext,
       title: 'Delete Account',
       message: 'This action cannot be undone.\nAre you sure?',
       cancelText: 'Cancel',
       confirmText: 'Delete',
       confirmTextColor: const Color(0xFFFF453A),
       onConfirm: () {
-        Navigator.of(navigatorContext).pop();
+        final navigator = Navigator.of(dialogContext);
+
+        navigator.pop();
 
         _showSuccessAndNavigate(
           title: 'Success !',
@@ -426,6 +436,7 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
     );
   }
 
+  // ✅ FIXED: Complete rewrite of success dialog to avoid async gaps
   void _showSuccessAndNavigate({
     required String title,
     required String message,
@@ -434,16 +445,19 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
   }) {
     if (!mounted) return;
 
-    final dialogContext = context;
-    final navigator = Navigator.of(dialogContext);
+    final parentContext = context;
+    final navigator = Navigator.of(parentContext);
 
     showDialog(
-      context: dialogContext,
+      context: parentContext,
       barrierDismissible: false,
-      builder: (BuildContext innerContext) {
+      builder: (BuildContext dialogContext) {
+        // ✅ Save dialog navigator before async operation
+        final dialogNavigator = Navigator.of(dialogContext);
+
         Future.delayed(const Duration(seconds: 2), () {
-          if (Navigator.canPop(innerContext)) {
-            Navigator.of(innerContext).pop();
+          if (dialogNavigator.canPop()) {
+            dialogNavigator.pop();
 
             Future.delayed(const Duration(milliseconds: 100), () {
               if (useReplacement) {
@@ -530,7 +544,7 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
   }
 }
 
-// profileCard with support Base64 dan refresh callback
+// ✅ FIXED: profileCard with async gap fix
 class _ProfileCard extends StatelessWidget {
   final UserProfile profile;
   final bool isLoading;
@@ -557,7 +571,6 @@ class _ProfileCard extends StatelessWidget {
         children: [
           Stack(
             children: [
-              // support Base64 images
               _buildProfileImage(),
               if (isLoading)
                 Positioned.fill(
@@ -635,16 +648,17 @@ class _ProfileCard extends StatelessWidget {
             icon: const Icon(Icons.edit_outlined),
             splashRadius: 20,
             onPressed: () async {
-              final navigatorContext = context;
+              // ✅ Save navigator before async operation
+              final navigator = Navigator.of(context);
 
-              final result = await Navigator.push(
-                navigatorContext,
+              final result = await navigator.push(
                 MaterialPageRoute(
                   builder: (context) => const EditAccountInformationScreen(),
                 ),
               );
 
-              if (result == true && navigatorContext.mounted) {
+              // ✅ Check mounted before using context
+              if (result == true && context.mounted) {
                 onRefresh();
               }
             },

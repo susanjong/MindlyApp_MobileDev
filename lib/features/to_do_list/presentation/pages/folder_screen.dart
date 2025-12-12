@@ -100,11 +100,13 @@ class _FolderScreenState extends State<FolderScreen> {
   void _showAddTaskDialog() {
     AddTaskBottomSheet.show(
       context,
+      // ✅ 1. Set initial category to current folder
       initialCategory: widget.folderName,
-      isCategoryLocked: true, // Kunci kategori ke folder ini
+      // ✅ 2. UNLOCK category so user can select "Add New Category"
+      isCategoryLocked: false,
 
       onSave: (taskData) async {
-        // 1. Tampilkan Loading Indicator (Opsional, agar user tahu sedang proses)
+        // Show Loading
         showDialog(
           context: context,
           barrierDismissible: false,
@@ -112,46 +114,30 @@ class _FolderScreenState extends State<FolderScreen> {
         );
 
         try {
-          final now = DateTime.now();
+          DateTime deadline = taskData['deadline'] ?? DateTime.now();
 
-          // --- LOGIC PARSING TANGGAL ---
-          // Mengubah string "2025", "January", "1" menjadi angka
-          int year = int.tryParse(taskData['year'].toString()) ?? now.year;
-          int day = int.tryParse(taskData['day'].toString()) ?? now.day;
+          String category = taskData['category'] ?? widget.folderName;
 
-          int month = now.month;
-          String monthStr = taskData['month'].toString();
-          List<String> months = [
-            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-          ];
-          // Mencocokkan nama bulan (misal "January" cocok dengan "Jan")
-          int monthIndex = months.indexWhere((m) => monthStr.startsWith(m));
-          if (monthIndex != -1) month = monthIndex + 1;
-
-          // Buat object Deadline
-          DateTime deadline = DateTime(year, month, day, 23, 59);
-          // -----------------------------
-
-          // 2. SIMPAN KE FIREBASE
           await _todoService.addTodo(
-            taskData['name'],
-            widget.folderName, // Paksa kategori sesuai folder
+            taskData['title'],
+            category,
             deadline,
           );
 
-          // Tutup Loading Indicator
           if (mounted) Navigator.pop(context);
 
-          // 3. TAMPILKAN SNACKBAR SUKSES
+          // 3. Tampilkan snackbar successfull
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('Task added successfully!'),
                 backgroundColor: Colors.green,
-                behavior: SnackBarBehavior.floating, // Agar melayang cantik
+                behavior: SnackBarBehavior.floating, // Agar melayang
               ),
             );
+            if (taskData['category'] != widget.folderName) {
+              // Navigator.pop(context); // Optional: Go back to see new category
+            }
           }
         } catch (e) {
           // Tutup Loading Indicator jika error
@@ -320,7 +306,7 @@ class _FolderScreenState extends State<FolderScreen> {
           ],
         ),
       )
-      : FloatingActionButton(
+          : FloatingActionButton(
         backgroundColor: const Color(0xFFD732A8),
         shape: const CircleBorder(),
         onPressed: _showAddTaskDialog,
@@ -328,12 +314,13 @@ class _FolderScreenState extends State<FolderScreen> {
           Icons.add,
           color: Colors.white,
           size: 28,
-        ),
       ),
+    ),
     );
   }
 
-  // Widget Helpers
+  // --- Widget Helpers ---
+
   Widget _buildPopupMenu() {
     return PopupMenuButton<String>(
       icon: const Icon(Icons.more_horiz, color: Colors.black),

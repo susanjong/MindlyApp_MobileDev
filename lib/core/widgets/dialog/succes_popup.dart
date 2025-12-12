@@ -11,20 +11,25 @@ class SuccessDialog {
     bool useReplacement = true,
     int delaySeconds = 2,
   }) async {
-    // save the navigator state before showing dialog
+    // ✅ Save navigator references BEFORE any async operations
     final navigator = Navigator.of(context);
 
     await showDialog(
       context: context,
       barrierDismissible: false,
       builder: (BuildContext dialogContext) {
+        // ✅ Save dialog navigator reference before async
+        final dialogNavigator = Navigator.of(dialogContext);
+
         // auto close after delay and navigate
         Future.delayed(Duration(seconds: delaySeconds), () {
-          if (Navigator.canPop(dialogContext)) {
-            Navigator.of(dialogContext).pop();
+          // ✅ Use saved navigator reference instead of dialogContext
+          if (dialogNavigator.canPop()) {
+            dialogNavigator.pop();
 
             // navigate using the saved navigator
             Future.delayed(const Duration(milliseconds: 100), () {
+              // ✅ Use saved navigator from parent context (already saved above)
               if (useReplacement) {
                 navigator.pushReplacementNamed(routeName);
               } else {

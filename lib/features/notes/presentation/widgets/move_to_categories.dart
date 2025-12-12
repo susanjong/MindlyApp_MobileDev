@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../data/models/category_model.dart';
-import '../../data/services/note_service.dart';
+import '../../data/services/note_service.dart'; // ✅ Pastikan import service
 import '../../../../core/widgets/dialog/alert_dialog.dart';
 import 'add_category_dialog.dart';
 import 'note_search_bar.dart';
 
-// Show dialog untuk move notes ke category lain
+// ✅ Ganti parameter 'categories' (List) menjadi 'noteService'
 void showMoveToDialog({
   required BuildContext context,
   required NoteService noteService,
@@ -19,7 +19,7 @@ void showMoveToDialog({
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     builder: (context) => MoveToCategoriesDialog(
-      noteService: noteService,
+      noteService: noteService, // ✅ Pass service
       selectedNoteIds: selectedNoteIds,
       onMoveConfirmed: onMoveConfirmed,
       onAddCategory: onAddCategory,
@@ -28,7 +28,7 @@ void showMoveToDialog({
 }
 
 class MoveToCategoriesDialog extends StatefulWidget {
-  final NoteService noteService;
+  final NoteService noteService; // ✅ Gunakan Service
   final List<String> selectedNoteIds;
   final Function(String categoryId) onMoveConfirmed;
   final Function(String categoryName) onAddCategory;
@@ -64,11 +64,10 @@ class _MoveToCategoriesDialogState extends State<MoveToCategoriesDialog> {
     super.dispose();
   }
 
-  // Filter categories (exclude 'all' and 'bookmarks')
+  // ✅ Helper untuk filter list
   List<CategoryModel> _filterCategories(List<CategoryModel> categories) {
-    final validCategories = categories
-        .where((c) => c.id != 'all' && c.id != 'bookmarks')
-        .toList();
+    // Filter 'all' dan 'bookmarks' agar tidak muncul di opsi move
+    final validCategories = categories.where((c) => c.id != 'all' && c.id != 'bookmarks').toList();
 
     if (_searchQuery.isEmpty) return validCategories;
     return validCategories
@@ -79,17 +78,14 @@ class _MoveToCategoriesDialogState extends State<MoveToCategoriesDialog> {
   void _showAddCategoryDialog() {
     showDialog(
       context: context,
-      builder: (ctx) {
-        return AddCategoryDialog(
-          onAdd: (name) async {
-            await widget.onAddCategory(name);
-
-            if (!mounted) return;
-
-            Navigator.pop(context, true);  // aman karena dicek mounted
-          },
-        );
-      },
+      builder: (ctx) => AddCategoryDialog(
+        onAdd: (name) async {
+          await widget.onAddCategory(name);
+          if (mounted) {
+            Navigator.pop(context);
+          }
+        },
+      ),
     );
   }
 
@@ -108,16 +104,8 @@ class _MoveToCategoriesDialogState extends State<MoveToCategoriesDialog> {
       confirmText: 'Move',
       confirmTextColor: const Color(0xFF5784EB),
       onConfirm: () {
-        // Panggil callback move
         widget.onMoveConfirmed(_selectedCategoryId!);
-
-        // Tutup dialog konfirmasi
-        Navigator.of(context).pop();
-
-        // Tutup bottom sheet "Move to..."
-        Navigator.of(context).pop();
-
-        // Tampilkan snackbar sukses
+        Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Notes moved to "${selectedCategory.name}"')),
         );
@@ -133,7 +121,7 @@ class _MoveToCategoriesDialogState extends State<MoveToCategoriesDialog> {
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      // StreamBuilder untuk real-time update categories
+      // ✅ Wrap dengan StreamBuilder agar real-time update
       child: StreamBuilder<List<CategoryModel>>(
         stream: widget.noteService.getCategoriesStream(),
         builder: (context, snapshot) {
@@ -142,7 +130,7 @@ class _MoveToCategoriesDialogState extends State<MoveToCategoriesDialog> {
 
           return Column(
             children: [
-              // Header dengan tombol add category dan confirm
+              // Header
               Container(
                 padding: const EdgeInsets.fromLTRB(25, 20, 20, 0),
                 child: Row(
@@ -171,16 +159,13 @@ class _MoveToCategoriesDialogState extends State<MoveToCategoriesDialog> {
                             ? const Color(0xFF5784EB)
                             : Colors.grey.shade400,
                       ),
-                      onPressed: _selectedCategoryId != null
-                          ? () => _confirmMove(allCategories)
-                          : null,
+                      onPressed: _selectedCategoryId != null ? () => _confirmMove(allCategories) : null,
                       tooltip: 'Confirm Move',
                     ),
                   ],
                 ),
               ),
 
-              // Search bar
               NoteSearchBar(
                 controller: _searchController,
                 hintText: 'Search categories...',
@@ -191,18 +176,14 @@ class _MoveToCategoriesDialogState extends State<MoveToCategoriesDialog> {
 
               const SizedBox(height: 4),
 
-              // Categories list
+              // Categories List
               Expanded(
                 child: displayCategories.isEmpty
                     ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(
-                        Icons.folder_off,
-                        size: 64,
-                        color: Colors.grey.shade300,
-                      ),
+                      Icon(Icons.folder_off, size: 64, color: Colors.grey.shade300),
                       const SizedBox(height: 12),
                       Text(
                         _searchQuery.isEmpty
@@ -217,10 +198,7 @@ class _MoveToCategoriesDialogState extends State<MoveToCategoriesDialog> {
                   ),
                 )
                     : ListView.builder(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 22.5,
-                    vertical: 8,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 22.5, vertical: 8),
                   itemCount: displayCategories.length,
                   itemBuilder: (context, index) {
                     final category = displayCategories[index];
@@ -233,8 +211,7 @@ class _MoveToCategoriesDialogState extends State<MoveToCategoriesDialog> {
                         isSelected: isSelected,
                         onTap: () {
                           setState(() {
-                            _selectedCategoryId =
-                            isSelected ? null : category.id;
+                            _selectedCategoryId = isSelected ? null : category.id;
                           });
                         },
                       ),
@@ -274,16 +251,14 @@ class _CategoryItem extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: isSelected
-                ? const Color(0xFF5784EB)
-                : const Color(0xFFD732A8),
+            color: isSelected ? const Color(0xFF5784EB) : const Color(0xFFD732A8),
             width: isSelected ? 2 : 1,
           ),
-          boxShadow: const [
+          boxShadow: [
             BoxShadow(
-              color: Color(0x3F000000),
+              color: const Color(0x3F000000),
               blurRadius: 4,
-              offset: Offset(0, 4),
+              offset: const Offset(0, 4),
             ),
           ],
         ),
@@ -314,14 +289,10 @@ class _CategoryItem extends StatelessWidget {
               width: 24,
               height: 24,
               decoration: BoxDecoration(
-                color: isSelected
-                    ? const Color(0xFF5784EB)
-                    : Colors.transparent,
+                color: isSelected ? const Color(0xFF5784EB) : Colors.transparent,
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: isSelected
-                      ? const Color(0xFF5784EB)
-                      : Colors.grey.shade400,
+                  color: isSelected ? const Color(0xFF5784EB) : Colors.grey.shade400,
                   width: 2,
                 ),
               ),
@@ -335,3 +306,4 @@ class _CategoryItem extends StatelessWidget {
     );
   }
 }
+
