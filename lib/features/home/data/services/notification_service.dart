@@ -19,6 +19,45 @@ class NotificationService {
     return _firestore.collection('users').doc(user.uid).collection('notifications');
   }
 
+  // ✅ NEW: Check if notifications are enabled for current user
+  Future<bool> areNotificationsEnabled() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return false;
+
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+
+      if (userDoc.exists) {
+        final data = userDoc.data();
+        if (data != null && data.containsKey('notificationsEnabled')) {
+          return data['notificationsEnabled'] as bool;
+        }
+      }
+
+      // Default true jika field tidak ada
+      return true;
+    } catch (e) {
+      debugPrint('Error checking notification settings: $e');
+      return true; // Default true jika error
+    }
+  }
+
+  // ✅ NEW: Stream untuk notification setting
+  Stream<bool> getNotificationSettingStream() {
+    final user = _auth.currentUser;
+    if (user == null) return Stream.value(false);
+
+    return _firestore.collection('users').doc(user.uid).snapshots().map((snapshot) {
+      if (snapshot.exists) {
+        final data = snapshot.data();
+        if (data != null && data.containsKey('notificationsEnabled')) {
+          return data['notificationsEnabled'] as bool;
+        }
+      }
+      return true; // Default true
+    });
+  }
+
   // Initialize local notifications
   static Future<void> initialize() async {
     const AndroidInitializationSettings androidSettings =
@@ -88,7 +127,7 @@ class NotificationService {
     );
   }
 
-  // Create notification in Firestore and show local notification
+  // ✅ UPDATED: Create notification dengan check setting
   Future<void> createNotification({
     required String title,
     required String description,
@@ -97,6 +136,15 @@ class NotificationService {
     String? relatedTaskId,
   }) async {
     try {
+      // ✅ Check apakah notifikasi diaktifkan
+      final isEnabled = await areNotificationsEnabled();
+
+      if (!isEnabled) {
+        debugPrint('⚠️ Notifications are disabled by user. Skipping notification creation.');
+        return; // Tidak buat notifikasi jika disabled
+      }
+
+      // Buat notifikasi di Firestore
       await _notificationsCollection.add({
         'title': title,
         'description': description,
@@ -107,12 +155,14 @@ class NotificationService {
         'relatedTaskId': relatedTaskId,
       });
 
-      // Show local notification
+      // Show local notification di HP
       await showNotification(
         title: title,
         body: description,
         type: type,
       );
+
+      debugPrint('✅ Notification created: $title');
     } catch (e) {
       debugPrint('Error creating notification: $e');
     }
@@ -167,13 +217,21 @@ class NotificationService {
     await _notificationsCollection.doc(notificationId).delete();
   }
 
-  // Schedule reminder notification
+  // ✅ UPDATED: Schedule reminder dengan check setting
   Future<void> scheduleReminder({
     required String taskId,
     required String taskTitle,
     required DateTime reminderTime,
   }) async {
     try {
+      // ✅ Check apakah notifikasi diaktifkan
+      final isEnabled = await areNotificationsEnabled();
+
+      if (!isEnabled) {
+        debugPrint('⚠️ Notifications are disabled by user. Cannot schedule reminder.');
+        return; // Tidak schedule reminder jika disabled
+      }
+
       // Create reminder notification in Firestore
       await createNotification(
         title: 'Reminder: $taskTitle',

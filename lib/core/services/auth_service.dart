@@ -270,24 +270,42 @@ class AuthService {
     }
   }
 
-  //  delete account
+  /// ===== DELETE ACCOUNT - MENGHAPUS SEMUA DATA USER =====
   static Future<void> deleteAccount() async {
     try {
       final user = _auth.currentUser;
       if (user == null) throw Exception('No user signed in');
 
       final uid = user.uid;
+
+      debugPrint('=== Starting account deletion process ===');
+
+      // STEP 1: Hapus semua subcollections
+      await _deleteAllUserData(uid);
+
+      // STEP 2: Hapus dokumen user utama
       try {
         await _firestore.collection('users').doc(uid).delete();
-      } catch (_) {}
+        debugPrint('✓ User document deleted');
+      } catch (e) {
+        debugPrint('Error deleting user document: $e');
+      }
 
+      // STEP 3: Sign out dari Google jika menggunakan Google Sign-In
       try {
         if (await _googleSignIn.isSignedIn()) {
           await _googleSignIn.signOut();
+          debugPrint('✓ Google Sign-In signed out');
         }
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('Error signing out from Google: $e');
+      }
 
+      // STEP 4: Hapus akun dari Firebase Auth
       await user.delete();
+      debugPrint('✓ Firebase Auth account deleted');
+      debugPrint('=== Account deletion completed successfully ===');
+
     } on FirebaseAuthException catch (e) {
       switch (e.code) {
         case 'requires-recent-login':
@@ -297,6 +315,82 @@ class AuthService {
         default:
           throw Exception(e.message ?? 'Failed to delete account');
       }
+    } catch (e) {
+      throw Exception('Failed to delete account: ${e.toString()}');
+    }
+  }
+
+  /// Helper: Menghapus SEMUA data user dari Firestore
+  static Future<void> _deleteAllUserData(String uid) async {
+    try {
+      debugPrint('=== Starting deletion of all user data for UID: $uid ===');
+
+      // ✅ Daftar LENGKAP semua subcollections yang perlu dihapus
+      final List<String> subcollections = [
+        'notes',                   // dari NoteService
+        'categories',              // dari NoteService & CategoryService
+        'todos',                   // dari TodoService
+        'notifications',           // dari NotificationService
+        'events',                  // dari EventService (calendar)
+        'home_completed_tasks',    // 🔥 TAMBAHAN BARU untuk HomePage completed tasks
+      ];
+
+      for (String collectionName in subcollections) {
+        await _deleteSubcollection(uid, collectionName);
+      }
+
+      debugPrint('=== All user data deleted successfully ===');
+
+    } catch (e) {
+      debugPrint('Error deleting user data: $e');
+      // Tetap lanjutkan proses delete account meskipun ada error
+    }
+  }
+
+  /// Helper: Menghapus satu subcollection dengan batch
+  static Future<void> _deleteSubcollection(String uid, String collectionName) async {
+    try {
+      debugPrint('Deleting subcollection: $collectionName');
+
+      final snapshot = await _firestore
+          .collection('users')
+          .doc(uid)
+          .collection(collectionName)
+          .get();
+
+      debugPrint('Found ${snapshot.docs.length} documents in $collectionName');
+
+      if (snapshot.docs.isEmpty) {
+        debugPrint('No documents to delete in $collectionName');
+        return;
+      }
+
+      // Hapus dalam batch (max 500 per batch)
+      final batch = _firestore.batch();
+      int count = 0;
+
+      for (var doc in snapshot.docs) {
+        batch.delete(doc.reference);
+        count++;
+
+        // Commit batch setiap 500 dokumen
+        if (count >= 500) {
+          await batch.commit();
+          debugPrint('Batch committed: $count documents from $collectionName');
+          count = 0;
+        }
+      }
+
+      // Commit sisa dokumen
+      if (count > 0) {
+        await batch.commit();
+        debugPrint('Final batch committed: $count documents from $collectionName');
+      }
+
+      debugPrint('✓ Subcollection $collectionName deleted successfully');
+
+    } catch (e) {
+      debugPrint('Error deleting subcollection $collectionName: $e');
     }
   }
 
