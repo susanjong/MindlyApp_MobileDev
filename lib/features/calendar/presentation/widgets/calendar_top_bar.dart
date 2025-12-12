@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class CalendarTopBar extends StatelessWidget implements PreferredSizeWidget {
   final bool isYearView;
@@ -18,48 +19,90 @@ class CalendarTopBar extends StatelessWidget implements PreferredSizeWidget {
   });
 
   @override
-  Size get preferredSize => const Size.fromHeight(60);
+  Size get preferredSize => const Size.fromHeight(70);
 
   @override
   Widget build(BuildContext context) {
-    return AppBar(
-      backgroundColor: Colors.white,
-      elevation: 0,
-      automaticallyImplyLeading: false,
-      title: Text(
-        titleDate,
-        style: GoogleFonts.poppins(
-          color: const Color(0xFFFBAE38), // Warna Kuning/Orange sesuai request
-          fontSize: 24,
-          fontWeight: FontWeight.w600,
+    return Container(
+      color: Colors.white,
+      // Padding disamakan persis dengan CustomTopAppBar (Home/Notes)
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      child: SafeArea(
+        bottom: false,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // --- BAGIAN KIRI: Logo & Brand ---
+            Row(
+              children: [
+                SizedBox(
+                  width: 32.36,
+                  height: 30,
+                  child: Center(
+                    child: SvgPicture.asset(
+                      'assets/images/Mindly_logo.svg',
+                      width: 32.36,
+                      height: 30,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) => const Icon(
+                        Icons.image_not_supported_outlined,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Teks 'Mindly' disamakan style-nya
+                Text(
+                  'Mindly',
+                  style: GoogleFonts.poppins(
+                    fontSize: 30,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF004455),
+                    letterSpacing: -0.5,
+                  ),
+                ),
+              ],
+            ),
+
+            // --- BAGIAN KANAN: Icons ---
+            Row(
+              children: [
+                // Search Icon
+                IconButton(
+                  icon: const Icon(
+                    Icons.search,
+                    color: Color(0xFF1A1A1A),
+                    size: 26, // Ukuran disamakan (sebelumnya 28)
+                  ),
+                  onPressed: onSearchTap,
+                  tooltip: 'Search Events',
+                  // Menghapus padding tambahan agar posisi pas
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+
+                const SizedBox(width: 20), // Jarak antar icon (disesuaikan agar tidak terlalu rapat/jauh)
+
+                // Toggle View Icon
+                IconButton(
+                  onPressed: onToggleView,
+                  icon: Icon(
+                    isYearView ? Icons.calendar_view_month : Icons.calendar_today_outlined,
+                    color: const Color(0xFF1A1A1A),
+                    size: 26, // Ukuran disamakan (sebelumnya 28)
+                  ),
+                  tooltip: isYearView ? 'Show Monthly View' : 'Show Yearly View',
+                  // Menghapus padding tambahan
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
-      actions: [
-        // Search Icon
-        IconButton(
-          icon: const Icon(Icons.search, color: Colors.black, size: 28),
-          onPressed: onSearchTap,
-          tooltip: 'Search Events',
-        ),
-
-        // Add Event Icon
-        IconButton(
-          icon: const Icon(Icons.add, color: Colors.black, size: 28),
-          onPressed: onAddEvent,
-          tooltip: 'Add New Event',
-        ),
-
-        // Calendar View Toggle (Month <-> Year)
-        IconButton(
-          onPressed: onToggleView,
-          icon: Icon(
-            isYearView ? Icons.calendar_view_month : Icons.calendar_today_outlined,
-            color: const Color(0xFF004455), // Warna Brand
-          ),
-          tooltip: isYearView ? 'Show Monthly View' : 'Show Yearly View',
-        ),
-        const SizedBox(width: 10),
-      ],
     );
   }
 }

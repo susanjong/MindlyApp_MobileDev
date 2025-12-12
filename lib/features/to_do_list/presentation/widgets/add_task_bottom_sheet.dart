@@ -8,11 +8,11 @@ class AddTaskBottomSheet extends StatefulWidget {
   final bool isCategoryLocked;
 
   const AddTaskBottomSheet({
-    Key? key,
+    super.key,
     this.onSave,
     this.initialCategory,
     this.isCategoryLocked = false,
-  }) : super(key: key);
+  });
 
   @override
   State<AddTaskBottomSheet> createState() => _AddTaskBottomSheetState();

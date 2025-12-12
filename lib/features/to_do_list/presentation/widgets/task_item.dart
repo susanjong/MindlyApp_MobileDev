@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../pages/taskDetailScreen.dart';
+import '../pages/taskdetail_screen.dart';
 
 class TaskItem extends StatelessWidget {
   final Map<String, dynamic> task;

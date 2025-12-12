@@ -1,40 +1,72 @@
-import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-class EventModel {
+class Event {
+  final String? id;
   final String title;
-  final String time;
-  final String location;
-  final Color color;
+  final String description;
+  final DateTime startTime;
+  final DateTime endTime;
+  final String categoryId;
+  final String userId;
+  final DateTime createdAt;
 
-  EventModel({
+  Event({
+    this.id,
     required this.title,
-    required this.time,
-    required this.location,
-    required this.color,
+    required this.description,
+    required this.startTime,
+    required this.endTime,
+    required this.categoryId,
+    required this.userId,
+    required this.createdAt,
   });
 
-  // Factory method untuk membuat dummy data (opsional, untuk testing)
-  factory EventModel.dummy() {
-    return EventModel(
-      title: 'Sample Event',
-      time: 'Today, 10:00 AM',
-      location: 'Office',
-      color: const Color(0xFF0D5F5F),
+  // Convert Event to Map for Firestore
+  Map<String, dynamic> toMap() {
+    return {
+      'title': title,
+      'description': description,
+      'startTime': Timestamp.fromDate(startTime),
+      'endTime': Timestamp.fromDate(endTime),
+      'categoryId': categoryId,
+      'userId': userId,
+      'createdAt': Timestamp.fromDate(createdAt),
+    };
+  }
+
+  // Create Event from Firestore document
+  factory Event.fromMap(Map<String, dynamic> map, String id) {
+    return Event(
+      id: id,
+      title: map['title'] ?? '',
+      description: map['description'] ?? '',
+      startTime: (map['startTime'] as Timestamp).toDate(),
+      endTime: (map['endTime'] as Timestamp).toDate(),
+      categoryId: map['categoryId'] ?? '',
+      userId: map['userId'] ?? '',
+      createdAt: (map['createdAt'] as Timestamp).toDate(),
     );
   }
 
-  // Method untuk copy dengan perubahan (immutability pattern)
-  EventModel copyWith({
+  Event copyWith({
+    String? id,
     String? title,
-    String? time,
-    String? location,
-    Color? color,
+    String? description,
+    DateTime? startTime,
+    DateTime? endTime,
+    String? categoryId,
+    String? userId,
+    DateTime? createdAt,
   }) {
-    return EventModel(
+    return Event(
+      id: id ?? this.id,
       title: title ?? this.title,
-      time: time ?? this.time,
-      location: location ?? this.location,
-      color: color ?? this.color,
+      description: description ?? this.description,
+      startTime: startTime ?? this.startTime,
+      endTime: endTime ?? this.endTime,
+      categoryId: categoryId ?? this.categoryId,
+      userId: userId ?? this.userId,
+      createdAt: createdAt ?? this.createdAt,
     );
   }
 }
