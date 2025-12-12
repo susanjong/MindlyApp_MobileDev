@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
 import '../models/todo_model.dart';
 
 class TodoService {
@@ -16,19 +15,11 @@ class TodoService {
     return _firestore.collection('users').doc(user.uid).collection('todos');
   }
 
-  // Mendapatkan referensi koleksi notifications
-  CollectionReference get _notificationsCollection {
-    final user = _auth.currentUser;
-    if (user == null) {
-      throw Exception('User not logged in');
-    }
-    return _firestore.collection('users').doc(user.uid).collection('notifications');
-  }
-
   // 1. CREATE: Tambah Task Baru
-  Future<void> addTodo(String title, String category, DateTime deadline) async {
+  Future<void> addTodo(String title, String category, DateTime deadline, String description) async {
     await _todosCollection.add({
       'title': title,
+      'description': description,
       'category': category,
       'deadline': Timestamp.fromDate(deadline),
       'isCompleted': false,
@@ -50,60 +41,21 @@ class TodoService {
 
   // 3. UPDATE: Mengubah Status Selesai/Belum
   Future<void> toggleTodoStatus(String id, bool currentStatus) async {
-    // Update status
     await _todosCollection.doc(id).update({
       'isCompleted': !currentStatus,
     });
-
-    // Jika task selesai (dari belum selesai menjadi selesai), buat notifikasi
-    if (!currentStatus) {
-      // Get task details
-      DocumentSnapshot todoDoc = await _todosCollection.doc(id).get();
-      if (todoDoc.exists) {
-        Map<String, dynamic> todoData = todoDoc.data() as Map<String, dynamic>;
-        String taskTitle = todoData['title'] ?? 'Task';
-
-        // Create achievement notification
-        await _createCompletionNotification(taskTitle);
-      }
-    }
   }
 
-  // 3a. UPDATE: Mengubah Judul Task
   Future<void> updateTaskTitle(String id, String newTitle) async {
     await _todosCollection.doc(id).update({
       'title': newTitle,
     });
   }
 
-  // 3b. UPDATE: Mengubah Deskripsi Task
   Future<void> updateTaskDescription(String id, String newDescription) async {
     await _todosCollection.doc(id).update({
       'description': newDescription, // Pastikan field 'description' ada di model/firebase
     });
-  }
-
-  // Helper: Create notification when task is completed
-  Future<void> _createCompletionNotification(String taskTitle) async {
-    try {
-      // Check if notification already exists
-      QuerySnapshot existing = await _notificationsCollection
-          .where('type', isEqualTo: 'achievement')
-          .where('description', isEqualTo: 'Great job! You completed "$taskTitle"')
-          .get();
-
-      if (existing.docs.isEmpty) {
-        await _notificationsCollection.add({
-          'title': 'Task Completed! 🎉',
-          'description': 'Great job! You completed "$taskTitle"',
-          'timestamp': Timestamp.now(),
-          'isRead': false,
-          'type': 'achievement',
-        });
-      }
-    } catch (e) {
-      debugPrint('Error creating completion notification: $e');
-    }
   }
 
   // 4. DELETE: Menghapus Task

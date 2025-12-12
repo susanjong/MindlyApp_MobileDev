@@ -122,17 +122,18 @@ class _FolderScreenState extends State<FolderScreen> {
             taskData['title'],
             category,
             deadline,
+            taskData['description'] ?? '',
           );
 
           if (mounted) Navigator.pop(context);
 
-          // 3. Tampilkan snackbar successfull
+          // 3. TAMPILKAN SNACKBAR SUKSES
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('Task added successfully!'),
                 backgroundColor: Colors.green,
-                behavior: SnackBarBehavior.floating, // Agar melayang
+                behavior: SnackBarBehavior.floating, // Agar melayang cantik
               ),
             );
             if (taskData['category'] != widget.folderName) {
@@ -145,7 +146,7 @@ class _FolderScreenState extends State<FolderScreen> {
 
           // 4. TAMPILKAN SNACKBAR ERROR (Supaya kita tahu salahnya dimana)
           if (mounted) {
-            debugPrint("Error saving task: $e");
+            print("Error saving task: $e"); // Cek console debug
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('Failed to add task: $e'),
@@ -309,13 +310,9 @@ class _FolderScreenState extends State<FolderScreen> {
           : FloatingActionButton(
         backgroundColor: const Color(0xFFD732A8),
         shape: const CircleBorder(),
+        child: const Icon(Icons.add, color: Colors.white, size: 28),
         onPressed: _showAddTaskDialog,
-        child: const Icon(
-          Icons.add,
-          color: Colors.white,
-          size: 28,
       ),
-    ),
     );
   }
 
