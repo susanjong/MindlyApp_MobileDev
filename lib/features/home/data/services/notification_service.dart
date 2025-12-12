@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:notesapp/features/home/data/models/notification_model.dart';
 
@@ -39,7 +40,7 @@ class NotificationService {
       settings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
         // Handle notification tap
-        print('Notification tapped: ${response.payload}');
+        debugPrint('Notification tapped: ${response.payload}');
       },
     );
 
@@ -113,7 +114,7 @@ class NotificationService {
         type: type,
       );
     } catch (e) {
-      print('Error creating notification: $e');
+      debugPrint('Error creating notification: $e');
     }
   }
 
@@ -189,7 +190,7 @@ class NotificationService {
         type: 'reminder',
       );
     } catch (e) {
-      print('Error scheduling reminder: $e');
+      debugPrint('Error scheduling reminder: $e');
     }
   }
 }

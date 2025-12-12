@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 class AuthService {
@@ -84,7 +85,7 @@ class AuthService {
         await userRef.update(data);
       }
     } catch (e) {
-      print('Error in _createOrUpdateUserInFirestore: $e');
+      debugPrint('Error in _createOrUpdateUserInFirestore: $e');
       rethrow;
     }
   }
@@ -223,7 +224,7 @@ class AuthService {
     }
   }
 
-  //  re-authen for user
+  //  re-authentication for user
   static Future<void> reauthenticateUser(String password) async {
     final user = _auth.currentUser;
     if (user == null || user.email == null) {
@@ -309,15 +310,15 @@ class AuthService {
       final user = _auth.currentUser;
       if (user == null) throw Exception('No user signed in');
 
-      print('=== Starting profile update ===');
-      print('DisplayName: $displayName');
-      print('Bio: $bio');
-      print('PhotoURL: ${photoURL == null ? "null (no change)" : photoURL.isEmpty ? "empty string (REMOVED)" : photoURL.startsWith("data:image") ? "Base64 (length ${photoURL.length})" : "URL: $photoURL"}');
+      debugPrint('=== Starting profile update ===');
+      debugPrint('DisplayName: $displayName');
+      debugPrint('Bio: $bio');
+      debugPrint('PhotoURL: ${photoURL == null ? "null (no change)" : photoURL.isEmpty ? "empty string (REMOVED)" : photoURL.startsWith("data:image") ? "Base64 (length ${photoURL.length})" : "URL: $photoURL"}');
 
       // Update Firebase Auth profile (ONLY if not Base64)
       if (displayName != null) {
         await user.updateDisplayName(displayName);
-        print('Display name updated in Firebase Auth');
+        debugPrint('Display name updated in Firebase Auth');
       }
 
       // handle photo in Firebase Auth
@@ -325,19 +326,19 @@ class AuthService {
         if (photoURL.isEmpty) {
           // photo was removed, set to null in Firebase Auth
           await user.updatePhotoURL(null);
-          print('Photo REMOVED from Firebase Auth (set to null)');
+          debugPrint('Photo REMOVED from Firebase Auth (set to null)');
         } else if (!photoURL.startsWith('data:image')) {
           // regular URL - update Firebase Auth
           await user.updatePhotoURL(photoURL);
-          print('Photo URL updated in Firebase Auth');
+          debugPrint('Photo URL updated in Firebase Auth');
         } else {
           // base64 - skip Firebase Auth (doesn't support Base64)
-          print('⏭ Skipping Firebase Auth for Base64 image');
+          debugPrint('⏭ Skipping Firebase Auth for Base64 image');
         }
       }
 
       await user.reload();
-      print(' Firebase Auth user reloaded');
+      debugPrint('✓ Firebase Auth user reloaded');
 
       // update Firestore (supports everything including empty string)
       final userRef = _firestore.collection('users').doc(user.uid);
@@ -358,15 +359,14 @@ class AuthService {
       // empty string = photo removed, Base64 = new photo, URL = photo URL
       if (photoURL != null) {
         updateData['photoURL'] = photoURL;
-        print('Storing photoURL in Firestore: ${photoURL.isEmpty ? "EMPTY (removed)" : photoURL.startsWith("data:image") ? "Base64" : "URL"}');
+        debugPrint('Storing photoURL in Firestore: ${photoURL.isEmpty ? "EMPTY (removed)" : photoURL.startsWith("data:image") ? "Base64" : "URL"}');
       }
 
       await userRef.update(updateData);
-      print('Firestore updated successfully');
-      print('=== Profile update completed ===');
+      debugPrint('Firestore updated successfully');
+      debugPrint('=== Profile update completed ===');
 
     } catch (e) {
-      print('Error in updateUserProfile: $e');
       throw Exception('Failed to update profile: ${e.toString()}');
     }
   }
