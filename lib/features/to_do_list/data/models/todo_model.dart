@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class TodoModel {
   final String id;
   final String title;
+  final String description;
   final String category;
   final DateTime deadline;
   final bool isCompleted;
@@ -11,6 +12,7 @@ class TodoModel {
   TodoModel({
     required this.id,
     required this.title,
+    this.description = '',
     required this.category,
     required this.deadline,
     this.isCompleted = false,
@@ -22,6 +24,7 @@ class TodoModel {
     return TodoModel(
       id: documentId,
       title: data['title'] ?? '',
+      description: data['description'] ?? '',
       category: data['category'] ?? 'Uncategorized',
       // Mengubah Timestamp Firebase ke DateTime Dart
       deadline: (data['deadline'] as Timestamp).toDate(),

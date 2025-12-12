@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../pages/taskdetail_screen.dart';
+import '../pages/taskDetailScreen.dart';
+import '../../../../core/widgets/dialog/alert_dialog.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
+import '../../data/services/todo_services.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class TaskItem extends StatelessWidget {
   final Map<String, dynamic> task;
@@ -14,179 +18,287 @@ class TaskItem extends StatelessWidget {
     this.onDelete,
   });
 
-  @override
-  Widget build(BuildContext context) {
-    final DateTime? deadline = task['deadline'] as DateTime?;
+  void _navigateToDetail(BuildContext context) {
+    final TodoService _todoService = TodoService(); // Instance service
 
-    // 2. Tentukan Status (Overdue / Urgent)
-    bool isOverdue = false;
-    bool isUrgent = false;
-
-    if (deadline != null && !task['completed']) {
-      final now = DateTime.now();
-      final difference = deadline.difference(now);
-
-      if (difference.isNegative) {
-        isOverdue = true; // Lewat deadline
-      } else if (difference.inHours <= 12) {
-        isUrgent = true; // Kurang dari 12 jam
-      }
-    }
-
-    String dateDay = "01";
-    String dateMonth = "Today";
-
-    if (deadline != null) {
-      dateDay = DateFormat('dd').format(deadline);
-      // Jika tanggal hari ini, tampilkan "Today", jika tidak tampilkan Bulan (misal: "Nov")
-      if (DateUtils.isSameDay(deadline, DateTime.now())) {
-        dateMonth = "Today";
-      } else {
-        dateMonth = DateFormat('MMM').format(deadline);
-      }
-    }
-
-    String displayTime = task['time'] ?? '';
-    if (displayTime.isEmpty && deadline != null) {
-      displayTime = DateFormat('h:mm a').format(deadline);
-    }
-
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => TaskDetailScreen(
-              task: task,
-              onDelete: onDelete ?? () {},
-            ),
-          ),
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), // Padding disesuaikan
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(50),
-          border: Border.all(color: Colors.black, width: 1.5),
-        ),
-        child: Row(
-          children: [
-            GestureDetector(
-              onTap: onToggle,
-              behavior: HitTestBehavior.opaque,
-              child: Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                      color: const Color(0xFF5784EB),
-                      width: 2
-                  ),
-                  color: task['completed'] == true
-                      ? const Color(0xFF5784EB)
-                      : Colors.transparent,
-                ),
-                child: task['completed'] == true
-                    ? const Icon(Icons.check, size: 18, color: Colors.white)
-                    : null,
-              ),
-            ),
-
-            const SizedBox(width: 16),
-
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.access_time,
-                        size: 14,
-                        color: Colors.grey,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        task['time'] ?? '',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-
-                      // logic badge
-                      if (isOverdue) ...[
-                        const SizedBox(width: 8),
-                        _buildBadge('Overdue', const Color(0xFFD4183D)),
-                      ] else if (isUrgent) ...[
-                        const SizedBox(width: 8),
-                        _buildBadge('Urgent', const Color(0xFFF9C474)),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    task['title'] ?? '',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w400,
-                      color: Colors.black87,
-                      decoration: task['completed'] == true
-                          ? TextDecoration.lineThrough
-                          : TextDecoration.none,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(width: 12),
-
-            // --- 3. DATE CIRCLE (KANAN) ---
-            Container(
-              width: 45,
-              height: 45,
-              decoration: const BoxDecoration(
-                color: Color(0xFF5784EB),
-                shape: BoxShape.circle,
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    dateMonth, // "Today" atau "Nov"
-                    style: const TextStyle(
-                      fontSize: 9,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  Text(
-                    dateDay, // "01"
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      height: 1.0,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => TaskDetailScreen(
+          task: task,
+          onDelete: onDelete ?? () {},
+          onTitleChanged: (newTitle) async {
+            if (task['id'] != null) {
+              await _todoService.updateTaskTitle(task['id'], newTitle);
+            }
+          },
+          onDescriptionChanged: (newDescription) async {
+            if (task['id'] != null) {
+              await _todoService.updateTaskDescription(task['id'], newDescription);
+            }
+          },
         ),
       ),
     );
   }
 
-  // Helper widget untuk Badge Kecil (Urgent/Overdue)
+  void _showDeleteDialog(BuildContext context) {
+    showIOSDialog(
+      context: context,
+      title: 'Delete Task',
+      message: 'Are you sure you want to delete "${task['title']}"?',
+      confirmText: 'Delete',
+      confirmTextColor: const Color(0xFFFF453A),
+      onConfirm: () {
+        if (onDelete != null) onDelete!();
+      },
+    );
+  }
+
+  void _showCompletionDialog(BuildContext context) {
+    showIOSDialog(
+      context: context,
+      title: 'Delete completed task',
+      message: 'Do you want to delete this completed task?',
+      cancelText: 'Keep',
+      confirmText: 'Delete',
+      confirmTextColor: const Color(0xFFFF453A),
+      onCancel: () {
+        if (task['completed'] != true) {
+          onToggle();
+        }
+      },
+      onConfirm: () {
+        if (onDelete != null) onDelete!();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Task deleted")),
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final DateTime? deadline = task['deadline'] is Timestamp
+        ? (task['deadline'] as Timestamp).toDate()
+        : task['deadline'] as DateTime?;
+
+    // 2. Status Overdue/Urgent
+    bool isOverdue = false;
+    bool isUrgent = false;
+
+    if (deadline != null && task['completed'] != true) {
+      final now = DateTime.now();
+      final difference = deadline.difference(now);
+      if (difference.isNegative) {
+        isOverdue = true;
+      } else if (difference.inHours <= 12) {
+        isUrgent = true;
+      }
+    }
+
+    String dateDay = "--";
+    String dateMonth = "--";
+    bool isToday = false; // Flag penanda hari ini
+
+    if (deadline != null) {
+      final now = DateTime.now();
+      // Cek apakah Tahun, Bulan, dan Hari sama
+      isToday = deadline.year == now.year &&
+          deadline.month == now.month &&
+          deadline.day == now.day;
+
+      if (isToday) {
+        // Jika hari ini, set text khusus
+        dateMonth = ""; // Kosongkan bulan
+        dateDay = "Today";
+      } else {
+        // Jika bukan hari ini, format biasa
+        dateDay = DateFormat('dd').format(deadline);
+        dateMonth = DateFormat('MMM').format(deadline);
+      }
+    }
+
+    String displayTime = "--:--";
+    if (deadline != null) {
+      displayTime = DateFormat('HH:mm').format(deadline); // Format 24 jam (misal 14:30)
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Slidable(
+        key: ValueKey(task['id'] ?? task['title']),
+
+        // ✅ ACTION PANE SESUAI GAMBAR
+        endActionPane: ActionPane(
+          motion: const ScrollMotion(),
+          extentRatio: 0.6, // Lebar area geser
+          children: [
+            const SizedBox(width: 8), // Spasi antara item dan tombol
+
+            // Tombol EDIT (Kuning)
+            CustomSlidableAction(
+              onPressed: (context) => _navigateToDetail(context),
+              backgroundColor: const Color(0xFFFFA726),
+              foregroundColor: Colors.white,
+              borderRadius: BorderRadius.circular(50), // Bulat Penuh
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Icon(Icons.edit, size: 20),
+                  SizedBox(height: 4),
+                  Text("Edit", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ),
+
+            const SizedBox(width: 8), // Spasi antar tombol
+
+            // Tombol DELETE (Merah)
+            CustomSlidableAction(
+              onPressed: (context) => _showDeleteDialog(context),
+              backgroundColor: const Color(0xFFD32F2F),
+              foregroundColor: Colors.white,
+              borderRadius: BorderRadius.circular(50), // Bulat Penuh
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Icon(Icons.delete, size: 20),
+                  SizedBox(height: 4),
+                  Text("Delete", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ),
+          ],
+        ),
+
+        // TAMPILAN ITEM UTAMA
+        child: GestureDetector(
+          onTap: () => _navigateToDetail(context),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF4F7FF),
+              borderRadius: BorderRadius.circular(50),
+              border: Border.all(color: Colors.black, width: 1),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                )
+              ],
+            ),
+            child: Row(
+              children: [
+                // Checkbox
+                GestureDetector(
+                  onTap: () {
+                    if (task['completed'] != true) {
+                      _showCompletionDialog(context);
+                    } else {
+                      onToggle();
+                    }
+                  },
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: const Color(0xFF5784EB), width: 2),
+                      color: task['completed'] == true
+                          ? const Color(0xFF5784EB)
+                          : Colors.transparent,
+                    ),
+                    child: task['completed'] == true
+                        ? const Icon(Icons.check, size: 18, color: Colors.white)
+                        : null,
+                  ),
+                ),
+                const SizedBox(width: 16),
+
+                // Info Task
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.access_time, size: 14, color: Colors.grey),
+                          const SizedBox(width: 4),
+                          Text(
+                            displayTime,
+                            style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w500),
+                          ),
+                          if (isOverdue) ...[
+                            const SizedBox(width: 8),
+                            _buildBadge('Overdue', const Color(0xFFD4183D)),
+                          ] else if (isUrgent) ...[
+                            const SizedBox(width: 8),
+                            _buildBadge('Urgent', const Color(0xFFF9C474)),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        task['title'] ?? 'No Title',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                          decoration: task['completed'] == true
+                              ? TextDecoration.lineThrough
+                              : TextDecoration.none,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(width: 12),
+
+                // Date Circle
+                Container(
+                  width: 45,
+                  height: 45,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF5784EB),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Hanya tampilkan Bulan jika BUKAN hari ini
+                      if (!isToday)
+                        Text(
+                          dateMonth,
+                          style: const TextStyle(fontSize: 9, color: Colors.white, fontWeight: FontWeight.w500),
+                        ),
+                      Text(
+                        dateDay,
+                        style: TextStyle(
+                          // Jika "Today", kecilkan font sedikit agar muat
+                            fontSize: isToday ? 11 : 14,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            height: 1.0
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildBadge(String text, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -199,7 +311,7 @@ class TaskItem extends StatelessWidget {
         style: const TextStyle(
           fontSize: 10,
           color: Colors.white,
-          fontWeight: FontWeight.w500,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );
