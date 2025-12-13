@@ -1,21 +1,29 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
+// ✅ Import Services & Models (Pastikan path sesuai)
 import '../../data/models/todo_model.dart';
 import '../../data/services/todo_services.dart';
+
+// Import Core & Config
 import '../../../../core/services/auth_service.dart';
 import '../../../../config/routes/routes.dart';
 import '../../../../core/widgets/navigation/custom_top_app_bar.dart';
 import '../../../../core/widgets/navigation/custom_navbar_widget.dart';
+
+// Import Widgets
 import '../widgets/task_item.dart';
 import '../widgets/add_task_bottom_sheet.dart';
+
+// Import Pages
 import 'all_category_screen.dart';
 import 'overdue_screen.dart';
 import 'urgent_screen.dart';
 
 class MainTodoScreen extends StatefulWidget {
   final String? username;
-  const MainTodoScreen({super.key, this.username});
+  const MainTodoScreen({Key? key, this.username}) : super(key: key);
 
   @override
   State<MainTodoScreen> createState() => _MainTodoScreenState();
@@ -70,9 +78,11 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
       backgroundColor: Colors.white,
       appBar: CustomTopAppBar(
         onProfileTap: () => Navigator.pushNamed(context, AppRoutes.profile),
-        onNotificationTap: () {},
+        onNotificationTap: () {
+          Navigator.pushNamed(context, AppRoutes.notification);
+        },
       ),
-      // ✅ Gunakan StreamBuilder untuk Realtime Update
+      // Gunakan StreamBuilder untuk Realtime Update
       body: StreamBuilder<List<TodoModel>>(
         stream: _todoService.getTodosStream(),
         builder: (context, snapshot) {
@@ -252,7 +262,7 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
     );
   }
 
-  // ✅ Logic Simpan ke Firebase saat Add Task
+  // Logic Simpan ke Firebase saat Add Task
   void _showAddTaskDialog() {
     AddTaskBottomSheet.show(
       context,
@@ -264,7 +274,8 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
         await _todoService.addTodo(
             taskData['title'],
             category,
-            deadline
+            deadline,
+            taskData['description'] ?? ''
         );
 
         if (mounted) {
@@ -279,15 +290,9 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
   Widget _buildStatusCard(String count, String label, Color topColor, Color bottomColor) {
     return GestureDetector(
       onTap: () {
-        if (label == 'All') {
-          Navigator.push(context, MaterialPageRoute(builder: (context) => const AllCategoryScreen()));
-        }
-        else if (label == 'Urgent') {
-          Navigator.push(context, MaterialPageRoute(builder: (context) => const UrgentTaskScreen()));
-        }
-        else if (label == 'Overdue') {
-          Navigator.push(context, MaterialPageRoute(builder: (context) => const OverdueTaskScreen()));
-        }
+        if (label == 'All') Navigator.push(context, MaterialPageRoute(builder: (context) => const AllCategoryScreen()));
+        else if (label == 'Urgent') Navigator.push(context, MaterialPageRoute(builder: (context) => const UrgentTaskScreen()));
+        else if (label == 'Overdue') Navigator.push(context, MaterialPageRoute(builder: (context) => const OverdueTaskScreen()));
       },
       child: Container(
         height: 120,

@@ -155,14 +155,13 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
 
     try {
       final eventToSave = Event(
-        id: _isEditMode ? widget.eventToEdit!.id : null, // Pakai ID lama jika edit
+        id: _isEditMode ? widget.eventToEdit!.id : null,
         title: _eventNameController.text,
         description: _noteController.text,
         startTime: startDateTime,
         endTime: endDateTime,
         categoryId: _selectedCategoryId!,
         userId: _userId,
-        // Jika edit, pertahankan createdAt lama, jika baru pakai DateTime.now()
         createdAt: _isEditMode ? widget.eventToEdit!.createdAt : DateTime.now(),
       );
 
@@ -172,8 +171,12 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
         await _eventService.addEvent(eventToSave);
       }
 
+      // ✅ REMOVED: Tidak schedule reminder di sini
+      // Reminder akan di-trigger manual dari ReminderCard saja
+      // Ini mencegah duplikasi notifikasi
+
       if (mounted) {
-        Navigator.pop(context); // Tutup BottomSheet
+        Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(_isEditMode ? 'Event updated successfully' : 'Event created successfully'),

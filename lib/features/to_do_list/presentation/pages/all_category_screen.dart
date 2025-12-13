@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+
+// ✅ Import Services & Models
 import '../../data/models/todo_model.dart';
 import '../../data/services/todo_services.dart';
 import '../../data/models/category_model.dart';
 import '../../data/services/category_service.dart';
+
+// ✅ Import Widgets (Termasuk Alert Dialog dari Core)
 import '../../../../core/widgets/dialog/alert_dialog.dart';
 import '../widgets/task_item.dart';
 import 'folder_screen.dart';
 
 class AllCategoryScreen extends StatefulWidget {
-  const AllCategoryScreen({super.key});
+  const AllCategoryScreen({Key? key}) : super(key: key);
 
   @override
   State<AllCategoryScreen> createState() => _AllCategoryScreenState();
@@ -49,7 +53,7 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
     });
   }
 
-  // ✅ LOGIC DELETE SELECTED TASKS (Fixed async gap)
+  // ✅ LOGIC DELETE SELECTED TASKS
   void _deleteSelectedTasks() {
     if (_selectedTaskIds.isEmpty) return;
 
@@ -60,9 +64,6 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
       confirmText: 'Delete',
       confirmTextColor: const Color(0xFFFF453A),
       onConfirm: () async {
-        final navigator = Navigator.of(context);
-        final messenger = ScaffoldMessenger.of(context);
-
         for (String id in _selectedTaskIds) {
           await _todoService.deleteTodo(id);
         }
@@ -72,14 +73,16 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
           _isSelectMode = false;
         });
 
-        messenger.showSnackBar(
-          const SnackBar(content: Text("Tasks deleted successfully")),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Tasks deleted successfully")),
+          );
+        }
       },
     );
   }
 
-  // ✅ LOGIC DELETE CATEGORY (Fixed async gap)
+  // ✅ LOGIC DELETE CATEGORY
   void _deleteCategory(String categoryId, String categoryName) {
     showIOSDialog(
       context: context,
@@ -88,13 +91,12 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
       confirmText: 'Delete',
       confirmTextColor: const Color(0xFFFF453A),
       onConfirm: () async {
-        final messenger = ScaffoldMessenger.of(context);
-
         await _categoryService.deleteCategory(categoryId);
-
-        messenger.showSnackBar(
-          const SnackBar(content: Text("Category deleted successfully")),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Category deleted successfully")),
+          );
+        }
       },
     );
   }
@@ -176,12 +178,16 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
                     const SizedBox(height: 20),
 
                     // --- HORIZONTAL CATEGORY LIST ---
+                    // --- HORIZONTAL CATEGORY LIST ---
                     SizedBox(
-                      height: 130,
+                      // 1. TINGKATKAN TINGGI AGAR SHADOW TIDAK TERPOTONG
+                      height: 130, // Sebelumnya 110, tambah jadi 130 atau lebih
                       child: categories.isEmpty
                           ? const Center(child: Text("No categories"))
                           : ListView.builder(
                         scrollDirection: Axis.horizontal,
+                        // 2. TAMBAHKAN PADDING VERTIKAL
+                        // Agar ada ruang untuk shadow di atas dan bawah
                         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                         itemCount: categories.length,
                         itemBuilder: (context, index) {
@@ -374,8 +380,11 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
       ),
       child: PopupMenuButton<String>(
         icon: const Icon(Icons.more_horiz, size: 24, color: Colors.black87),
+
+        // Hapus padding default
         padding: EdgeInsets.zero,
         constraints: const BoxConstraints(),
+
         offset: const Offset(0, 30),
         elevation: 2,
         onSelected: (value) {
@@ -435,7 +444,7 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.25),
+              color: Colors.black.withOpacity(0.25),
               offset: const Offset(0, 4),
               blurRadius: 4,
               spreadRadius: 0,
@@ -462,7 +471,7 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.4),
+                    color: Colors.white.withOpacity(0.4),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -548,8 +557,7 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
 }
 
 class _IOSAddCategoryDialogContent extends StatefulWidget {
-  const _IOSAddCategoryDialogContent();
-
+  const _IOSAddCategoryDialogContent({Key? key}) : super(key: key);
   @override
   State<_IOSAddCategoryDialogContent> createState() => _IOSAddCategoryDialogContentState();
 }
@@ -600,11 +608,8 @@ class _IOSAddCategoryDialogContentState extends State<_IOSAddCategoryDialogConte
                   Container(width: 1, color: const Color(0xFFE0E0E0)),
                   Expanded(child: InkWell(onTap: () async {
                     if (_nameController.text.trim().isNotEmpty) {
-                      final navigator = Navigator.of(context);
-
                       await _categoryService.addCategory(_nameController.text.trim(), _selectedGradientIndex);
-
-                      navigator.pop();
+                      if (mounted) Navigator.pop(context);
                     }
                   }, child: Center(child: Text("Add", style: GoogleFonts.poppins(color: blueColor, fontSize: 15, fontWeight: FontWeight.w600))))),
                 ]))
