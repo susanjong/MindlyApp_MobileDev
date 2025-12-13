@@ -78,9 +78,11 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
       backgroundColor: Colors.white,
       appBar: CustomTopAppBar(
         onProfileTap: () => Navigator.pushNamed(context, AppRoutes.profile),
-        onNotificationTap: () {},
+        onNotificationTap: () {
+          Navigator.pushNamed(context, AppRoutes.notification);
+        },
       ),
-      // ✅ Gunakan StreamBuilder untuk Realtime Update
+      // Gunakan StreamBuilder untuk Realtime Update
       body: StreamBuilder<List<TodoModel>>(
         stream: _todoService.getTodosStream(),
         builder: (context, snapshot) {
@@ -260,7 +262,7 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
     );
   }
 
-  // ✅ Logic Simpan ke Firebase saat Add Task
+  // Logic Simpan ke Firebase saat Add Task
   void _showAddTaskDialog() {
     AddTaskBottomSheet.show(
       context,
@@ -297,7 +299,7 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
         decoration: BoxDecoration(
           gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [topColor, bottomColor]),
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 12, offset: const Offset(0, 4))],
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 12, offset: const Offset(0, 4))],
         ),
         child: Padding(
           padding: const EdgeInsets.all(14),
