@@ -93,13 +93,65 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
                         return _buildEmptyState();
                       }
 
-                      return ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
-                        itemCount: notifications.length,
-                        itemBuilder: (context, index) {
-                          final notification = notifications[index];
-                          return _buildNotificationCard(notification);
-                        },
+                      return Column(
+                        children: [
+                          // ✅ Delete All Button
+                          if (notifications.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  GestureDetector(
+                                    onTap: () => _showDeleteAllDialog(),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 10,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: const Color(0xFFFF6B6B),
+                                          width: 1.5,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          const Icon(
+                                            Icons.delete_sweep,
+                                            size: 18,
+                                            color: Color(0xFFFF6B6B),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            'Delete All',
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 13,
+                                              color: const Color(0xFFFF6B6B),
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                          Expanded(
+                            child: ListView.builder(
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                              itemCount: notifications.length,
+                              itemBuilder: (context, index) {
+                                final notification = notifications[index];
+                                return _buildNotificationCard(notification);
+                              },
+                            ),
+                          ),
+                        ],
                       );
                     },
                   );
@@ -108,6 +160,78 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  // ✅ Dialog konfirmasi Delete All
+  void _showDeleteAllDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFFFCFCFC),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Delete All Notifications?',
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFF1A1A1A),
+          ),
+        ),
+        content: Text(
+          'This action cannot be undone. All notifications will be permanently deleted.',
+          style: GoogleFonts.poppins(fontSize: 14, color: const Color(0xFF6B6B6B)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.poppins(color: const Color(0xFF6B6B6B)),
+            ),
+          ),
+          TextButton(
+            onPressed: () async {
+              final navigator = Navigator.of(context);
+              final messenger = ScaffoldMessenger.of(context);
+
+              try {
+                await _notificationService.deleteAllNotifications();
+
+                navigator.pop(); // Close dialog
+
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'All notifications deleted',
+                      style: GoogleFonts.poppins(fontSize: 13),
+                    ),
+                    duration: const Duration(seconds: 2),
+                    backgroundColor: const Color(0xFF10B981),
+                  ),
+                );
+              } catch (e) {
+                navigator.pop();
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Failed to delete notifications',
+                      style: GoogleFonts.poppins(fontSize: 13),
+                    ),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            child: Text(
+              'Delete All',
+              style: GoogleFonts.poppins(
+                color: const Color(0xFFFF6B6B),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -199,18 +323,19 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
 
                       return GestureDetector(
                         onTap: () async {
+                          final messenger = ScaffoldMessenger.of(context);
+
                           await _notificationService.markAllAsRead();
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'All notifications marked as read',
-                                  style: GoogleFonts.poppins(fontSize: 13),
-                                ),
-                                duration: const Duration(seconds: 2),
+
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'All notifications marked as read',
+                                style: GoogleFonts.poppins(fontSize: 13),
                               ),
-                            );
-                          }
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
                         },
                         child: Container(
                           padding: const EdgeInsets.symmetric(
@@ -269,7 +394,6 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
         final isSmallScreen = screenWidth < 360;
         final isMediumScreen = screenWidth >= 360 && screenWidth < 600;
 
-        // Adaptive sizes
         final iconSize = isSmallScreen ? 100.0 : isMediumScreen ? 110.0 : 120.0;
         final innerIconSize = isSmallScreen ? 70.0 : isMediumScreen ? 80.0 : 90.0;
         final iconInnerSize = isSmallScreen ? 40.0 : isMediumScreen ? 45.0 : 50.0;
@@ -296,7 +420,6 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
                   mainAxisAlignment: MainAxisAlignment.center,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Animated icon with red color
                     AnimatedBuilder(
                       animation: _animationController,
                       builder: (context, child) {
@@ -348,7 +471,6 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
                     ),
                     SizedBox(height: isSmallScreen ? 24 : 28),
 
-                    // Title
                     Text(
                       'Notifications are Off',
                       style: GoogleFonts.poppins(
@@ -361,7 +483,6 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
                     ),
                     SizedBox(height: isSmallScreen ? 8 : 10),
 
-                    // Description
                     Text(
                       'You won\'t receive any notifications until you enable them in settings',
                       style: GoogleFonts.poppins(
@@ -376,7 +497,6 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
                     ),
                     SizedBox(height: isSmallScreen ? 28 : 32),
 
-                    // Enable button - Purple color #D732A8
                     GestureDetector(
                       onTap: () {
                         Navigator.pushNamed(context, AppRoutes.profile);
@@ -421,7 +541,6 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
                     ),
                     SizedBox(height: isSmallScreen ? 12 : 14),
 
-                    // Info box - Yellow hint color #FBAE38
                     Container(
                       width: double.infinity,
                       constraints: BoxConstraints(
@@ -479,7 +598,15 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
         notification.priority == 'high' &&
         notification.title.contains('Overdue');
 
-    if (isOverdueCompletion) {
+    // ✅ Handle event notifications
+    if (notification.type == 'event_reminder' || notification.type == 'event_created') {
+      backgroundColor = const Color(0xFFF3E5F5);
+      borderColor = const Color(0xFFD732A8);
+      iconData = notification.type == 'event_reminder'
+          ? Icons.event_available
+          : Icons.event_note;
+      iconColor = const Color(0xFFD732A8);
+    } else if (isOverdueCompletion) {
       backgroundColor = const Color(0xFFEFF6FF);
       borderColor = const Color(0xFFC2DCFF);
       iconData = Icons.celebration;
@@ -499,8 +626,8 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
           iconColor = const Color(0xFFFF9800);
           break;
         case 'overdue':
-          backgroundColor = const Color(0xFFEFF6FF);
-          borderColor = const Color(0xFFC2DCFF);
+          backgroundColor = const Color(0xFFFFEBEE);
+          borderColor = const Color(0xFFFFCDD2);
           iconData = Icons.warning_amber_rounded;
           iconColor = const Color(0xFFD4183D);
           break;
@@ -602,7 +729,7 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
                           ),
                         ),
                       ),
-                      if (isOverdueCompletion)
+                      if (notification.type == 'overdue')
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: ShapeDecoration(
@@ -714,14 +841,16 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
   Future<void> _handleReminder(NotificationModel notification) async {
     if (notification.relatedTaskId == null) return;
 
-    await _notificationService.scheduleReminder(
-      taskId: notification.relatedTaskId!,
-      taskTitle: notification.description.replaceAll('"', ''),
-      reminderTime: DateTime.now().add(const Duration(hours: 1)),
-    );
+    final messenger = ScaffoldMessenger.of(context);
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
+    try {
+      await _notificationService.scheduleReminder(
+        taskId: notification.relatedTaskId!,
+        taskTitle: notification.description.replaceAll('"', ''),
+        reminderTime: DateTime.now().add(const Duration(hours: 1)),
+      );
+
+      messenger.showSnackBar(
         SnackBar(
           content: Text(
             'Reminder set successfully! ⏰',
@@ -729,6 +858,17 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
           ),
           duration: const Duration(seconds: 2),
           backgroundColor: const Color(0xFF4CAF50),
+        ),
+      );
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'Failed to set reminder: ${e.toString()}',
+            style: GoogleFonts.poppins(),
+          ),
+          duration: const Duration(seconds: 2),
+          backgroundColor: Colors.red,
         ),
       );
     }
