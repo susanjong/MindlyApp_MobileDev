@@ -190,7 +190,6 @@ class NotificationService {
         );
       } else {
         // TODO: Schedule notification untuk waktu yang tepat
-        // Untuk sekarang, kita buat notifikasi langsung
         await createNotification(
           title: '📅 Event Created',
           description: 'Event "$eventTitle" has been scheduled',
