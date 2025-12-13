@@ -16,9 +16,10 @@ class TodoService {
   }
 
   // 1. CREATE: Tambah Task Baru
-  Future<void> addTodo(String title, String category, DateTime deadline) async {
+  Future<void> addTodo(String title, String category, DateTime deadline, {String description = ''}) async {
     await _todosCollection.add({
       'title': title,
+      'description': description,
       'category': category,
       'deadline': Timestamp.fromDate(deadline),
       'isCompleted': false,

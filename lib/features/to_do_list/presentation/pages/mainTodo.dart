@@ -266,13 +266,15 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
       context,
       onSave: (taskData) async {
         DateTime deadline = taskData['deadline'] ?? DateTime.now();
-
         String category = taskData['category'] ?? 'Uncategorized';
+        String title = taskData['title'] ?? '';
+        String description = taskData['description'] ?? '';
 
         await _todoService.addTodo(
-            taskData['title'],
+            title,
             category,
-            deadline
+            deadline,
+            description: description // Tambahkan parameter ini
         );
 
         if (mounted) {
