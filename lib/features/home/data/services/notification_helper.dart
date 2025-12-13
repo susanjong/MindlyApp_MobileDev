@@ -1,4 +1,3 @@
-// lib/core/services/notification_helper.dart
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter/foundation.dart';
@@ -12,7 +11,7 @@ class NotificationHelper {
 
   FlutterLocalNotificationsPlugin get plugin => _notifications;
 
-  // ✅ Initialize notification plugin
+  // ✅ Initialize notification plugin (WITHOUT exact alarm permission)
   Future<void> initialize() async {
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosSettings = DarwinInitializationSettings(
@@ -35,24 +34,28 @@ class NotificationHelper {
       },
     );
 
-    // Request permissions
+    // Request permissions (WITHOUT exact alarms)
     await _requestPermissions();
 
     if (kDebugMode) {
-      print('✅ NotificationHelper initialized');
+      print('✅ NotificationHelper initialized (without exact alarms)');
     }
   }
 
   Future<void> _requestPermissions() async {
     final android = _notifications.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+
+    // ✅ Request notification permission (basic)
     await android?.requestNotificationsPermission();
-    await android?.requestExactAlarmsPermission();
+
+    // ❌ HAPUS BARIS INI - Tidak perlu exact alarms permission
+    // await android?.requestExactAlarmsPermission();
 
     final ios = _notifications.resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
     await ios?.requestPermissions(alert: true, badge: true, sound: true);
   }
 
-  // ✅ Schedule notification
+  // ✅ Schedule notification (menggunakan inexact scheduling)
   Future<void> scheduleNotification({
     required int id,
     required String title,
@@ -83,17 +86,18 @@ class NotificationHelper {
       iOS: iosDetails,
     );
 
+    // ✅ Gunakan inexact scheduling (tidak butuh exact alarm permission)
     await _notifications.zonedSchedule(
       id,
       title,
       body,
       tzDateTime,
       notificationDetails,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      androidScheduleMode: AndroidScheduleMode.inexact,
     );
 
     if (kDebugMode) {
-      print('✅ Notification scheduled: ID=$id, Time=$scheduledDate');
+      print('✅ Notification scheduled (inexact): ID=$id, Time=$scheduledDate');
     }
   }
 
@@ -102,6 +106,14 @@ class NotificationHelper {
     await _notifications.cancel(id);
     if (kDebugMode) {
       print('🗑️ Notification cancelled: ID=$id');
+    }
+  }
+
+  // ✅ Cancel all notifications
+  Future<void> cancelAllNotifications() async {
+    await _notifications.cancelAll();
+    if (kDebugMode) {
+      print('🗑️ All notifications cancelled');
     }
   }
 
