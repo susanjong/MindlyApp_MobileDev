@@ -26,6 +26,17 @@ class AuthService {
     return user.providerData.first.providerId;
   }
 
+  // ===== CEK APAKAH EMAIL SUDAH TERVERIFIKASI =====
+  static Future<bool> checkEmailVerified() async {
+    try {
+      await _auth.currentUser?.reload();
+      return _auth.currentUser?.emailVerified ?? false;
+    } catch (e) {
+      debugPrint('Error checking email verification: $e');
+      return false;
+    }
+  }
+
   // create or update (firestore)
   static Future<void> _createOrUpdateUserInFirestore(
       User user, {
@@ -90,7 +101,7 @@ class AuthService {
     }
   }
 
-  // for google sign in
+  // for google sign in (Google otomatis terverifikasi)
   static Future<UserCredential?> signInWithGoogle() async {
     try {
       await _googleSignIn.signOut();
@@ -141,6 +152,13 @@ class AuthService {
         password: password,
       );
 
+      // ✅ CEK EMAIL VERIFICATION SETELAH LOGIN
+      if (credential.user != null && !credential.user!.emailVerified) {
+        // Jika email belum diverifikasi, sign out dan throw exception
+        await _auth.signOut();
+        throw Exception('Please verify your email before signing in. Check your inbox.');
+      }
+
       if (credential.user != null) {
         await _createOrUpdateUserInFirestore(credential.user!);
       }
@@ -180,11 +198,13 @@ class AuthService {
         await credential.user?.reload();
       }
 
-      // send verification email
-      try {
-        await credential.user?.sendEmailVerification();
-      } catch (_) {}
+      // ✅ KIRIM EMAIL VERIFICATION (WAJIB)
+      if (credential.user != null && !credential.user!.emailVerified) {
+        await credential.user!.sendEmailVerification();
+        debugPrint('✓ Verification email sent to ${credential.user!.email}');
+      }
 
+      // ✅ BUAT USER DI FIRESTORE TAPI TANDAI BELUM VERIFIED
       if (credential.user != null) {
         await _createOrUpdateUserInFirestore(
           credential.user!,
@@ -325,14 +345,13 @@ class AuthService {
     try {
       debugPrint('=== Starting deletion of all user data for UID: $uid ===');
 
-      // ✅ Daftar LENGKAP semua subcollections yang perlu dihapus
       final List<String> subcollections = [
-        'notes',                   // dari NoteService
-        'categories',              // dari NoteService & CategoryService
-        'todos',                   // dari TodoService
-        'notifications',           // dari NotificationService
-        'events',                  // dari EventService (calendar)
-        'home_completed_tasks',    // 🔥 TAMBAHAN BARU untuk HomePage completed tasks
+        'notes',
+        'categories',
+        'todos',
+        'notifications',
+        'events',
+        'home_completed_tasks',
       ];
 
       for (String collectionName in subcollections) {
@@ -343,7 +362,6 @@ class AuthService {
 
     } catch (e) {
       debugPrint('Error deleting user data: $e');
-      // Tetap lanjutkan proses delete account meskipun ada error
     }
   }
 
@@ -365,7 +383,6 @@ class AuthService {
         return;
       }
 
-      // Hapus dalam batch (max 500 per batch)
       final batch = _firestore.batch();
       int count = 0;
 
@@ -373,7 +390,6 @@ class AuthService {
         batch.delete(doc.reference);
         count++;
 
-        // Commit batch setiap 500 dokumen
         if (count >= 500) {
           await batch.commit();
           debugPrint('Batch committed: $count documents from $collectionName');
@@ -381,7 +397,6 @@ class AuthService {
         }
       }
 
-      // Commit sisa dokumen
       if (count > 0) {
         await batch.commit();
         debugPrint('Final batch committed: $count documents from $collectionName');
@@ -405,28 +420,20 @@ class AuthService {
       if (user == null) throw Exception('No user signed in');
 
       debugPrint('=== Starting profile update ===');
-      debugPrint('DisplayName: $displayName');
-      debugPrint('Bio: $bio');
-      debugPrint('PhotoURL: ${photoURL == null ? "null (no change)" : photoURL.isEmpty ? "empty string (REMOVED)" : photoURL.startsWith("data:image") ? "Base64 (length ${photoURL.length})" : "URL: $photoURL"}');
 
-      // Update Firebase Auth profile (ONLY if not Base64)
       if (displayName != null) {
         await user.updateDisplayName(displayName);
         debugPrint('Display name updated in Firebase Auth');
       }
 
-      // handle photo in Firebase Auth
       if (photoURL != null) {
         if (photoURL.isEmpty) {
-          // photo was removed, set to null in Firebase Auth
           await user.updatePhotoURL(null);
           debugPrint('Photo REMOVED from Firebase Auth (set to null)');
         } else if (!photoURL.startsWith('data:image')) {
-          // regular URL - update Firebase Auth
           await user.updatePhotoURL(photoURL);
           debugPrint('Photo URL updated in Firebase Auth');
         } else {
-          // base64 - skip Firebase Auth (doesn't support Base64)
           debugPrint('⏭ Skipping Firebase Auth for Base64 image');
         }
       }
@@ -434,7 +441,6 @@ class AuthService {
       await user.reload();
       debugPrint('✓ Firebase Auth user reloaded');
 
-      // update Firestore (supports everything including empty string)
       final userRef = _firestore.collection('users').doc(user.uid);
 
       final updateData = <String, dynamic>{
@@ -449,11 +455,8 @@ class AuthService {
         updateData['bio'] = bio;
       }
 
-      // always update photoURL in Firestore when provided
-      // empty string = photo removed, Base64 = new photo, URL = photo URL
       if (photoURL != null) {
         updateData['photoURL'] = photoURL;
-        debugPrint('Storing photoURL in Firestore: ${photoURL.isEmpty ? "EMPTY (removed)" : photoURL.startsWith("data:image") ? "Base64" : "URL"}');
       }
 
       await userRef.update(updateData);
@@ -479,19 +482,16 @@ class AuthService {
     }
   }
 
-  // update only photo URL in Firestore - SUPPORT BASE64
   static Future<void> updateUserPhotoURL(String photoURL) async {
     try {
       final user = _auth.currentUser;
       if (user == null) throw Exception('No user signed in');
 
-      // only update Firebase Auth if it's not base64
       if (!photoURL.startsWith('data:image')) {
         await user.updatePhotoURL(photoURL);
         await user.reload();
       }
 
-      // always update Firestore (supports Base64)
       await _firestore.collection('users').doc(user.uid).update({
         'photoURL': photoURL,
         'updatedAt': FieldValue.serverTimestamp(),
@@ -501,7 +501,6 @@ class AuthService {
     }
   }
 
-  // update user data (general purpose for settings like notifications)
   static Future<void> updateUserData(Map<String, dynamic> data) async {
     try {
       final user = _auth.currentUser;
@@ -518,7 +517,6 @@ class AuthService {
     }
   }
 
-  //  get user data
   static Future<Map<String, dynamic>?> getUserData() async {
     try {
       final user = _auth.currentUser;
@@ -541,13 +539,16 @@ class AuthService {
     return _firestore.collection('users').doc(user.uid).snapshots();
   }
 
+  // ✅ KIRIM ULANG EMAIL VERIFICATION
   static Future<void> sendEmailVerification() async {
     try {
       final user = _auth.currentUser;
       if (user != null && !user.emailVerified) {
         await user.sendEmailVerification();
+        debugPrint('✓ Verification email sent');
       }
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Error sending verification email: $e');
       throw Exception('Failed to send verification email');
     }
   }
