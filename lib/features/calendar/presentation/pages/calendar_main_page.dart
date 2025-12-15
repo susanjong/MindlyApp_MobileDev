@@ -44,6 +44,8 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
   void initState() {
     super.initState();
     _loadCategories();
+    // ✅ Optional: Check pending notifications on init
+    _checkPendingNotifications();
   }
 
   @override
@@ -64,6 +66,20 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
             };
           });
         });
+  }
+
+  // ✅ NEW: Check pending notifications untuk debugging
+  Future<void> _checkPendingNotifications() async {
+    try {
+      final pending = await _eventService.getPendingNotifications();
+      debugPrint('📋 Total pending notifications: ${pending.length}');
+
+      for (var notif in pending) {
+        debugPrint('  - ID: ${notif.id}, Title: ${notif.title}, Payload: ${notif.payload}');
+      }
+    } catch (e) {
+      debugPrint('❌ Error checking pending notifications: $e');
+    }
   }
 
   Color _getColorFromHex(String hexColor) {
@@ -120,7 +136,10 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => const AddEventBottomSheet(),
-    );
+    ).then((_) {
+      // ✅ Refresh pending notifications after adding event
+      _checkPendingNotifications();
+    });
   }
 
   Future<void> _handleSearch() async {
@@ -138,8 +157,12 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
         ),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to load events for search: $e')),
+        SnackBar(
+          content: Text('Failed to load events for search: $e'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
@@ -165,19 +188,15 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
       },
       child: Scaffold(
         backgroundColor: Colors.white,
-
         appBar: CustomTopAppBar(
           isCalendarMode: true,
           isYearView: _currentView == CalendarViewMode.yearly,
           onSearchTap: _handleSearch,
           onToggleView: _toggleViewMode,
-          onProfileTap: () =>
-              Navigator.pushNamed(context, AppRoutes.profile),
-          onNotificationTap: () {},
+          onProfileTap: () => Navigator.pushNamed(context, AppRoutes.profile),
+          onNotificationTap: () => Navigator.pushNamed(context, AppRoutes.notification),
         ),
-
         body: _buildBodyContent(),
-
         floatingActionButton: GlobalExpandableFab(
           actions: [
             FabActionModel(
@@ -187,9 +206,7 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
             ),
           ],
         ),
-        floatingActionButtonLocation:
-        FloatingActionButtonLocation.endFloat,
-
+        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
         bottomNavigationBar: CustomNavBar(
           selectedIndex: 3,
           onItemTapped: _handleNavigation,
@@ -207,6 +224,10 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
         return StreamBuilder<List<Event>>(
           stream: _eventService.getEventsForMonth(userId, _focusedMonth),
           builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
             final monthEvents = snapshot.data ?? [];
             return MonthlyViewWidget(
               currentMonth: _focusedMonth,
@@ -229,17 +250,18 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
         );
 
       case CalendarViewMode.yearly:
-      // PERUBAHAN DISINI: Gunakan StreamBuilder untuk mengambil Data REAL
-      // Kita ambil semua event agar bisa ditampilkan di view tahunan
         return StreamBuilder<List<Event>>(
           stream: _eventService.getAllEvents(userId),
           builder: (context, snapshot) {
-            // Jika loading, atau error, atau kosong, kita tetap tampilkan kalender tapi tanpa dot
+            if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
             final allEvents = snapshot.data ?? [];
 
             return YearlyViewWidget(
               currentYear: _focusedMonth.year,
-              events: allEvents, // PASS REAL DATA
+              events: allEvents,
               onMonthTap: (month) {
                 setState(() {
                   _focusedMonth = month;
@@ -290,16 +312,10 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
             const SizedBox(height: 16),
             Expanded(
               child: StreamBuilder<List<Event>>(
-                stream: _eventService.getEventsForDate(
-                  userId,
-                  _selectedDate,
-                ),
+                stream: _eventService.getEventsForDate(userId, _selectedDate),
                 builder: (context, snapshot) {
-                  if (snapshot.connectionState ==
-                      ConnectionState.waiting) {
-                    return const Center(
-                      child: CircularProgressIndicator(),
-                    );
+                  if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+                    return const Center(child: CircularProgressIndicator());
                   }
 
                   final events = snapshot.data ?? [];
@@ -308,12 +324,23 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
                     return Center(
                       child: Padding(
                         padding: const EdgeInsets.only(top: 40),
-                        child: Text(
-                          'No events for this date',
-                          style: GoogleFonts.poppins(
-                            color: const Color(0xFF94A3B8),
-                            fontSize: 14,
-                          ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.event_busy,
+                              size: 60,
+                              color: Colors.grey[300],
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'No events for this date',
+                              style: GoogleFonts.poppins(
+                                color: const Color(0xFF94A3B8),
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     );
@@ -322,29 +349,23 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
                   return ListView.builder(
                     controller: _scrollController,
                     physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 10,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
                     itemCount: events.length,
                     itemBuilder: (context, index) {
                       final event = events[index];
-                      final category =
-                      _categories[event.categoryId];
+                      final category = _categories[event.categoryId];
                       final color = category != null
                           ? _getColorFromHex(category.color)
                           : const Color(0xFF5683EB);
 
                       return Padding(
-                        padding:
-                        const EdgeInsets.only(bottom: 16),
+                        padding: const EdgeInsets.only(bottom: 16),
                         child: GestureDetector(
                           onTap: () {
                             showModalBottomSheet(
                               context: context,
                               isScrollControlled: true,
-                              backgroundColor:
-                              Colors.transparent,
+                              backgroundColor: Colors.transparent,
                               builder: (_) => EventDetailSheet(
                                 event: event,
                                 category: category,
@@ -352,34 +373,24 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
                             );
                           },
                           child: Row(
-                            crossAxisAlignment:
-                            CrossAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               SizedBox(
                                 width: 50,
                                 child: Text(
-                                  DateFormat('HH:mm')
-                                      .format(event.startTime),
+                                  DateFormat('HH:mm').format(event.startTime),
                                   style: GoogleFonts.poppins(
-                                    color:
-                                    const Color(0xFF94A3B8),
+                                    color: const Color(0xFF94A3B8),
                                     fontSize: 12,
-                                    fontWeight:
-                                    FontWeight.w500,
+                                    fontWeight: FontWeight.w500,
                                   ),
                                 ),
                               ),
                               Expanded(
                                 child: ScheduleCardWidget(
                                   title: event.title,
-                                  startTime:
-                                  DateFormat('HH:mm')
-                                      .format(
-                                      event.startTime),
-                                  endTime:
-                                  DateFormat('HH:mm')
-                                      .format(
-                                      event.endTime),
+                                  startTime: DateFormat('HH:mm').format(event.startTime),
+                                  endTime: DateFormat('HH:mm').format(event.endTime),
                                   color: color,
                                   height: 80,
                                 ),

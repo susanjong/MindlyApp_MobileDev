@@ -12,6 +12,7 @@ class Event {
   final String location;
   final String reminder;
   final String repeat;
+  final String? parentEventId;
 
   Event({
     this.id,
@@ -25,6 +26,7 @@ class Event {
     this.location = '',
     this.reminder = '15 minutes before',
     this.repeat = 'Does not repeat',
+    this.parentEventId,
   });
 
   // Convert to Map for Firestore
@@ -40,6 +42,7 @@ class Event {
       'location': location,
       'reminder': reminder,
       'repeat': repeat,
+      if (parentEventId != null) 'parentEventId': parentEventId,
     };
   }
 
@@ -57,6 +60,7 @@ class Event {
       location: map['location'] ?? '',
       reminder: map['reminder'] ?? '15 minutes before',
       repeat: map['repeat'] ?? 'Does not repeat',
+      parentEventId: map['parentEventId'],
     );
   }
 
@@ -72,6 +76,7 @@ class Event {
     String? location,
     String? reminder,
     String? repeat,
+    String? parentEventId,
   }) {
     return Event(
       id: id ?? this.id,
@@ -85,6 +90,7 @@ class Event {
       location: location ?? this.location,
       reminder: reminder ?? this.reminder,
       repeat: repeat ?? this.repeat,
+      parentEventId: parentEventId ?? this.parentEventId,
     );
   }
 }
