@@ -22,7 +22,7 @@ class AboutPage extends StatelessWidget {
             style: GoogleFonts.poppins(
               color: Colors.black,
               fontSize: 24,
-              fontWeight: FontWeight.w400,
+              fontWeight: FontWeight.w500,
               letterSpacing: -0.48,
             ),
           ),
