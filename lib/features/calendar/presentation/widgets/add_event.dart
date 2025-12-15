@@ -1,10 +1,12 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:notesapp/features/calendar/data/models/event_model.dart';
 import '../../../../features/calendar/data/services/category_service.dart';
 import '../../../../features/calendar/data/services/event_service.dart';
+import '../../data/services/location_service.dart';
 
 class AddEventBottomSheet extends StatefulWidget {
   final Event? eventToEdit; // Parameter untuk mode edit
@@ -19,6 +21,7 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
   // Services
   final EventService _eventService = EventService();
   final CategoryService _categoryService = CategoryService();
+  final LocationService _locationService = LocationService();
   final String _userId = FirebaseAuth.instance.currentUser!.uid;
 
   // Controllers
@@ -357,12 +360,12 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
 
   Widget _buildLocationField() {
     return Container(
-      height: 40,
+      // Hapus height fix agar dropdown bisa menyesuaikan
       decoration: BoxDecoration(
         border: Border.all(color: const Color(0xFFD1D1D1)),
         borderRadius: BorderRadius.circular(8),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 14), // Hapus vertical padding di container
       child: Row(
         children: [
           const Icon(
@@ -372,28 +375,75 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: TextField(
+            child: TypeAheadField<LocationSuggestion>(
               controller: _locationController,
-              style: GoogleFonts.poppins(
-                fontSize: 15,
-                color: const Color(0xFF222B45),
-              ),
-              onChanged: (value) {
+              builder: (context, controller, focusNode) {
+                return TextField(
+                  controller: controller,
+                  focusNode: focusNode,
+                  style: GoogleFonts.poppins(
+                    fontSize: 15,
+                    color: const Color(0xFF222B45),
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'Search location',
+                    hintStyle: GoogleFonts.poppins(
+                      color: const Color(0xFF8F9BB3),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w400,
+                    ),
+                    border: InputBorder.none,
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 10), // Pindahkan padding ke sini
+                  ),
+                );
+              },
+              suggestionsCallback: (pattern) async {
+                return await _locationService.searchLocation(pattern);
+              },
+              itemBuilder: (context, suggestion) {
+                return ListTile(
+                  leading: const Icon(Icons.location_pin, color: Color(0xFF5784EB)),
+                  title: Text(
+                    suggestion.displayName,
+                    style: GoogleFonts.poppins(fontSize: 13),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                );
+              },
+              onSelected: (suggestion) {
+                // Simpan nama lokasi ke controller
+                _locationController.text = suggestion.displayName;
+
                 setState(() {});
               },
-              decoration: InputDecoration(
-                hintText: 'Add location',
-                hintStyle: GoogleFonts.poppins(
-                  color: const Color(0xFF8F9BB3),
-                  fontSize: 15,
-                  fontWeight: FontWeight.w400,
+              decorationBuilder: (context, child) {
+                return Material(
+                  type: MaterialType.card,
+                  elevation: 4,
+                  borderRadius: BorderRadius.circular(8),
+                  child: child,
+                );
+              },
+              emptyBuilder: (context) => Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Text(
+                  'No location found',
+                  style: GoogleFonts.poppins(color: Colors.grey),
                 ),
-                border: InputBorder.none,
-                isDense: true,
-                contentPadding: EdgeInsets.zero,
               ),
             ),
           ),
+          // Tambahkan tombol clear jika ada teks
+          if (_locationController.text.isNotEmpty)
+            GestureDetector(
+              onTap: () {
+                _locationController.clear();
+                setState(() {});
+              },
+              child: const Icon(Icons.close, size: 18, color: Colors.grey),
+            ),
         ],
       ),
     );
