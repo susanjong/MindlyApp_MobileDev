@@ -11,11 +11,11 @@ class AddTaskBottomSheet extends StatefulWidget {
   final bool isCategoryLocked;
 
   const AddTaskBottomSheet({
-    super.key,
+    Key? key,
     this.onSave,
     this.initialCategory,
     this.isCategoryLocked = false,
-  });
+  }) : super(key: key);
 
   @override
   State<AddTaskBottomSheet> createState() => _AddTaskBottomSheetState();
@@ -63,7 +63,7 @@ class _AddTaskBottomSheetState extends State<AddTaskBottomSheet> {
     return months[monthName] ?? 1;
   }
 
-  // data sementara
+  // ✅ DATA SEMENTARA
   Map<String, dynamic>? _tempNewCategory;
 
   @override
@@ -99,6 +99,7 @@ class _AddTaskBottomSheetState extends State<AddTaskBottomSheet> {
     }
   }
 
+  // ✅ LOGIC SAVE UTAMA
   void _handleSave() async {
     if (!_isFormValid) return; // Mencegah save jika tidak valid
 
@@ -278,7 +279,9 @@ class _AddTaskBottomSheetState extends State<AddTaskBottomSheet> {
 
                   const SizedBox(height: 24),
 
-                  // 2. Bagian time (Wajib karena default sudah terisi)
+                  // ==========================================
+                  // 2. BAGIAN TIME (Wajib karena default sudah terisi)
+                  // ==========================================
                   _buildLabel('TIME'),
                   const SizedBox(height: 8),
                   Row(
@@ -432,9 +435,12 @@ class _AddTaskBottomSheetState extends State<AddTaskBottomSheet> {
   }
 }
 
-// dialog add data
+// ============================================
+//  DIALOG ADD CATEGORY (UI Only - Return Data)
+// ============================================
+
 class _IOSAddCategoryDialogContent extends StatefulWidget {
-  const _IOSAddCategoryDialogContent();
+  const _IOSAddCategoryDialogContent({Key? key}) : super(key: key);
 
   @override
   State<_IOSAddCategoryDialogContent> createState() =>
@@ -515,10 +521,11 @@ class _IOSAddCategoryDialogContentState extends State<_IOSAddCategoryDialogConte
                   children: [
                     Expanded(child: InkWell(onTap: () => Navigator.pop(context), child: Center(child: Text('Cancel', style: GoogleFonts.poppins(color: blueColor, fontSize: 15))))),
                     Container(width: 1, color: const Color(0xFFE0E0E0)),
-                    // tombol add data
+                    // ✅ TOMBOL ADD (Hanya Return Data)
                     Expanded(child: InkWell(onTap: () {
                       final name = _nameController.text.trim();
                       if (name.isNotEmpty) {
+                        // KEMBALIKAN DATA KE PARENT
                         Navigator.pop(context, {
                           'name': name,
                           'gradientIndex': _selectedGradientIndex

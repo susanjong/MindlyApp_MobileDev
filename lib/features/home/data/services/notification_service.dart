@@ -1,3 +1,4 @@
+// notification_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/widgets.dart';
@@ -16,7 +17,47 @@ class NotificationService {
     if (user == null) {
       throw Exception('User not logged in');
     }
-    return _firestore.collection('users').doc(user.uid).collection('notifications');
+    return _firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('notifications');
+  }
+
+  // ✅ Check if notifications are enabled for current user
+  Future<bool> areNotificationsEnabled() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return false;
+
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+
+      if (userDoc.exists) {
+        final data = userDoc.data();
+        if (data != null && data.containsKey('notificationsEnabled')) {
+          return data['notificationsEnabled'] as bool;
+        }
+      }
+      return true;
+    } catch (e) {
+      debugPrint('Error checking notification settings: $e');
+      return true;
+    }
+  }
+
+  // ✅ Stream untuk notification setting
+  Stream<bool> getNotificationSettingStream() {
+    final user = _auth.currentUser;
+    if (user == null) return Stream.value(false);
+
+    return _firestore.collection('users').doc(user.uid).snapshots().map((snapshot) {
+      if (snapshot.exists) {
+        final data = snapshot.data();
+        if (data != null && data.containsKey('notificationsEnabled')) {
+          return data['notificationsEnabled'] as bool;
+        }
+      }
+      return true;
+    });
   }
 
   // Initialize local notifications
@@ -24,8 +65,7 @@ class NotificationService {
     const AndroidInitializationSettings androidSettings =
     AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    const DarwinInitializationSettings iosSettings =
-    DarwinInitializationSettings(
+    const DarwinInitializationSettings iosSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
       requestSoundPermission: true,
@@ -39,12 +79,10 @@ class NotificationService {
     await _notificationsPlugin.initialize(
       settings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
-        // Handle notification tap
         debugPrint('Notification tapped: ${response.payload}');
       },
     );
 
-    // Request permissions for Android 13+
     await _notificationsPlugin
         .resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>()
@@ -57,8 +95,7 @@ class NotificationService {
     required String body,
     required String type,
   }) async {
-    const AndroidNotificationDetails androidDetails =
-    AndroidNotificationDetails(
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'task_channel',
       'Task Notifications',
       channelDescription: 'Notifications for task updates',
@@ -88,15 +125,23 @@ class NotificationService {
     );
   }
 
-  // Create notification in Firestore and show local notification
+  // ✅ Create notification dengan check setting
   Future<void> createNotification({
     required String title,
     required String description,
     required String type,
     required String priority,
     String? relatedTaskId,
+    String? relatedEventId,
   }) async {
     try {
+      final isEnabled = await areNotificationsEnabled();
+
+      if (!isEnabled) {
+        debugPrint('⚠️ Notifications are disabled by user. Skipping notification creation.');
+        return;
+      }
+
       await _notificationsCollection.add({
         'title': title,
         'description': description,
@@ -105,17 +150,120 @@ class NotificationService {
         'type': type,
         'priority': priority,
         'relatedTaskId': relatedTaskId,
+        'relatedEventId': relatedEventId,
       });
 
-      // Show local notification
       await showNotification(
         title: title,
         body: description,
         type: type,
       );
+
+      debugPrint('✅ Notification created: $title');
     } catch (e) {
       debugPrint('Error creating notification: $e');
     }
+  }
+
+  // ✅ NEW: Create notification for calendar event
+  Future<void> createEventNotification({
+    required String eventId,
+    required String eventTitle,
+    required DateTime eventTime,
+    required int minutesBefore,
+  }) async {
+    try {
+      final isEnabled = await areNotificationsEnabled();
+      if (!isEnabled) return;
+
+      final now = DateTime.now();
+      final reminderTime = eventTime.subtract(Duration(minutes: minutesBefore));
+
+      // Jika waktu reminder sudah lewat, kirim notifikasi sekarang
+      if (reminderTime.isBefore(now)) {
+        await createNotification(
+          title: '📅 Event Reminder',
+          description: 'Event "$eventTitle" is coming up soon!',
+          type: 'event_reminder',
+          priority: 'high',
+          relatedEventId: eventId,
+        );
+      } else {
+        // TODO: Schedule notification untuk waktu yang tepat
+        await createNotification(
+          title: '📅 Event Created',
+          description: 'Event "$eventTitle" has been scheduled',
+          type: 'event_created',
+          priority: 'medium',
+          relatedEventId: eventId,
+        );
+      }
+    } catch (e) {
+      debugPrint('Error creating event notification: $e');
+    }
+  }
+
+  // ✅ NEW: Check for overdue tasks and create notifications
+  Future<void> checkAndNotifyOverdueTasks() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return;
+
+      final isEnabled = await areNotificationsEnabled();
+      if (!isEnabled) return;
+
+      final now = DateTime.now();
+      final todosSnapshot = await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('todos')
+          .where('isCompleted', isEqualTo: false)
+          .get();
+
+      for (var doc in todosSnapshot.docs) {
+        final data = doc.data();
+        final deadline = (data['deadline'] as Timestamp).toDate();
+
+        // Cek apakah sudah overdue
+        if (deadline.isBefore(now)) {
+          final taskTitle = data['title'] ?? 'Untitled Task';
+          final createdAt = data['createdAt'] != null
+              ? (data['createdAt'] as Timestamp).toDate()
+              : now;
+
+          // Format tanggal
+          final deadlineStr = _formatDate(deadline);
+          final createdStr = _formatDate(createdAt);
+
+          // Cek apakah sudah ada notifikasi overdue untuk task ini
+          final existingNotif = await _notificationsCollection
+              .where('relatedTaskId', isEqualTo: doc.id)
+              .where('type', isEqualTo: 'overdue')
+              .limit(1)
+              .get();
+
+          // Hanya buat notifikasi baru jika belum ada
+          if (existingNotif.docs.isEmpty) {
+            await createNotification(
+              title: '⚠️ Overdue Task',
+              description: 'Task "$taskTitle" is overdue! Created on $createdStr, deadline was $deadlineStr',
+              type: 'overdue',
+              priority: 'high',
+              relatedTaskId: doc.id,
+            );
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error checking overdue tasks: $e');
+    }
+  }
+
+  // Helper untuk format tanggal
+  String _formatDate(DateTime date) {
+    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return '${date.day} ${months[date.month - 1]} ${date.year}';
   }
 
   // Get notifications stream
@@ -167,14 +315,37 @@ class NotificationService {
     await _notificationsCollection.doc(notificationId).delete();
   }
 
-  // Schedule reminder notification
+  // ✅ NEW: Delete all notifications
+  Future<void> deleteAllNotifications() async {
+    try {
+      final batch = _firestore.batch();
+      final allDocs = await _notificationsCollection.get();
+
+      for (var doc in allDocs.docs) {
+        batch.delete(doc.reference);
+      }
+
+      await batch.commit();
+      debugPrint('✅ All notifications deleted');
+    } catch (e) {
+      debugPrint('Error deleting all notifications: $e');
+      rethrow;
+    }
+  }
+
+  // Schedule reminder
   Future<void> scheduleReminder({
     required String taskId,
     required String taskTitle,
     required DateTime reminderTime,
   }) async {
     try {
-      // Create reminder notification in Firestore
+      final isEnabled = await areNotificationsEnabled();
+      if (!isEnabled) {
+        debugPrint('⚠️ Notifications are disabled by user. Cannot schedule reminder.');
+        return;
+      }
+
       await createNotification(
         title: 'Reminder: $taskTitle',
         description: 'Don\'t forget about your task!',
@@ -183,7 +354,6 @@ class NotificationService {
         relatedTaskId: taskId,
       );
 
-      // Show immediate notification
       await showNotification(
         title: 'Reminder Set! ⏰',
         body: 'You will be reminded about "$taskTitle"',

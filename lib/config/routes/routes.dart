@@ -6,7 +6,8 @@ import '../../features/auth/presentation/pages/resetpass.dart';
 import '../../features/auth/presentation/pages/signup.dart';
 import '../../features/auth/presentation/pages/splash_screen.dart';
 import '../../features/auth/presentation/pages/terms_of_service.dart';
-import '../../features/home/presentation/pages/home.dart';
+import '../../features/auth/presentation/pages/email_verification_screen.dart';
+import '../../core/services/auth_wrapper.dart';
 import '../../features/home/presentation/pages/notification.dart';
 import '../../features/notes/presentation/pages/note_editor_page.dart';
 import '../../features/notes/presentation/pages/notes_main_page.dart';
@@ -36,6 +37,7 @@ class AppRoutes {
   static const String aboutUs = '/about_info';
   static const String termsOfService = '/terms-of-service';
   static const String PrivacyPolicy = '/privacy-policy';
+  static const String emailVerification = '/email-verification';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -47,14 +49,18 @@ class AppRoutes {
         return _buildRoute(const SignUpScreen());
       case signIn:
         return _buildRoute(const LoginAccountScreen());
+
       case home:
-        return _buildRoute(const HomePage());
+        return _buildRoute(const AuthWrapper());
+
       case resetPassword:
         return _buildRoute(const ResetPasswordScreen());
       case AppRoutes.termsOfService:
         return MaterialPageRoute(builder: (_) => const TermsOfServiceScreen());
       case AppRoutes.PrivacyPolicy:
         return MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen());
+      case AppRoutes.emailVerification:
+        return MaterialPageRoute(builder: (_) => const EmailVerificationScreen());
       case profile:
         return _buildRoute(const AccountProfilePage());
       case notes:
