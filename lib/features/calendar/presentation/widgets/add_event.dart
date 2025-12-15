@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -9,9 +8,9 @@ import '../../../../core/widgets/others/snackbar.dart';
 import '../../../../features/calendar/data/services/category_service.dart';
 import '../../../../features/calendar/data/services/event_service.dart';
 
+// --- MAIN WIDGET ---
 class AddEventBottomSheet extends StatefulWidget {
   final Event? eventToEdit;
-
   const AddEventBottomSheet({super.key, this.eventToEdit});
 
   @override
@@ -23,46 +22,35 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
   final CategoryService _categoryService = CategoryService();
   final String _userId = FirebaseAuth.instance.currentUser!.uid;
 
+  // Controllers
   final TextEditingController _eventNameController = TextEditingController();
   final TextEditingController _noteController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
   final TextEditingController _categoryController = TextEditingController();
 
+  // State Variables
   bool _isLoading = false;
   bool _isEditMode = false;
   bool _isDataPopulated = false;
 
+  // Date & Time
   DateTime? _selectedDateObj;
   TimeOfDay? _startTimeObj;
   TimeOfDay? _endTimeObj;
 
-  String _selectedDateStr = '';
-  String _startTimeStr = '';
-  String _endTimeStr = '';
-
-  // ✅ Preserve user's last selected reminder and repeat
+  // Options
   String _reminder = '15 minutes before';
   String _repeat = 'Does not repeat';
   String? _selectedCategoryId;
-
   List<Category> _categories = [];
 
+  // Constants
   final List<String> _reminderOptions = [
-    'None',
-    '5 minutes before',
-    '10 minutes before',
-    '15 minutes before',
-    '30 minutes before',
-    '1 hour before',
-    '1 day before',
+    'None', '5 minutes before', '10 minutes before', '15 minutes before',
+    '30 minutes before', '1 hour before', '1 day before'
   ];
-
   final List<String> _repeatOptions = [
-    'Does not repeat',
-    'Every day',
-    'Every week',
-    'Every month',
-    'Every year',
+    'Does not repeat', 'Every day', 'Every week', 'Every month', 'Every year'
   ];
 
   @override
@@ -83,34 +71,16 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
 
   void _populateExistingData() {
     final event = widget.eventToEdit!;
-
     _eventNameController.text = event.title;
     _noteController.text = event.description;
     _locationController.text = event.location;
 
-    // ✅ PRESERVE REMINDER SETTING
-    if (_reminderOptions.contains(event.reminder)) {
-      _reminder = event.reminder;
-    } else {
-      _reminder = '15 minutes before'; // Fallback
-    }
-
-    // ✅ PRESERVE REPEAT SETTING
-    if (_repeatOptions.contains(event.repeat)) {
-      _repeat = event.repeat;
-    } else {
-      _repeat = 'Does not repeat'; // Fallback
-    }
+    if (_reminderOptions.contains(event.reminder)) _reminder = event.reminder;
+    if (_repeatOptions.contains(event.repeat)) _repeat = event.repeat;
 
     _selectedDateObj = event.startTime;
-    _selectedDateStr = DateFormat('dd/MM/yyyy').format(event.startTime);
-
     _startTimeObj = TimeOfDay.fromDateTime(event.startTime);
-    _startTimeStr = _startTimeObj!.format(context);
-
     _endTimeObj = TimeOfDay.fromDateTime(event.endTime);
-    _endTimeStr = _endTimeObj!.format(context);
-
     _selectedCategoryId = event.categoryId;
   }
 
@@ -136,33 +106,51 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
     });
   }
 
-  Future<void> _validateAndSave() async {
-    List<String> missingFields = [];
-    if (_eventNameController.text.isEmpty) missingFields.add('Event name');
-    if (_selectedDateStr.isEmpty) missingFields.add('Date');
-    if (_startTimeStr.isEmpty) missingFields.add('Start time');
-    if (_endTimeStr.isEmpty) missingFields.add('End time');
-    if (_selectedCategoryId == null) missingFields.add('Category');
+  // --- LOGIC FUNCTIONS ---
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDateObj ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(colorScheme: const ColorScheme.light(primary: Color(0xFF5784EB))),
+        child: child!,
+      ),
+    );
+    if (picked != null) setState(() => _selectedDateObj = picked);
+  }
 
-    if (missingFields.isNotEmpty) {
-      _showErrorDialog('Incomplete Fields', 'Please fill in: ${missingFields.join(', ')}');
+  Future<void> _pickTime(bool isStart) async {
+    final initial = isStart ? (_startTimeObj ?? TimeOfDay.now()) : (_endTimeObj ?? TimeOfDay.now());
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: initial,
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(colorScheme: const ColorScheme.light(primary: Color(0xFF5784EB))),
+        child: child!,
+      ),
+    );
+    if (picked != null) {
+      setState(() => isStart ? _startTimeObj = picked : _endTimeObj = picked);
+    }
+  }
+
+  Future<void> _validateAndSave() async {
+    // Basic validation
+    if (_eventNameController.text.isEmpty || _selectedDateObj == null ||
+        _startTimeObj == null || _endTimeObj == null || _selectedCategoryId == null) {
+      _showErrorDialog('Incomplete Fields', 'Please fill in all required fields.');
       return;
     }
 
     final startDateTime = DateTime(
-      _selectedDateObj!.year,
-      _selectedDateObj!.month,
-      _selectedDateObj!.day,
-      _startTimeObj!.hour,
-      _startTimeObj!.minute,
+      _selectedDateObj!.year, _selectedDateObj!.month, _selectedDateObj!.day,
+      _startTimeObj!.hour, _startTimeObj!.minute,
     );
-
     final endDateTime = DateTime(
-      _selectedDateObj!.year,
-      _selectedDateObj!.month,
-      _selectedDateObj!.day,
-      _endTimeObj!.hour,
-      _endTimeObj!.minute,
+      _selectedDateObj!.year, _selectedDateObj!.month, _selectedDateObj!.day,
+      _endTimeObj!.hour, _endTimeObj!.minute,
     );
 
     if (endDateTime.isBefore(startDateTime)) {
@@ -183,8 +171,10 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
         userId: _userId,
         createdAt: _isEditMode ? widget.eventToEdit!.createdAt : DateTime.now(),
         location: _locationController.text,
-        reminder: _reminder, // ✅ User's selected reminder
-        repeat: _repeat, // ✅ User's selected repeat
+        reminder: _reminder,
+        repeat: _repeat,
+        // Penting untuk delete logic: parentEventId
+        parentEventId: _isEditMode ? widget.eventToEdit!.parentEventId : null,
       );
 
       if (_isEditMode) {
@@ -195,388 +185,47 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
 
       if (mounted) {
         Navigator.pop(context);
-        Snackbar.success(
-          context,
-          _isEditMode ? 'Event updated successfully' : 'Event created successfully',
-        );
+        Snackbar.success(context, _isEditMode ? 'Event updated' : 'Event created');
       }
     } catch (e) {
-      if (mounted) {
-        Snackbar.error(context, 'Failed to save event: $e');
-      }
+      if (mounted) Snackbar.error(context, 'Failed to save: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
   void _showErrorDialog(String title, String content) {
-    showIOSDialog(
-      context: context,
-      title: title,
-      message: content,
-      confirmText: "OK",
-      confirmTextColor: const Color(0xFFD732A8),
-      singleButton: true,
-      onConfirm: () {},
-    );
+    showIOSDialog(context: context, title: title, message: content, confirmText: "OK", singleButton: true, onConfirm: () {});
   }
 
-  void _showAddCategoryDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFFFCFCFC),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Add New Category', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600)),
-        content: TextField(
-          controller: _categoryController,
-          autofocus: true,
-          decoration: const InputDecoration(hintText: 'Category name'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              if (_categoryController.text.isNotEmpty) {
-                final randomColor = Colors.primaries[DateTime.now().millisecond % Colors.primaries.length];
-                String hexColor = '#${randomColor.toARGB32().toRadixString(16).substring(2)}';
-
-                final newCategory = Category(
-                  name: _categoryController.text,
-                  color: hexColor,
-                  userId: _userId,
-                );
-
-                await _categoryService.addCategory(newCategory);
-                _categoryController.clear();
-                if (context.mounted) Navigator.pop(context);
-              }
-            },
-            child: const Text('Add', style: TextStyle(color: Color(0xFFD732A8), fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _pickTime(bool isStart) async {
-    final initialTime = isStart ? (_startTimeObj ?? TimeOfDay.now()) : (_endTimeObj ?? TimeOfDay.now());
-
-    final pickedTime = await showTimePicker(
-      context: context,
-      initialTime: initialTime,
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: Color(0xFF5784EB),
-              onSurface: Color(0xFF222B45),
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-
-    if (pickedTime != null) {
-      setState(() {
-        if (isStart) {
-          _startTimeObj = pickedTime;
-          _startTimeStr = pickedTime.format(context);
-        } else {
-          _endTimeObj = pickedTime;
-          _endTimeStr = pickedTime.format(context);
-        }
-      });
-    }
-  }
-
-  Future<void> _pickDate() async {
-    final pickedDate = await showDatePicker(
-      context: context,
-      initialDate: _selectedDateObj ?? DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: Color(0xFF5784EB),
-              onSurface: Color(0xFF222B45),
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-
-    if (pickedDate != null) {
-      setState(() {
-        _selectedDateObj = pickedDate;
-        _selectedDateStr = DateFormat('dd/MM/yyyy').format(pickedDate);
-      });
-    }
-  }
-
-  Color _getColorFromHex(String hexColor) {
-    hexColor = hexColor.replaceAll('#', '');
-    if (hexColor.length == 6) hexColor = 'FF$hexColor';
-    return Color(int.parse(hexColor, radix: 16));
-  }
-
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String hint,
-    bool isRequired = false,
-    int maxLines = 1,
-    double? height,
-  }) {
-    return Container(
-      height: height ?? 50,
-      decoration: BoxDecoration(
-        border: Border.all(color: const Color(0xFFD1D1D1)),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
-      child: TextField(
-        controller: controller,
-        maxLines: maxLines,
-        style: GoogleFonts.poppins(fontSize: 15, color: const Color(0xFF222B45)),
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: GoogleFonts.poppins(color: const Color(0xFF8F9BB3), fontSize: 15),
-          border: InputBorder.none,
-          isDense: true,
-          contentPadding: EdgeInsets.zero,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLocationField() {
-    return Container(
-      height: 50,
-      decoration: BoxDecoration(
-        border: Border.all(color: const Color(0xFFD1D1D1)),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      child: Row(
-        children: [
-          const Icon(Icons.location_on_outlined, size: 20, color: Color(0xFF8F9BB3)),
-          const SizedBox(width: 10),
-          Expanded(
-            child: TextField(
-              controller: _locationController,
-              style: GoogleFonts.poppins(fontSize: 15, color: const Color(0xFF222B45)),
-              decoration: InputDecoration(
-                hintText: 'Location (Optional)',
-                hintStyle: GoogleFonts.poppins(color: const Color(0xFF8F9BB3), fontSize: 15, fontWeight: FontWeight.w400),
-                border: InputBorder.none,
-                isDense: true,
-                contentPadding: EdgeInsets.zero,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDropdownField({
-    required String value,
-    required VoidCallback onTap,
-    required IconData icon,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 40,
-        decoration: BoxDecoration(
-          border: Border.all(color: const Color(0xFFD1D1D1)),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              children: [
-                Icon(icon, size: 18, color: const Color(0xFF8F9BB3)),
-                const SizedBox(width: 10),
-                Text(value, style: GoogleFonts.poppins(color: const Color(0xFF222B45), fontSize: 15)),
-              ],
-            ),
-            const Icon(Icons.keyboard_arrow_down, size: 20, color: Color(0xFF8F9BB3)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCategoryChip({
-    required String label,
-    required Color color,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 32,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        decoration: BoxDecoration(
-          border: Border.all(color: color, width: 1.5),
-          borderRadius: BorderRadius.circular(16),
-          color: isSelected ? color.withValues(alpha: 0.15) : Colors.transparent,
-        ),
-        child: Center(
-          child: Text(
-            label,
-            style: GoogleFonts.poppins(color: color, fontSize: 14, fontWeight: FontWeight.w500),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showReminderPicker() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.7),
-        decoration: const BoxDecoration(
-          color: Color(0xFFFCFCFC),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 10),
-              Text('Select Reminder', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 10),
-              ..._reminderOptions.map((option) => ListTile(
-                title: Text(option),
-                trailing: _reminder == option ? const Icon(Icons.check, color: Color(0xFFD732A8)) : null,
-                onTap: () {
-                  setState(() => _reminder = option);
-                  Navigator.pop(context);
-                },
-              )),
-              const SizedBox(height: 20),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showRepeatPicker() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.7),
-        decoration: const BoxDecoration(
-          color: Color(0xFFFCFCFC),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 10),
-              Text('Select Repeat', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 10),
-              ..._repeatOptions.map((option) => ListTile(
-                title: Text(option),
-                trailing: _repeat == option ? const Icon(Icons.check, color: Color(0xFFD732A8)) : null,
-                onTap: () {
-                  setState(() => _repeat = option);
-                  Navigator.pop(context);
-                },
-              )),
-              const SizedBox(height: 20),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
+  // --- BUILD METHOD ---
   @override
   Widget build(BuildContext context) {
-    final double keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
     final double screenHeight = MediaQuery.of(context).size.height;
+    final double keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
     final double screenWidth = MediaQuery.of(context).size.width;
-
     final bool isTablet = screenWidth > 600;
-    final double widthConstraint = isTablet ? 600 : double.infinity;
-
-    final double availableSpace = (screenHeight * 0.9) - keyboardHeight;
-    final double safeMaxHeight = math.max(availableSpace, 0.0);
-    final double desiredMinHeight = screenHeight * 0.4;
-    final double safeMinHeight = math.min(desiredMinHeight, safeMaxHeight);
 
     return Padding(
       padding: EdgeInsets.only(bottom: keyboardHeight),
       child: Center(
         child: ConstrainedBox(
           constraints: BoxConstraints(
-            maxWidth: widthConstraint,
-            minHeight: safeMinHeight,
-            maxHeight: safeMaxHeight,
+            maxWidth: isTablet ? 600 : double.infinity,
+            maxHeight: screenHeight * 0.85,
           ),
           child: Container(
             decoration: BoxDecoration(
               color: const Color(0xFFFCFCFC),
-              borderRadius: BorderRadius.vertical(
-                top: const Radius.circular(32),
-                bottom: isTablet ? const Radius.circular(32) : Radius.zero,
-              ),
+              borderRadius: BorderRadius.vertical(top: const Radius.circular(32), bottom: isTablet ? const Radius.circular(32) : Radius.zero),
               border: Border.all(color: Colors.black.withValues(alpha: 0.15), width: 1),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  margin: const EdgeInsets.symmetric(vertical: 10),
-                  width: 80,
-                  height: 3,
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.7),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const SizedBox(width: 24),
-                      Text(
-                        _isEditMode ? 'Edit Event' : 'Add New Event',
-                        style: GoogleFonts.poppins(
-                          color: const Color(0xFF222B45),
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: () => Navigator.pop(context),
-                        child: const Icon(Icons.close, size: 24, color: Color(0xFF222B45)),
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
+                _EventHeader(isEditMode: _isEditMode),
+
+                Flexible(
                   child: SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
                     keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
@@ -584,160 +233,48 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (isTablet || MediaQuery.of(context).orientation == Orientation.landscape) ...[
-                          Row(
-                            children: [
-                              Expanded(child: _buildTextField(controller: _eventNameController, hint: 'Event name*', isRequired: true)),
-                              const SizedBox(width: 16),
-                              Expanded(child: _buildLocationField()),
-                            ],
-                          )
-                        ] else ...[
-                          _buildTextField(controller: _eventNameController, hint: 'Event name*', isRequired: true),
-                          const SizedBox(height: 14),
-                          _buildLocationField(),
-                        ],
-                        const SizedBox(height: 14),
-                        _buildTextField(controller: _noteController, hint: 'Type the note here...', maxLines: 3, height: 70),
-                        const SizedBox(height: 14),
-                        GestureDetector(
-                          onTap: _pickDate,
-                          child: Container(
-                            height: 40,
-                            decoration: BoxDecoration(
-                              border: Border.all(color: const Color(0xFFD1D1D1)),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            padding: const EdgeInsets.symmetric(horizontal: 14),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.calendar_today_outlined, size: 18, color: Color(0xFF8F9BB3)),
-                                const SizedBox(width: 10),
-                                Text(
-                                  _selectedDateStr.isEmpty ? 'Date' : _selectedDateStr,
-                                  style: GoogleFonts.poppins(
-                                    color: _selectedDateStr.isEmpty ? const Color(0xFF8F9BB3) : const Color(0xFF222B45),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                        _EventInputFields(
+                          nameController: _eventNameController,
+                          locationController: _locationController,
+                          noteController: _noteController,
+                          isTablet: isTablet,
                         ),
                         const SizedBox(height: 14),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: () => _pickTime(true),
-                                child: Container(
-                                  height: 40,
-                                  decoration: BoxDecoration(
-                                    border: Border.all(color: const Color(0xFFD1D1D1)),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                                  child: Row(
-                                    children: [
-                                      const Icon(Icons.access_time_outlined, size: 18, color: Color(0xFF8F9BB3)),
-                                      const SizedBox(width: 10),
-                                      Text(
-                                        _startTimeStr.isEmpty ? 'Start time' : _startTimeStr,
-                                        style: GoogleFonts.poppins(
-                                          color: _startTimeStr.isEmpty ? const Color(0xFF8F9BB3) : const Color(0xFF222B45),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 18),
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: () => _pickTime(false),
-                                child: Container(
-                                  height: 40,
-                                  decoration: BoxDecoration(
-                                    border: Border.all(color: const Color(0xFFD1D1D1)),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                                  child: Row(
-                                    children: [
-                                      const Icon(Icons.access_time_outlined, size: 18, color: Color(0xFF8F9BB3)),
-                                      const SizedBox(width: 10),
-                                      Text(
-                                        _endTimeStr.isEmpty ? 'End time' : _endTimeStr,
-                                        style: GoogleFonts.poppins(
-                                          color: _endTimeStr.isEmpty ? const Color(0xFF8F9BB3) : const Color(0xFF222B45),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
+
+                        _EventDateTime(
+                          dateStr: _selectedDateObj != null ? DateFormat('dd/MM/yyyy').format(_selectedDateObj!) : '',
+                          startTimeStr: _startTimeObj?.format(context) ?? '',
+                          endTimeStr: _endTimeObj?.format(context) ?? '',
+                          onDateTap: _pickDate,
+                          onStartTimeTap: () => _pickTime(true),
+                          onEndTimeTap: () => _pickTime(false),
                         ),
                         const SizedBox(height: 14),
-                        Text('Reminder', style: GoogleFonts.poppins(color: const Color(0xFF131313), fontSize: 15, fontWeight: FontWeight.w500)),
-                        const SizedBox(height: 10),
-                        _buildDropdownField(value: _reminder, onTap: _showReminderPicker, icon: Icons.notifications_outlined),
+
+                        _EventOptions(
+                          reminder: _reminder,
+                          repeat: _repeat,
+                          reminderOptions: _reminderOptions,
+                          repeatOptions: _repeatOptions,
+                          onReminderChanged: (val) => setState(() => _reminder = val),
+                          onRepeatChanged: (val) => setState(() => _repeat = val),
+                        ),
                         const SizedBox(height: 17),
-                        Text('Repeat', style: GoogleFonts.poppins(color: const Color(0xFF131313), fontSize: 15, fontWeight: FontWeight.w500)),
-                        const SizedBox(height: 10),
-                        _buildDropdownField(value: _repeat, onTap: _showRepeatPicker, icon: Icons.repeat_outlined),
-                        const SizedBox(height: 17),
-                        Text('Select Category', style: GoogleFonts.poppins(color: const Color(0xFF222B45), fontSize: 15, fontWeight: FontWeight.w500)),
-                        const SizedBox(height: 10),
-                        SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
-                            children: [
-                              ..._categories.map((category) {
-                                return Padding(
-                                  padding: const EdgeInsets.only(right: 10),
-                                  child: _buildCategoryChip(
-                                    label: category.name,
-                                    color: _getColorFromHex(category.color),
-                                    isSelected: _selectedCategoryId == category.id,
-                                    onTap: () {
-                                      setState(() {
-                                        _selectedCategoryId = category.id;
-                                      });
-                                    },
-                                  ),
-                                );
-                              }),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Center(
-                          child: GestureDetector(
-                            onTap: _showAddCategoryDialog,
-                            child: Text('+ Add new', style: GoogleFonts.poppins(color: const Color(0xFFD732A8), fontSize: 14, fontWeight: FontWeight.w500)),
-                          ),
+
+                        _EventCategory(
+                          categories: _categories,
+                          selectedId: _selectedCategoryId,
+                          onCategorySelected: (id) => setState(() => _selectedCategoryId = id),
+                          onAddCategory: () {
+                            // Implementasi logika add category dialog di sini atau pass function
+                          },
                         ),
                         const SizedBox(height: 20),
-                        GestureDetector(
-                          onTap: _isLoading ? null : _validateAndSave,
-                          child: Container(
-                            width: double.infinity,
-                            height: 50,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFD732A8),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Center(
-                              child: _isLoading
-                                  ? const CircularProgressIndicator(color: Colors.white)
-                                  : Text(
-                                _isEditMode ? 'Update' : 'Create',
-                                style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600),
-                              ),
-                            ),
-                          ),
+
+                        _EventSaveButton(
+                          isLoading: _isLoading,
+                          isEditMode: _isEditMode,
+                          onTap: _validateAndSave,
                         ),
                         const SizedBox(height: 30),
                       ],
@@ -748,6 +285,270 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+// --- EXTRACTED WIDGETS (MODULAR) ---
+
+class _EventHeader extends StatelessWidget {
+  final bool isEditMode;
+  const _EventHeader({required this.isEditMode});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          margin: const EdgeInsets.symmetric(vertical: 10),
+          width: 80, height: 3,
+          decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.7), borderRadius: BorderRadius.circular(2)),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const SizedBox(width: 24),
+              Text(isEditMode ? 'Edit Event' : 'Add New Event', style: GoogleFonts.poppins(color: const Color(0xFF222B45), fontSize: 16, fontWeight: FontWeight.w600)),
+              GestureDetector(onTap: () => Navigator.pop(context), child: const Icon(Icons.close, size: 24, color: Color(0xFF222B45))),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _EventInputFields extends StatelessWidget {
+  final TextEditingController nameController;
+  final TextEditingController locationController;
+  final TextEditingController noteController;
+  final bool isTablet;
+
+  const _EventInputFields({
+    required this.nameController,
+    required this.locationController,
+    required this.noteController,
+    required this.isTablet,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final nameField = _buildTextField(controller: nameController, hint: 'Event name*', isRequired: true);
+    final locField = _buildLocationField(locationController);
+
+    return Column(
+      children: [
+        if (isTablet)
+          Row(children: [Expanded(child: nameField), const SizedBox(width: 16), Expanded(child: locField)])
+        else ...[
+          nameField, const SizedBox(height: 14), locField,
+        ],
+        const SizedBox(height: 14),
+        _buildTextField(controller: noteController, hint: 'Type the note here...', maxLines: 3, height: 70),
+      ],
+    );
+  }
+
+  Widget _buildTextField({required TextEditingController controller, required String hint, bool isRequired = false, int maxLines = 1, double? height}) {
+    return Container(
+      height: height ?? 50,
+      decoration: BoxDecoration(border: Border.all(color: const Color(0xFFD1D1D1)), borderRadius: BorderRadius.circular(8)),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
+      child: TextField(
+        controller: controller, maxLines: maxLines,
+        style: GoogleFonts.poppins(fontSize: 15, color: const Color(0xFF222B45)),
+        decoration: InputDecoration(hintText: hint, hintStyle: GoogleFonts.poppins(color: const Color(0xFF8F9BB3), fontSize: 15), border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.zero),
+      ),
+    );
+  }
+
+  Widget _buildLocationField(TextEditingController controller) {
+    return Container(
+      height: 50,
+      decoration: BoxDecoration(border: Border.all(color: const Color(0xFFD1D1D1)), borderRadius: BorderRadius.circular(8)),
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      child: Row(
+        children: [
+          const Icon(Icons.location_on_outlined, size: 20, color: Color(0xFF8F9BB3)),
+          const SizedBox(width: 10),
+          Expanded(child: TextField(controller: controller, style: GoogleFonts.poppins(fontSize: 15, color: const Color(0xFF222B45)), decoration: InputDecoration(hintText: 'Location (Optional)', hintStyle: GoogleFonts.poppins(color: const Color(0xFF8F9BB3), fontSize: 15), border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.zero))),
+        ],
+      ),
+    );
+  }
+}
+
+class _EventDateTime extends StatelessWidget {
+  final String dateStr;
+  final String startTimeStr;
+  final String endTimeStr;
+  final VoidCallback onDateTap;
+  final VoidCallback onStartTimeTap;
+  final VoidCallback onEndTimeTap;
+
+  const _EventDateTime({
+    required this.dateStr, required this.startTimeStr, required this.endTimeStr,
+    required this.onDateTap, required this.onStartTimeTap, required this.onEndTimeTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        _buildPickerBox(icon: Icons.calendar_today_outlined, text: dateStr.isEmpty ? 'Date' : dateStr, onTap: onDateTap),
+        const SizedBox(height: 14),
+        Row(
+          children: [
+            Expanded(child: _buildPickerBox(icon: Icons.access_time_outlined, text: startTimeStr.isEmpty ? 'Start time' : startTimeStr, onTap: onStartTimeTap)),
+            const SizedBox(width: 18),
+            Expanded(child: _buildPickerBox(icon: Icons.access_time_outlined, text: endTimeStr.isEmpty ? 'End time' : endTimeStr, onTap: onEndTimeTap)),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPickerBox({required IconData icon, required String text, required VoidCallback onTap}) {
+    final isPlaceholder = text == 'Date' || text.contains('time');
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 40,
+        decoration: BoxDecoration(border: Border.all(color: const Color(0xFFD1D1D1)), borderRadius: BorderRadius.circular(8)),
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        child: Row(children: [Icon(icon, size: 18, color: const Color(0xFF8F9BB3)), const SizedBox(width: 10), Text(text, style: GoogleFonts.poppins(color: isPlaceholder ? const Color(0xFF8F9BB3) : const Color(0xFF222B45)))]),
+      ),
+    );
+  }
+}
+
+class _EventOptions extends StatelessWidget {
+  final String reminder;
+  final String repeat;
+  final List<String> reminderOptions;
+  final List<String> repeatOptions;
+  final ValueChanged<String> onReminderChanged;
+  final ValueChanged<String> onRepeatChanged;
+
+  const _EventOptions({
+    required this.reminder, required this.repeat,
+    required this.reminderOptions, required this.repeatOptions,
+    required this.onReminderChanged, required this.onRepeatChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Reminder', style: GoogleFonts.poppins(color: const Color(0xFF131313), fontSize: 15, fontWeight: FontWeight.w500)),
+        const SizedBox(height: 10),
+        _buildDropdown(context, reminder, reminderOptions, Icons.notifications_outlined, onReminderChanged),
+        const SizedBox(height: 17),
+        Text('Repeat', style: GoogleFonts.poppins(color: const Color(0xFF131313), fontSize: 15, fontWeight: FontWeight.w500)),
+        const SizedBox(height: 10),
+        _buildDropdown(context, repeat, repeatOptions, Icons.repeat_outlined, onRepeatChanged),
+      ],
+    );
+  }
+
+  Widget _buildDropdown(BuildContext context, String value, List<String> options, IconData icon, ValueChanged<String> onChanged) {
+    return GestureDetector(
+      onTap: () {
+        showModalBottomSheet(
+          context: context, backgroundColor: Colors.transparent, isScrollControlled: true,
+          builder: (ctx) => Container(
+            decoration: const BoxDecoration(color: Color(0xFFFCFCFC), borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              const SizedBox(height: 10),
+              ...options.map((opt) => ListTile(
+                title: Text(opt, style: GoogleFonts.poppins()),
+                trailing: value == opt ? const Icon(Icons.check, color: Color(0xFFD732A8)) : null,
+                onTap: () { onChanged(opt); Navigator.pop(ctx); },
+              )),
+              const SizedBox(height: 20),
+            ]),
+          ),
+        );
+      },
+      child: Container(
+        height: 40,
+        decoration: BoxDecoration(border: Border.all(color: const Color(0xFFD1D1D1)), borderRadius: BorderRadius.circular(8)),
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Row(children: [Icon(icon, size: 18, color: const Color(0xFF8F9BB3)), const SizedBox(width: 10), Text(value, style: GoogleFonts.poppins(color: const Color(0xFF222B45), fontSize: 15))]), const Icon(Icons.keyboard_arrow_down, size: 20, color: Color(0xFF8F9BB3))]),
+      ),
+    );
+  }
+}
+
+class _EventCategory extends StatelessWidget {
+  final List<Category> categories;
+  final String? selectedId;
+  final ValueChanged<String> onCategorySelected;
+  final VoidCallback onAddCategory;
+
+  const _EventCategory({required this.categories, required this.selectedId, required this.onCategorySelected, required this.onAddCategory});
+
+  Color _getColor(String hex) {
+    hex = hex.replaceAll('#', '');
+    if (hex.length == 6) hex = 'FF$hex';
+    return Color(int.parse(hex, radix: 16));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Select Category', style: GoogleFonts.poppins(color: const Color(0xFF222B45), fontSize: 15, fontWeight: FontWeight.w500)),
+        const SizedBox(height: 10),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              ...categories.map((cat) {
+                final color = _getColor(cat.color);
+                final isSelected = selectedId == cat.id;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 10),
+                  child: GestureDetector(
+                    onTap: () => onCategorySelected(cat.id!),
+                    child: Container(
+                      height: 32, padding: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(border: Border.all(color: color, width: 1.5), borderRadius: BorderRadius.circular(16), color: isSelected ? color.withValues(alpha: 0.15) : Colors.transparent),
+                      child: Center(child: Text(cat.name, style: GoogleFonts.poppins(color: color, fontSize: 14, fontWeight: FontWeight.w500))),
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        Center(child: GestureDetector(onTap: onAddCategory, child: Text('+ Add new', style: GoogleFonts.poppins(color: const Color(0xFFD732A8), fontSize: 14, fontWeight: FontWeight.w500)))),
+      ],
+    );
+  }
+}
+
+class _EventSaveButton extends StatelessWidget {
+  final bool isLoading;
+  final bool isEditMode;
+  final VoidCallback onTap;
+
+  const _EventSaveButton({required this.isLoading, required this.isEditMode, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: isLoading ? null : onTap,
+      child: Container(
+        width: double.infinity, height: 50,
+        decoration: BoxDecoration(color: const Color(0xFFD732A8), borderRadius: BorderRadius.circular(12)),
+        child: Center(child: isLoading ? const CircularProgressIndicator(color: Colors.white) : Text(isEditMode ? 'Update' : 'Create', style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600))),
       ),
     );
   }

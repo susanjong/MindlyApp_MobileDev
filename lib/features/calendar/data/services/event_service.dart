@@ -6,6 +6,8 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter/foundation.dart';
 import 'package:notesapp/features/home/data/services/notification_helper.dart';
 
+import '../../presentation/widgets/delete_repeated_event.dart';
+
 class EventService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final NotificationService _notificationService = NotificationService();
@@ -261,6 +263,72 @@ class EventService {
       );
     } catch (e) {
       throw Exception('Failed to update event: $e');
+    }
+  }
+
+  Future<void> deleteRecurringEvent({
+    required String userId,
+    required Event event,
+    required DeleteMode mode,
+  }) async {
+    final eventsRef = _getEventsCollection(userId);
+    final batch = _firestore.batch();
+
+    try {
+      // Logic ID: Jika parentEventId null, maka event ini adalah Parent-nya
+      final String seriesId = event.parentEventId ?? event.id!;
+
+      if (mode == DeleteMode.single) {
+        // 1. Hapus event ini saja (Single instance)
+        batch.delete(eventsRef.doc(event.id));
+      }
+      else if (mode == DeleteMode.all) {
+        // 2. Hapus Parent (Master)
+        batch.delete(eventsRef.doc(seriesId));
+
+        // 3. Hapus semua Anak (Children)
+        final childrenQuery = await eventsRef
+            .where('parentEventId', isEqualTo: seriesId)
+            .get();
+
+        for (var doc in childrenQuery.docs) {
+          batch.delete(doc.reference);
+        }
+      }
+      else if (mode == DeleteMode.following) {
+        // 4. Hapus event ini
+        batch.delete(eventsRef.doc(event.id));
+
+        // 5. Hapus semua event yang parent-nya sama DAN waktunya setelah event ini
+        // NOTE: Firestore membutuhkan Composite Index untuk query ini
+        // (parentEventId == X AND startTime > Y)
+        final futureEvents = await eventsRef
+            .where('parentEventId', isEqualTo: seriesId)
+            .where('startTime', isGreaterThan: Timestamp.fromDate(event.startTime))
+            .get();
+
+        for (var doc in futureEvents.docs) {
+          batch.delete(doc.reference);
+        }
+
+        // Edge Case: Jika kita menghapus "Following" dari Parent-nya langsung
+        if (event.id == seriesId) {
+          // Logic tambahan mungkin diperlukan jika parent dihapus tapi child sebelumnya ingin disimpan
+          // Tapi untuk simplifikasi, biasanya hapus parent = hapus akses ke series.
+        }
+      }
+
+      await batch.commit();
+
+      // Cancel notifikasi terkait
+      if (mode == DeleteMode.single) {
+        await _cancelScheduledNotification(event.id!);
+      } else {
+        // TODO: Logic cancel notifikasi batch (opsional, butuh iterasi ID)
+      }
+
+    } catch (e) {
+      throw Exception('Failed to delete recurring event: $e');
     }
   }
 
