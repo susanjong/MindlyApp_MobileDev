@@ -82,7 +82,7 @@ class _MoveToCategoriesDialogState extends State<MoveToCategoriesDialog> {
         onAdd: (name) async {
           await widget.onAddCategory(name);
           if (mounted) {
-            Navigator.pop(ctx);
+            Navigator.pop(context);
           }
         },
       ),

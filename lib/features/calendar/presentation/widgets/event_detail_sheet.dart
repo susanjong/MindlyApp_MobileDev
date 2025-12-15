@@ -3,11 +3,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:notesapp/core/widgets/dialog/alert_dialog.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
-import '../../../../features/calendar/data/models/event_model.dart';
+import 'package:notesapp/features/calendar/data/model/event_model.dart';
 import '../../../../features/calendar/data/services/category_service.dart';
 import '../../../../features/calendar/data/services/event_service.dart';
-import 'add_event.dart'; // Import AddEvent untuk mode Edit
+import 'add_event.dart';
 
 class EventDetailSheet extends StatelessWidget {
   final Event event;

@@ -126,10 +126,10 @@ class SuccessDialogContent extends StatefulWidget {
   final String message;
 
   const SuccessDialogContent({
-    Key? key,
+    super.key,
     required this.title,
     required this.message,
-  }) : super(key: key);
+  });
 
   @override
   State<SuccessDialogContent> createState() => _SuccessDialogContentState();
@@ -191,7 +191,7 @@ class _SuccessDialogContentState extends State<SuccessDialogContent>
                 color: const Color(0xFF34A853),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF34A853).withOpacity(0.3),
+                    color: const Color(0xFF34A853).withValues(alpha: 0.3),
                     blurRadius: 20,
                     spreadRadius: 5,
                   ),

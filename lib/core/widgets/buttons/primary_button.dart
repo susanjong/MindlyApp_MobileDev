@@ -1,22 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-// Custom Button untuk profile page (ukuran kecil) - Responsive
+// custom button for profile page with small size
 class CustomButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
 
   const CustomButton({
-    Key? key,
+    super.key,
     required this.label,
     this.onPressed,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
     final double screenWidth = MediaQuery.of(context).size.width;
 
-    // Responsive sizing
     final double buttonWidth = screenWidth > 600 ? 100 : 88.81;
     final double buttonHeight = screenWidth > 600 ? 28 : 24;
     final double fontSize = screenWidth > 600 ? 13 : 12;
@@ -51,7 +50,7 @@ class CustomButton extends StatelessWidget {
   }
 }
 
-// Primary Button untuk login/signup (ukuran besar dengan desain pink) - Responsive
+// primary button make responsive
 class PrimaryButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
@@ -61,10 +60,10 @@ class PrimaryButton extends StatelessWidget {
   final double? height;
   final bool showArrow;
   final bool enabled;
-  final bool isFullWidth; // Opsi untuk full width responsif
+  final bool isFullWidth;
 
   const PrimaryButton({
-    Key? key,
+    super.key,
     required this.label,
     required this.onPressed,
     this.backgroundColor,
@@ -74,25 +73,23 @@ class PrimaryButton extends StatelessWidget {
     this.showArrow = true,
     this.enabled = true,
     this.isFullWidth = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
     final double screenWidth = MediaQuery.of(context).size.width;
-    final double screenHeight = MediaQuery.of(context).size.height;
 
-    // Responsive sizing
+    // responsive sizing
     final double buttonWidth = isFullWidth
-        ? screenWidth - 80 // Full width dengan padding
+        ? screenWidth - 80
         : (width ?? (screenWidth > 600 ? 360 : 312));
 
     final double buttonHeight = height ?? (screenWidth > 600 ? 45 : 38);
     final double fontSize = screenWidth > 600 ? 16 : 15;
 
-    // Tentukan warna berdasarkan enabled state
     final buttonColor = enabled
         ? (backgroundColor ?? const Color(0xFFD732A8))
-        : const Color(0x7FD732A8); // Warna semi-transparent saat disabled
+        : const Color(0x7FD732A8); // warna semi-transparent saat disabled
 
     final buttonTextColor = enabled
         ? (textColor ?? Colors.white)
@@ -135,22 +132,21 @@ class PrimaryButton extends StatelessWidget {
   }
 }
 
-// Wrapper widget untuk button dengan safe area
 class SafeButtonArea extends StatelessWidget {
   final Widget child;
   final EdgeInsets? padding;
 
   const SafeButtonArea({
-    Key? key,
+    super.key,
     required this.child,
     this.padding,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
     final double screenWidth = MediaQuery.of(context).size.width;
 
-    // Responsive padding
+    // responsive padding
     final EdgeInsets defaultPadding = EdgeInsets.symmetric(
       horizontal: screenWidth > 600 ? 40 : 30,
       vertical: 16,
@@ -165,9 +161,8 @@ class SafeButtonArea extends StatelessWidget {
   }
 }
 
-// Example usage dengan SafeArea
 class ResponsiveButtonExample extends StatelessWidget {
-  const ResponsiveButtonExample({Key? key}) : super(key: key);
+  const ResponsiveButtonExample({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -178,32 +173,29 @@ class ResponsiveButtonExample extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Custom Button (small)
               CustomButton(
                 label: 'Edit Profile',
-                onPressed: () {
-                  print('Edit Profile tapped');
-                },
+                onPressed: null,
               ),
 
               const SizedBox(height: 20),
 
-              // Primary Button (normal width)
+              // primary button normal width
               PrimaryButton(
                 label: 'Sign In',
                 onPressed: () {
-                  print('Sign In tapped');
+                  debugPrint('Sign In tapped');
                 },
                 enabled: true,
               ),
 
               const SizedBox(height: 20),
 
-              // Primary Button (full width responsive)
+              // primary button full width responsive
               PrimaryButton(
                 label: 'Create Account',
                 onPressed: () {
-                  print('Create Account tapped');
+                  debugPrint('Create Account tapped');
                 },
                 enabled: true,
                 isFullWidth: true,
@@ -211,11 +203,11 @@ class ResponsiveButtonExample extends StatelessWidget {
 
               const SizedBox(height: 20),
 
-              // Primary Button (disabled)
+              // primary button disabled
               PrimaryButton(
                 label: 'Submit',
                 onPressed: () {
-                  print('Submit tapped');
+                  debugPrint('Submit tapped');
                 },
                 enabled: false,
               ),

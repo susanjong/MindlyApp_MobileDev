@@ -2,10 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
-
-// Import Routes & Widgets
 import '../../../../config/routes/routes.dart';
 import '../../../../core/widgets/navigation/custom_navbar_widget.dart';
 import '../../../../core/widgets/buttons/global_expandable_fab.dart';
@@ -16,7 +13,7 @@ import '../widgets/yearly_view.dart';
 import '../widgets/schedule_card.dart';
 import '../widgets/add_event.dart';
 import '../widgets/event_detail_sheet.dart';
-import '../../data/models/event_model.dart';
+import 'package:notesapp/features/calendar/data/model/event_model.dart';
 import '../../data/services/category_service.dart';
 import '../../data/services/event_service.dart';
 
@@ -150,14 +147,14 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
       backgroundColor: Colors.white,
 
       // 1. APP BAR
-        appBar: CustomTopAppBar(
-          isCalendarMode: true, // Aktifkan mode kalender
-          isYearView: _currentView == CalendarViewMode.yearly,
-          onSearchTap: _handleSearch,
-          onToggleView: _toggleViewMode,
-          onProfileTap: () => Navigator.pushNamed(context, AppRoutes.profile),
-          onNotificationTap: () {},
-        ),
+      appBar: CustomTopAppBar(
+        isCalendarMode: true, // Aktifkan mode kalender
+        isYearView: _currentView == CalendarViewMode.yearly,
+        onSearchTap: _handleSearch,
+        onToggleView: _toggleViewMode,
+        onProfileTap: () => Navigator.pushNamed(context, AppRoutes.profile),
+        onNotificationTap: () {},
+      ),
 
       // 2. BODY CONTENT (SWITCHER)
       body: _buildBodyContent(),

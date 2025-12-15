@@ -7,27 +7,29 @@ import '../../../../core/widgets/dialog/alert_dialog.dart';
 import '../widgets/task_item.dart';
 import '../widgets/add_task_bottom_sheet.dart';
 
+
 class FolderScreen extends StatefulWidget {
   final String folderName;
   final int gradientIndex;
   final List<List<Color>> gradients;
-
   final List<Map<String, dynamic>> folderTasks;
 
   const FolderScreen({
-    Key? key,
+    super.key,
+
     required this.folderName,
     required this.gradientIndex,
     required this.gradients,
     required this.folderTasks,
-  }) : super(key: key);
+  });
+
 
   @override
   State<FolderScreen> createState() => _FolderScreenState();
 }
 
 class _FolderScreenState extends State<FolderScreen> {
-  // ✅ Panggil Service
+  // Panggil Service
   final TodoService _todoService = TodoService();
 
   bool _isSelectMode = false;
@@ -98,11 +100,13 @@ class _FolderScreenState extends State<FolderScreen> {
   void _showAddTaskDialog() {
     AddTaskBottomSheet.show(
       context,
+      // ✅ 1. Set initial category to current folder
       initialCategory: widget.folderName,
-      isCategoryLocked: true, // Kunci kategori ke folder ini
+      // ✅ 2. UNLOCK category so user can select "Add New Category"
+      isCategoryLocked: false,
 
       onSave: (taskData) async {
-        // 1. Tampilkan Loading Indicator (Opsional, agar user tahu sedang proses)
+        // Show Loading
         showDialog(
           context: context,
           barrierDismissible: false,
@@ -110,35 +114,17 @@ class _FolderScreenState extends State<FolderScreen> {
         );
 
         try {
-          final now = DateTime.now();
+          DateTime deadline = taskData['deadline'] ?? DateTime.now();
 
-          // --- LOGIC PARSING TANGGAL ---
-          // Mengubah string "2025", "January", "1" menjadi angka
-          int year = int.tryParse(taskData['year'].toString()) ?? now.year;
-          int day = int.tryParse(taskData['day'].toString()) ?? now.day;
+          String category = taskData['category'] ?? widget.folderName;
 
-          int month = now.month;
-          String monthStr = taskData['month'].toString();
-          List<String> months = [
-            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-          ];
-          // Mencocokkan nama bulan (misal "January" cocok dengan "Jan")
-          int monthIndex = months.indexWhere((m) => monthStr.startsWith(m));
-          if (monthIndex != -1) month = monthIndex + 1;
-
-          // Buat object Deadline
-          DateTime deadline = DateTime(year, month, day, 23, 59);
-          // -----------------------------
-
-          // 2. SIMPAN KE FIREBASE
           await _todoService.addTodo(
-            taskData['name'],
-            widget.folderName, // Paksa kategori sesuai folder
+            taskData['title'],
+            category,
             deadline,
+            taskData['description'] ?? '',
           );
 
-          // Tutup Loading Indicator
           if (mounted) Navigator.pop(context);
 
           // 3. TAMPILKAN SNACKBAR SUKSES
@@ -150,6 +136,9 @@ class _FolderScreenState extends State<FolderScreen> {
                 behavior: SnackBarBehavior.floating, // Agar melayang cantik
               ),
             );
+            if (taskData['category'] != widget.folderName) {
+              // Navigator.pop(context); // Optional: Go back to see new category
+            }
           }
         } catch (e) {
           // Tutup Loading Indicator jika error

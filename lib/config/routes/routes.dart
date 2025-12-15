@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../features/auth/presentation/pages/forgotpass.dart';
 import '../../features/auth/presentation/pages/intro_app.dart';
 import '../../features/auth/presentation/pages/login.dart';
 import '../../features/auth/presentation/pages/privacy_policy.dart';
@@ -7,10 +6,12 @@ import '../../features/auth/presentation/pages/resetpass.dart';
 import '../../features/auth/presentation/pages/signup.dart';
 import '../../features/auth/presentation/pages/splash_screen.dart';
 import '../../features/auth/presentation/pages/terms_of_service.dart';
-import '../../features/home/presentation/pages/home.dart';
+import '../../features/auth/presentation/pages/email_verification_screen.dart';
+import '../../core/services/auth_wrapper.dart';
+import '../../features/home/presentation/pages/notification.dart';
 import '../../features/notes/presentation/pages/note_editor_page.dart';
 import '../../features/notes/presentation/pages/notes_main_page.dart';
-import '../../features/to_do_list/presentation/pages/mainTodo.dart';
+import '../../features/to_do_list/presentation/pages/main_todo.dart';
 import '../../features/calendar/presentation/pages/calendar_main_page.dart';
 import '../../features/profile/presentation/pages/about_info.dart';
 import '../../features/profile/presentation/pages/help_faq.dart';
@@ -31,10 +32,12 @@ class AppRoutes {
   static const String noteEditor = '/note-editor';
   static const String todo = '/todo';
   static const String calendar = '/calendar';
+  static const String notification = '/notification';
   static const String helpFaq = '/help_faq';
   static const String aboutUs = '/about_info';
   static const String termsOfService = '/terms-of-service';
   static const String PrivacyPolicy = '/privacy-policy';
+  static const String emailVerification = '/email-verification';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -46,21 +49,22 @@ class AppRoutes {
         return _buildRoute(const SignUpScreen());
       case signIn:
         return _buildRoute(const LoginAccountScreen());
+
       case home:
-        return _buildRoute(const HomePage());
+        return _buildRoute(const AuthWrapper());
+
       case resetPassword:
         return _buildRoute(const ResetPasswordScreen());
       case AppRoutes.termsOfService:
         return MaterialPageRoute(builder: (_) => const TermsOfServiceScreen());
       case AppRoutes.PrivacyPolicy:
         return MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen());
-      case forgotPassword:
-        return _buildRoute(const ForgotPasswordScreen());
+      case AppRoutes.emailVerification:
+        return MaterialPageRoute(builder: (_) => const EmailVerificationScreen());
       case profile:
         return _buildRoute(const AccountProfilePage());
       case notes:
         return _buildRoute(const NotesMainPage());
-
       case noteEditor:
         final noteId = settings.arguments as String?;
         return _buildRoute(NoteEditorPage(noteId: noteId));
@@ -68,6 +72,8 @@ class AppRoutes {
         return _buildRoute(const MainTodoScreen());
       case calendar:
         return _buildRoute(const CalendarMainPage());
+      case notification:
+        return _buildRoute(const NotificationPage());
       case helpFaq:
         return _buildRoute(const HelpFaqScreen());
       case aboutUs:

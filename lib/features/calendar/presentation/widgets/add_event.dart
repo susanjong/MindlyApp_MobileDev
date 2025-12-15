@@ -2,7 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import '../../../../features/calendar/data/models/event_model.dart';
+import 'package:notesapp/features/calendar/data/model/event_model.dart';
 import '../../../../features/calendar/data/services/category_service.dart';
 import '../../../../features/calendar/data/services/event_service.dart';
 
@@ -155,14 +155,13 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
 
     try {
       final eventToSave = Event(
-        id: _isEditMode ? widget.eventToEdit!.id : null, // Pakai ID lama jika edit
+        id: _isEditMode ? widget.eventToEdit!.id : null,
         title: _eventNameController.text,
         description: _noteController.text,
         startTime: startDateTime,
         endTime: endDateTime,
         categoryId: _selectedCategoryId!,
         userId: _userId,
-        // Jika edit, pertahankan createdAt lama, jika baru pakai DateTime.now()
         createdAt: _isEditMode ? widget.eventToEdit!.createdAt : DateTime.now(),
       );
 
@@ -172,8 +171,12 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
         await _eventService.addEvent(eventToSave);
       }
 
+      // ✅ REMOVED: Tidak schedule reminder di sini
+      // Reminder akan di-trigger manual dari ReminderCard saja
+      // Ini mencegah duplikasi notifikasi
+
       if (mounted) {
-        Navigator.pop(context); // Tutup BottomSheet
+        Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(_isEditMode ? 'Event updated successfully' : 'Event created successfully'),

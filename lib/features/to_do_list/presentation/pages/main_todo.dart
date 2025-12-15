@@ -30,7 +30,7 @@ class MainTodoScreen extends StatefulWidget {
 }
 
 class _MainTodoScreenState extends State<MainTodoScreen> {
-  int selectedDay = DateTime.now().day;
+  DateTime _selectedDate = DateTime.now();
   String _username = 'User';
 
   // ✅ Panggil Service
@@ -53,11 +53,11 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
     if (index != 2) Navigator.pushReplacementNamed(context, routes[index]);
   }
 
-  // ✅ Helper: Ubah Model ke Map agar cocok dengan TaskItem widget
   Map<String, dynamic> _mapModelToTaskItem(TodoModel todo) {
     return {
       'id': todo.id,
       'title': todo.title,
+      'description': todo.description,
       'time': DateFormat('h:mm a').format(todo.deadline),
       'date': DateFormat('dd MMM').format(todo.deadline),
       'deadline': todo.deadline,
@@ -66,15 +66,23 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
     };
   }
 
+  bool _isSameDate(DateTime date1, DateTime date2) {
+    return date1.year == date2.year &&
+        date1.month == date2.month &&
+        date1.day == date2.day;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: CustomTopAppBar(
         onProfileTap: () => Navigator.pushNamed(context, AppRoutes.profile),
-        onNotificationTap: () {},
+        onNotificationTap: () {
+          Navigator.pushNamed(context, AppRoutes.notification);
+        },
       ),
-      // ✅ Gunakan StreamBuilder untuk Realtime Update
+      // Gunakan StreamBuilder untuk Realtime Update
       body: StreamBuilder<List<TodoModel>>(
         stream: _todoService.getTodosStream(),
         builder: (context, snapshot) {
@@ -99,9 +107,9 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
           }).length;
 
           final allCount = incompleteTodos.length;
-
-          // 3. Filter List untuk ditampilkan di bawah (Task hari ini/semua yang belum selesai)
-          final displayList = incompleteTodos;
+          final displayList = allTodos.where((todo) {
+            return _isSameDate(todo.deadline, _selectedDate);
+          }).toList();
 
           return Column(
             children: [
@@ -121,7 +129,7 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
                             text: '$allCount things to do', // ✅ Data Realtime
                             style: const TextStyle(color: Color(0xFFFFB74D)),
                           ),
-                          const TextSpan(text: '\nremaining'),
+                          const TextSpan(text: ' for today'),
                         ],
                       ),
                     ),
@@ -150,8 +158,26 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: List.generate(7, (index) {
-                        final date = DateTime.now().subtract(Duration(days: DateTime.now().weekday - 1)).add(Duration(days: index));
-                        return _buildDayItem(DateFormat('E').format(date), date.day, date.day == selectedDay);
+                        // Generate tanggal untuk minggu ini (Senin - Minggu)
+                        final now = DateTime.now();
+                        // Anggap minggu dimulai dari Senin (weekday 1)
+                        final firstDayOfWeek = now.subtract(Duration(days: now.weekday - 1));
+                        final date = firstDayOfWeek.add(Duration(days: index));
+
+                        final isSelected = _isSameDate(date, _selectedDate);
+
+                        return GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _selectedDate = date;
+                            });
+                          },
+                          child: _buildDayItem(
+                              DateFormat('E').format(date),
+                              date.day,
+                              isSelected
+                          ),
+                        );
                       }),
                     ),
                     const SizedBox(height: 20),
@@ -170,13 +196,9 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
                   itemBuilder: (context, index) {
                     final todo = displayList[index];
                     return TaskItem(
-                      // Konversi Model ke Map agar TaskItem widget tidak error
                       task: _mapModelToTaskItem(todo),
 
-                      // Logic Toggle Status ke Firebase
                       onToggle: () => _todoService.toggleTodoStatus(todo.id, todo.isCompleted),
-
-                      // Logic Delete ke Firebase
                       onDelete: () => _todoService.deleteTodo(todo.id),
                     );
                   },
@@ -240,21 +262,20 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
     );
   }
 
-  // ✅ Logic Simpan ke Firebase saat Add Task
+  // Logic Simpan ke Firebase saat Add Task
   void _showAddTaskDialog() {
     AddTaskBottomSheet.show(
       context,
       onSave: (taskData) async {
-        final now = DateTime.now();
-        // Default deadline: Hari ini jam 23:59 (atau sesuaikan dengan inputan user jika ada)
-        // Jika bottom sheet memberikan data tanggal, parse di sini.
-        DateTime deadline = DateTime(now.year, now.month, now.day, 23, 59);
+        DateTime deadline = taskData['deadline'] ?? DateTime.now();
 
-        // Panggil Service Firebase
+        String category = taskData['category'] ?? 'Uncategorized';
+
         await _todoService.addTodo(
-            taskData['name'],
-            'Uncategorized', // Default category
-            deadline
+            taskData['title'],
+            category,
+            deadline,
+            taskData['description'] ?? ''
         );
 
         if (mounted) {
@@ -278,7 +299,7 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
         decoration: BoxDecoration(
           gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [topColor, bottomColor]),
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 12, offset: const Offset(0, 4))],
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 12, offset: const Offset(0, 4))],
         ),
         child: Padding(
           padding: const EdgeInsets.all(14),

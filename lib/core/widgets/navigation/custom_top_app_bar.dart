@@ -11,7 +11,7 @@ class CustomTopAppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool isSelectionMode;
   final VoidCallback? onSelectAllTap;
 
-  // Calendar Mode Props (NEW)
+  // Calendar Mode Props
   final bool isCalendarMode;
   final bool isYearView;
   final VoidCallback? onSearchTap;
@@ -37,7 +37,6 @@ class CustomTopAppBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     return Container(
       color: Colors.white,
-      // Padding ini DIJAMIN SAMA untuk semua halaman
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       child: SafeArea(
         bottom: false,
@@ -45,7 +44,6 @@ class CustomTopAppBar extends StatelessWidget implements PreferredSizeWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // --- BAGIAN KIRI (LOGO & TEXT) - SAMA UNTUK SEMUA ---
             Row(
               children: [
                 SizedBox(
@@ -77,9 +75,8 @@ class CustomTopAppBar extends StatelessWidget implements PreferredSizeWidget {
               ],
             ),
 
-            // --- BAGIAN KANAN (BERUBAH SESUAI MODE) ---
             if (isSelectionMode)
-            // 1. Mode Seleksi (Select All)
+            // 1. mode select all
               IconButton(
                 icon: const Icon(
                   Icons.open_in_full_rounded,
@@ -97,19 +94,18 @@ class CustomTopAppBar extends StatelessWidget implements PreferredSizeWidget {
                     icon: const Icon(
                       Icons.search,
                       color: Color(0xFF1A1A1A),
-                      size: 26, // Ukuran disamakan
+                      size: 26,
                     ),
                     tooltip: 'Search Events',
                     onPressed: onSearchTap,
                   ),
-                  // Add sedikit jarak antar icon jika perlu, tapi default IconButton punya padding
                   IconButton(
                     icon: Icon(
                       isYearView
                           ? Icons.calendar_view_month
                           : Icons.calendar_today_outlined,
                       color: const Color(0xFF1A1A1A),
-                      size: 26, // Ukuran disamakan
+                      size: 26,
                     ),
                     tooltip: isYearView ? 'Show Monthly View' : 'Show Yearly View',
                     onPressed: onToggleView,
