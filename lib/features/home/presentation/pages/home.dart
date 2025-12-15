@@ -13,7 +13,7 @@ import '../../../../core/widgets/navigation/custom_top_app_bar.dart';
 import '../../../notes/presentation/pages/note_editor_page.dart';
 import '../../../notes/data/models/note_model.dart';
 import '../../../notes/data/services/note_service.dart';
-import '../../../calendar/data/model/event_model.dart';
+import '../../../calendar/data/models/event_model.dart';
 import '../../../to_do_list/data/models/todo_model.dart';
 import '../../../to_do_list/data/services/todo_services.dart';
 import '../../../to_do_list/presentation/widgets/task_item.dart';

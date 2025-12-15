@@ -23,13 +23,24 @@ class MiniCalendarWidget extends StatelessWidget {
   }
 
   List<Widget> _buildWeekDays() {
+    // Tentukan awal minggu berdasarkan tanggal yang dipilih
     final startOfWeek = selectedDate.subtract(Duration(days: selectedDate.weekday - 1));
+
+    // Ambil waktu sekarang untuk pengecekan "Hari Ini"
+    final now = DateTime.now();
 
     return List.generate(7, (index) {
       final date = startOfWeek.add(Duration(days: index));
+
+      // Cek apakah tanggal ini dipilih
       final isSelected = date.day == selectedDate.day &&
           date.month == selectedDate.month &&
           date.year == selectedDate.year;
+
+      // Cek apakah tanggal ini adalah HARI INI
+      final isToday = date.day == now.day &&
+          date.month == now.month &&
+          date.year == now.year;
 
       return Expanded(
         child: Padding(
@@ -38,7 +49,7 @@ class MiniCalendarWidget extends StatelessWidget {
             day: date.day.toString(),
             weekday: _getWeekdayLabel(date.weekday),
             isSelected: isSelected,
-            hasEvent: date.day == 21, // Example: day 21 has event
+            isToday: isToday,
             onTap: () => onDateSelected(date),
           ),
         ),
@@ -56,14 +67,14 @@ class _CalendarDayItem extends StatelessWidget {
   final String day;
   final String weekday;
   final bool isSelected;
-  final bool hasEvent;
+  final bool isToday;
   final VoidCallback onTap;
 
   const _CalendarDayItem({
     required this.day,
     required this.weekday,
     required this.isSelected,
-    required this.hasEvent,
+    required this.isToday,
     required this.onTap,
   });
 
@@ -109,7 +120,8 @@ class _CalendarDayItem extends StatelessWidget {
                 ),
               ),
             ),
-            if (hasEvent) ...[
+
+            if (isToday) ...[
               const SizedBox(height: 4),
               Container(
                 width: 6,
@@ -119,6 +131,8 @@ class _CalendarDayItem extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
               ),
+            ] else ...[
+              const SizedBox(height: 10),
             ],
           ],
         ),

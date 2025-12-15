@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:notesapp/features/calendar/data/model/event_model.dart';
+import 'package:notesapp/features/calendar/data/models/event_model.dart';
 import 'package:notesapp/features/home/data/services/notification_service.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter/foundation.dart';

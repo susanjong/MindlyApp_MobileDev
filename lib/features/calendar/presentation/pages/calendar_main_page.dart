@@ -7,13 +7,14 @@ import '../../../../config/routes/routes.dart';
 import '../../../../core/widgets/navigation/custom_navbar_widget.dart';
 import '../../../../core/widgets/buttons/global_expandable_fab.dart';
 import '../../../../core/widgets/navigation/custom_top_app_bar.dart';
+import 'calendar_search_page.dart';
 import '../widgets/mini_calendar.dart';
 import '../widgets/monthly_view.dart';
 import '../widgets/yearly_view.dart';
 import '../widgets/schedule_card.dart';
 import '../widgets/add_event.dart';
 import '../widgets/event_detail_sheet.dart';
-import 'package:notesapp/features/calendar/data/model/event_model.dart';
+import 'package:notesapp/features/calendar/data/models/event_model.dart';
 import '../../data/services/category_service.dart';
 import '../../data/services/event_service.dart';
 
@@ -105,12 +106,6 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
     });
   }
 
-  void _onMonthChanged(DateTime month) {
-    setState(() {
-      _focusedMonth = month;
-    });
-  }
-
   // Navigasi Bottom Bar
   void _handleNavigation(int index) {
     final routes = [
@@ -134,11 +129,28 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
     );
   }
 
-  void _handleSearch() {
-    // TODO: Implement Real Search with Firebase
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Search feature coming soon!")),
-    );
+  Future<void> _handleSearch() async {
+    try {
+      // Ambil data events sekali saja
+      final allEvents = await _eventService.getAllEvents(userId).first;
+
+      if (!mounted) return;
+
+      // Navigasi ke Halaman Custom Search
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => CalendarSearchPage(
+            allEvents: allEvents,
+            categories: _categories,
+          ),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to load events for search: $e")),
+      );
+    }
   }
 
   @override
@@ -371,48 +383,4 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
       ],
     );
   }
-
-  // --- HELPERS UI ---
-
-  IconData _getToggleIcon() {
-    switch (_currentView) {
-      case CalendarViewMode.daily:
-        return Icons.calendar_month_outlined;
-      case CalendarViewMode.monthly:
-        return Icons.calendar_view_week_outlined;
-      case CalendarViewMode.yearly:
-        return Icons.view_day_outlined;
-    }
-  }
-
-  String _getToggleTooltip() {
-    switch (_currentView) {
-      case CalendarViewMode.daily:
-        return "Switch to Monthly";
-      case CalendarViewMode.monthly:
-        return "Switch to Yearly";
-      case CalendarViewMode.yearly:
-        return "Switch to Daily";
-    }
-  }
-}
-
-// Delegate Search (Placeholder)
-class _EventSearchDelegate extends SearchDelegate {
-  @override
-  List<Widget>? buildActions(BuildContext context) => [
-    IconButton(onPressed: () => query = '', icon: const Icon(Icons.clear)),
-  ];
-
-  @override
-  Widget? buildLeading(BuildContext context) => IconButton(
-    onPressed: () => close(context, null),
-    icon: const Icon(Icons.arrow_back),
-  );
-
-  @override
-  Widget buildResults(BuildContext context) => Center(child: Text('Results for "$query"'));
-
-  @override
-  Widget buildSuggestions(BuildContext context) => const Center(child: Text('Search events...'));
 }
