@@ -1,15 +1,15 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:notesapp/features/calendar/data/models/event_model.dart';
+import '../../../../core/widgets/others/snackbar.dart';
 import '../../../../features/calendar/data/services/category_service.dart';
 import '../../../../features/calendar/data/services/event_service.dart';
-import '../../data/services/location_service.dart';
+// HAPUS IMPORT LOCATION SERVICE & TYPEAHEAD
 
 class AddEventBottomSheet extends StatefulWidget {
-  final Event? eventToEdit; // Parameter untuk mode edit
+  final Event? eventToEdit;
 
   const AddEventBottomSheet({super.key, this.eventToEdit});
 
@@ -21,7 +21,6 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
   // Services
   final EventService _eventService = EventService();
   final CategoryService _categoryService = CategoryService();
-  final LocationService _locationService = LocationService();
   final String _userId = FirebaseAuth.instance.currentUser!.uid;
 
   // Controllers
@@ -33,7 +32,7 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
   // State Data
   bool _isLoading = false;
   bool _isEditMode = false;
-  bool _isDataPopulated = false; // Flag untuk memastikan data hanya diisi sekali
+  bool _isDataPopulated = false;
 
   // Date & Time State
   DateTime? _selectedDateObj;
@@ -67,14 +66,11 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
     super.initState();
     _isEditMode = widget.eventToEdit != null;
     _loadCategories();
-    // JANGAN panggil _populateExistingData() di sini karena butuh context
   }
 
-  // PERBAIKAN UTAMA ADA DI SINI
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Kita jalankan ini saat context sudah siap, dan hanya sekali saja
     if (_isEditMode && !_isDataPopulated) {
       _populateExistingData();
       _isDataPopulated = true;
@@ -83,20 +79,26 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
 
   void _populateExistingData() {
     final event = widget.eventToEdit!;
+
     _eventNameController.text = event.title;
     _noteController.text = event.description;
-    // _locationController.text = event.location; // Jika nanti ada field location
+    _locationController.text = event.location;
 
-    // Set Date
+    if (_reminderOptions.contains(event.reminder)) {
+      _reminder = event.reminder;
+    }
+    if (_repeatOptions.contains(event.repeat)) {
+      _repeat = event.repeat;
+    }
+
     _selectedDateObj = event.startTime;
     _selectedDateStr = DateFormat('dd/MM/yyyy').format(event.startTime);
 
-    // Set Time (Menggunakan TimeOfDay.fromDateTime)
     _startTimeObj = TimeOfDay.fromDateTime(event.startTime);
-    _startTimeStr = _startTimeObj!.format(context); // Sekarang aman memanggil context
+    _startTimeStr = _startTimeObj!.format(context);
 
     _endTimeObj = TimeOfDay.fromDateTime(event.endTime);
-    _endTimeStr = _endTimeObj!.format(context); // Sekarang aman memanggil context
+    _endTimeStr = _endTimeObj!.format(context);
 
     _selectedCategoryId = event.categoryId;
   }
@@ -110,13 +112,11 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
     super.dispose();
   }
 
-  // --- LOGIC: LOAD CATEGORIES ---
   void _loadCategories() {
     _categoryService.getCategories(_userId).listen((categoryList) {
       if (mounted) {
         setState(() {
           _categories = categoryList;
-          // Jika mode tambah baru (bukan edit) dan belum ada kategori dipilih
           if (!_isEditMode && _categories.isNotEmpty && _selectedCategoryId == null) {
             _selectedCategoryId = _categories.first.id;
           }
@@ -125,7 +125,6 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
     });
   }
 
-  // --- LOGIC: SAVE EVENT ---
   Future<void> _validateAndSave() async {
     List<String> missingFields = [];
     if (_eventNameController.text.isEmpty) missingFields.add('Event name');
@@ -166,6 +165,9 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
         categoryId: _selectedCategoryId!,
         userId: _userId,
         createdAt: _isEditMode ? widget.eventToEdit!.createdAt : DateTime.now(),
+        location: _locationController.text, // Simpan teks lokasi biasa
+        reminder: _reminder,
+        repeat: _repeat,
       );
 
       if (_isEditMode) {
@@ -174,23 +176,16 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
         await _eventService.addEvent(eventToSave);
       }
 
-      // ✅ REMOVED: Tidak schedule reminder di sini
-      // Reminder akan di-trigger manual dari ReminderCard saja
-      // Ini mencegah duplikasi notifikasi
-
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_isEditMode ? 'Event updated successfully' : 'Event created successfully'),
-            backgroundColor: const Color(0xFF10B981),
-            behavior: SnackBarBehavior.floating,
-          ),
+        Snackbar.success(
+            context,
+            _isEditMode ? 'Event updated successfully' : 'Event created successfully'
         );
       }
     } catch (e) {
       if (mounted) {
-        _showErrorDialog('Error', 'Failed to save event: $e');
+        Snackbar.error(context, 'Failed to save event: $e');
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -215,7 +210,6 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
     );
   }
 
-  // --- LOGIC: ADD CATEGORY ---
   void _showAddCategoryDialog() {
     showDialog(
       context: context,
@@ -257,7 +251,6 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
     );
   }
 
-  // --- LOGIC: PICKERS ---
   Future<void> _pickTime(bool isStart) async {
     final initialTime = isStart
         ? (_startTimeObj ?? TimeOfDay.now())
@@ -327,8 +320,7 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
     return Color(int.parse(hexColor, radix: 16));
   }
 
-  // --- WIDGET HELPERS ---
-
+  // Helper Widget untuk Text Field Standar
   Widget _buildTextField({
     required TextEditingController controller,
     required String hint,
@@ -358,14 +350,16 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
     );
   }
 
+  // --- LOCATION FIELD (MANUAL TEXT ONLY) ---
+  // Jauh lebih ringan daripada TypeAhead
   Widget _buildLocationField() {
     return Container(
-      // Hapus height fix agar dropdown bisa menyesuaikan
+      height: 50,
       decoration: BoxDecoration(
         border: Border.all(color: const Color(0xFFD1D1D1)),
         borderRadius: BorderRadius.circular(8),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 14), // Hapus vertical padding di container
+      padding: const EdgeInsets.symmetric(horizontal: 14),
       child: Row(
         children: [
           const Icon(
@@ -375,75 +369,22 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: TypeAheadField<LocationSuggestion>(
+            child: TextField(
               controller: _locationController,
-              builder: (context, controller, focusNode) {
-                return TextField(
-                  controller: controller,
-                  focusNode: focusNode,
-                  style: GoogleFonts.poppins(
-                    fontSize: 15,
-                    color: const Color(0xFF222B45),
-                  ),
-                  decoration: InputDecoration(
-                    hintText: 'Search location',
-                    hintStyle: GoogleFonts.poppins(
-                      color: const Color(0xFF8F9BB3),
-                      fontSize: 15,
-                      fontWeight: FontWeight.w400,
-                    ),
-                    border: InputBorder.none,
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 10), // Pindahkan padding ke sini
-                  ),
-                );
-              },
-              suggestionsCallback: (pattern) async {
-                return await _locationService.searchLocation(pattern);
-              },
-              itemBuilder: (context, suggestion) {
-                return ListTile(
-                  leading: const Icon(Icons.location_pin, color: Color(0xFF5784EB)),
-                  title: Text(
-                    suggestion.displayName,
-                    style: GoogleFonts.poppins(fontSize: 13),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                );
-              },
-              onSelected: (suggestion) {
-                // Simpan nama lokasi ke controller
-                _locationController.text = suggestion.displayName;
-
-                setState(() {});
-              },
-              decorationBuilder: (context, child) {
-                return Material(
-                  type: MaterialType.card,
-                  elevation: 4,
-                  borderRadius: BorderRadius.circular(8),
-                  child: child,
-                );
-              },
-              emptyBuilder: (context) => Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Text(
-                  'No location found',
-                  style: GoogleFonts.poppins(color: Colors.grey),
+              style: GoogleFonts.poppins(fontSize: 15, color: const Color(0xFF222B45)),
+              decoration: InputDecoration(
+                hintText: 'Location (Optional)',
+                hintStyle: GoogleFonts.poppins(
+                  color: const Color(0xFF8F9BB3),
+                  fontSize: 15,
+                  fontWeight: FontWeight.w400,
                 ),
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: EdgeInsets.zero,
               ),
             ),
           ),
-          // Tambahkan tombol clear jika ada teks
-          if (_locationController.text.isNotEmpty)
-            GestureDetector(
-              onTap: () {
-                _locationController.clear();
-                setState(() {});
-              },
-              child: const Icon(Icons.close, size: 18, color: Colors.grey),
-            ),
         ],
       ),
     );
@@ -634,15 +575,12 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Event Name
                     _buildTextField(controller: _eventNameController, hint: 'Event name*', isRequired: true),
                     const SizedBox(height: 14),
 
-                    // Note
                     _buildTextField(controller: _noteController, hint: 'Type the note here...', maxLines: 3, height: 70),
                     const SizedBox(height: 14),
 
-                    // Date
                     GestureDetector(
                       onTap: _pickDate,
                       child: Container(
@@ -664,7 +602,6 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
                     ),
                     const SizedBox(height: 14),
 
-                    // Time
                     Row(
                       children: [
                         Expanded(
@@ -708,10 +645,9 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
                     ),
 
                     const SizedBox(height: 14),
-                    _buildLocationField(),
+                    _buildLocationField(), // Input Lokasi Sederhana
                     const SizedBox(height: 14),
 
-                    // Reminder & Repeat
                     Text('Reminder', style: GoogleFonts.poppins(color: const Color(0xFF131313), fontSize: 15, fontWeight: FontWeight.w500)),
                     const SizedBox(height: 10),
                     _buildDropdownField(value: _reminder, onTap: _showReminderPicker, icon: Icons.notifications_outlined),
@@ -722,7 +658,6 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
                     _buildDropdownField(value: _repeat, onTap: _showRepeatPicker, icon: Icons.repeat_outlined),
                     const SizedBox(height: 17),
 
-                    // Category
                     Text('Select Category', style: GoogleFonts.poppins(color: const Color(0xFF222B45), fontSize: 15, fontWeight: FontWeight.w500)),
                     const SizedBox(height: 10),
                     SingleChildScrollView(
@@ -757,7 +692,6 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
 
                     const SizedBox(height: 20),
 
-                    // Save Button
                     GestureDetector(
                       onTap: _isLoading ? null : _validateAndSave,
                       child: Container(
