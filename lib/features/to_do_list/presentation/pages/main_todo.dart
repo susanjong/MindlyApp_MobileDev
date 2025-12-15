@@ -23,7 +23,7 @@ import 'urgent_screen.dart';
 
 class MainTodoScreen extends StatefulWidget {
   final String? username;
-  const MainTodoScreen({Key? key, this.username}) : super(key: key);
+  const MainTodoScreen({super.key, this.username});
 
   @override
   State<MainTodoScreen> createState() => _MainTodoScreenState();
@@ -33,7 +33,7 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
   DateTime _selectedDate = DateTime.now();
   String _username = 'User';
 
-  // ✅ Panggil Service
+  // Panggil Service
   final TodoService _todoService = TodoService();
 
   @override
@@ -290,9 +290,15 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
   Widget _buildStatusCard(String count, String label, Color topColor, Color bottomColor) {
     return GestureDetector(
       onTap: () {
-        if (label == 'All') Navigator.push(context, MaterialPageRoute(builder: (context) => const AllCategoryScreen()));
-        else if (label == 'Urgent') Navigator.push(context, MaterialPageRoute(builder: (context) => const UrgentTaskScreen()));
-        else if (label == 'Overdue') Navigator.push(context, MaterialPageRoute(builder: (context) => const OverdueTaskScreen()));
+        if (label == 'All') {
+          Navigator.push(context, MaterialPageRoute(builder: (context) => const AllCategoryScreen()));
+        }
+        else if (label == 'Urgent') {
+          Navigator.push(context, MaterialPageRoute(builder: (context) => const UrgentTaskScreen()));
+        }
+        else if (label == 'Overdue') {
+          Navigator.push(context, MaterialPageRoute(builder: (context) => const OverdueTaskScreen()));
+        }
       },
       child: Container(
         height: 120,

@@ -7,7 +7,7 @@ import '../widgets/urgent_overdue_taskItem.dart';
 import 'folder_screen.dart';
 
 class OverdueTaskScreen extends StatefulWidget {
-  const OverdueTaskScreen({Key? key}) : super(key: key);
+  const OverdueTaskScreen({super.key});
 
   @override
   State<OverdueTaskScreen> createState() => _OverdueTaskScreenState();

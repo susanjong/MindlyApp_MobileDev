@@ -11,11 +11,11 @@ class AddTaskBottomSheet extends StatefulWidget {
   final bool isCategoryLocked;
 
   const AddTaskBottomSheet({
-    Key? key,
+    super.key,
     this.onSave,
     this.initialCategory,
     this.isCategoryLocked = false,
-  }) : super(key: key);
+  });
 
   @override
   State<AddTaskBottomSheet> createState() => _AddTaskBottomSheetState();
@@ -440,7 +440,7 @@ class _AddTaskBottomSheetState extends State<AddTaskBottomSheet> {
 // ============================================
 
 class _IOSAddCategoryDialogContent extends StatefulWidget {
-  const _IOSAddCategoryDialogContent({Key? key}) : super(key: key);
+  const _IOSAddCategoryDialogContent({super.key});
 
   @override
   State<_IOSAddCategoryDialogContent> createState() =>
