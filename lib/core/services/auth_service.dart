@@ -569,4 +569,29 @@ class AuthService {
       throw Exception('Sign-out failed');
     }
   }
+
+  static Future<bool> isSessionValid() async {
+    final user = _auth.currentUser;
+    if (user == null) return false;
+
+    try {
+      // Ambil waktu login terakhir/pembuatan token
+      final metadata = user.metadata;
+      final lastSignIn = metadata.lastSignInTime ?? metadata.creationTime;
+
+      if (lastSignIn == null) return false;
+
+      final difference = DateTime.now().difference(lastSignIn);
+
+      // Jika sudah lebih dari 30 hari, force logout
+      if (difference.inDays > 30) {
+        await signOut();
+        return false;
+      }
+
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
 }

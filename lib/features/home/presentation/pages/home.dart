@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../../config/routes/routes.dart';
@@ -31,18 +32,18 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   bool _isNavBarVisible = true;
   final ScrollController _scrollController = ScrollController();
 
-  // Firebase services initialization
   final TodoService _todoService = TodoService();
   final NoteService _noteService = NoteService();
   final EventService _eventService = EventService();
   final CategoryService _categoryService = CategoryService();
 
-  // Data and state management
   Map<String, Category> _categories = {};
   String? _currentUserId;
   String _userName = 'User';
 
-  // Streams initialized once to prevent recreation on build
+  // Variable untuk logika back button
+  DateTime? currentBackPressTime;
+
   late Stream<List<TodoModel>> _todoStream;
   late Stream<List<NoteModel>> _noteStream;
   late Stream<List<Event>> _eventStream;
@@ -52,7 +53,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
-    // Initialize streams once to maintain real-time connection
     _todoStream = _todoService.getTodosStream();
     _noteStream = _noteService.getNotesStream();
     _eventStream = Stream.value([]);
@@ -70,7 +70,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     super.dispose();
   }
 
-  // Initialize user data and calendar categories for events
   void _initCalendarData() {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
@@ -87,7 +86,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
   }
 
-  // Handle navigation bar item taps
   void _handleNavigation(int index) {
     final routes = [
       AppRoutes.home,
@@ -100,7 +98,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
   }
 
-  // Load user display name from Firestore or Firebase Auth
   Future<void> _loadUserData() async {
     try {
       final userData = await AuthService.getUserData();
@@ -128,7 +125,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
   }
 
-  // Handle scroll direction to show/hide navigation bar
   void _onScroll() {
     if (_scrollController.position.userScrollDirection == ScrollDirection.reverse) {
       if (_isNavBarVisible) setState(() => _isNavBarVisible = false);
@@ -137,7 +133,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
   }
 
-  // Convert TodoModel to task item format for display
   Map<String, dynamic> _mapModelToTaskItem(TodoModel todo) {
     return {
       'id': todo.id,
@@ -151,7 +146,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     };
   }
 
-  // Get appropriate greeting based on current time
   String _getGreeting() {
     final hour = DateTime.now().hour;
     if (hour >= 6 && hour < 11) return 'Good Morning';
@@ -160,124 +154,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     return 'Good Night';
   }
 
-  // Navigation helpers
   void _navigateToNotesPage() => Navigator.pushNamed(context, AppRoutes.notes);
   void _navigateToEventsPage() => Navigator.pushNamed(context, AppRoutes.calendar);
 
-  // Convert hex color string to Color object
   Color _getColorFromHex(String hexColor) {
     hexColor = hexColor.replaceAll('#', '');
     if (hexColor.length == 6) hexColor = 'FF$hexColor';
     return Color(int.parse(hexColor, radix: 16));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Column(
-          children: [
-            CustomTopAppBar(
-              onProfileTap: () => Navigator.pushNamed(context, AppRoutes.profile),
-              onNotificationTap: () => Navigator.pushNamed(context, AppRoutes.notification),
-            ),
-            Expanded(
-              child: RefreshIndicator(
-                onRefresh: () async {
-                  await _loadUserData();
-                },
-                child: SingleChildScrollView(
-                  controller: _scrollController,
-                  physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-                    child: StreamBuilder<List<TodoModel>>(
-                      stream: _todoStream,
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
-                          return const Center(child: CircularProgressIndicator());
-                        }
-
-                        final allTodos = snapshot.data ?? [];
-
-                        // Filter pending tasks only (no completed tasks shown)
-                        final pendingTodos = allTodos.where((t) => !t.isCompleted).toList();
-                        final topTwoNeedsAttention = pendingTodos.take(2).toList();
-
-                        // Calculate daily progress (only count pending tasks)
-                        final totalTasks = allTodos.length;
-                        final completedCount = allTodos.where((t) => t.isCompleted).length;
-                        final progress = totalTasks > 0 ? completedCount / totalTasks : 0.0;
-
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildGreetingSectionWithStream(),
-                            const SizedBox(height: 24),
-                            _buildDailyProgressCard(progress, completedCount, totalTasks),
-                            const SizedBox(height: 24),
-
-                            // Show pending tasks that need attention
-                            if (topTwoNeedsAttention.isNotEmpty) ...[
-                              _buildSectionHeader(
-                                icon: Icons.error_outline,
-                                iconColor: const Color(0xFFFF6B6B),
-                                title: 'Needs Attention',
-                              ),
-                              const SizedBox(height: 12),
-                              ...topTwoNeedsAttention.map((todo) => TaskItem(
-                                task: _mapModelToTaskItem(todo),
-                                onToggle: () async {
-                                  await _todoService.toggleTodoStatus(todo.id, todo.isCompleted);
-                                },
-                                onDelete: () => _todoService.deleteTodo(todo.id),
-                              )),
-                              const SizedBox(height: 24),
-                            ],
-
-                            // Today's events section
-                            _buildSectionHeaderWithAction(
-                              icon: Icons.calendar_today,
-                              iconColor: const Color(0xFF0D5F5F),
-                              title: "Today's Event",
-                              actionText: 'View All →',
-                              onActionTap: _navigateToEventsPage,
-                            ),
-                            const SizedBox(height: 12),
-                            _buildEventsStream(),
-                            const SizedBox(height: 24),
-
-                            // Today's notes section
-                            _buildSectionHeaderWithAction(
-                              icon: Icons.note_outlined,
-                              iconColor: const Color(0xFFFF9800),
-                              title: "Today's Notes",
-                              actionText: 'View All →',
-                              onActionTap: _navigateToNotesPage,
-                            ),
-                            const SizedBox(height: 12),
-                            _buildNotesStream(),
-                            const SizedBox(height: 20),
-                          ],
-                        );
-                      },
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-      bottomNavigationBar: _buildBottomNavigationBar(),
-    );
-  }
-
-  // Check if a date is today
-  bool _isToday(DateTime date) {
-    final now = DateTime.now();
-    return date.year == now.year && date.month == now.month && date.day == now.day;
   }
 
   // Extract plain text from JSON content
@@ -290,7 +173,132 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
   }
 
-  // Build notes stream widget
+  bool _isToday(DateTime date) {
+    final now = DateTime.now();
+    return date.year == now.year && date.month == now.month && date.day == now.day;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // ✅ IMPLEMENTASI POPSCOPE UNTUK DOUBLE TAP EXIT
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (bool didPop, dynamic result) async {
+        if (didPop) return;
+
+        final now = DateTime.now();
+        if (currentBackPressTime == null ||
+            now.difference(currentBackPressTime!) > const Duration(seconds: 2)) {
+          currentBackPressTime = now;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Press back again to exit'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+          return;
+        }
+
+        // Keluar aplikasi jika tekan 2x
+        SystemNavigator.pop();
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          child: Column(
+            children: [
+              CustomTopAppBar(
+                onProfileTap: () => Navigator.pushNamed(context, AppRoutes.profile),
+                onNotificationTap: () => Navigator.pushNamed(context, AppRoutes.notification),
+              ),
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: () async {
+                    await _loadUserData();
+                  },
+                  child: SingleChildScrollView(
+                    controller: _scrollController,
+                    physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+                      child: StreamBuilder<List<TodoModel>>(
+                        stream: _todoStream,
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+                            return const Center(child: CircularProgressIndicator());
+                          }
+
+                          final allTodos = snapshot.data ?? [];
+                          final pendingTodos = allTodos.where((t) => !t.isCompleted).toList();
+                          final topTwoNeedsAttention = pendingTodos.take(2).toList();
+                          final totalTasks = allTodos.length;
+                          final completedCount = allTodos.where((t) => t.isCompleted).length;
+                          final progress = totalTasks > 0 ? completedCount / totalTasks : 0.0;
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildGreetingSectionWithStream(),
+                              const SizedBox(height: 24),
+                              _buildDailyProgressCard(progress, completedCount, totalTasks),
+                              const SizedBox(height: 24),
+
+                              if (topTwoNeedsAttention.isNotEmpty) ...[
+                                _buildSectionHeader(
+                                  icon: Icons.error_outline,
+                                  iconColor: const Color(0xFFFF6B6B),
+                                  title: 'Needs Attention',
+                                ),
+                                const SizedBox(height: 12),
+                                ...topTwoNeedsAttention.map((todo) => TaskItem(
+                                  task: _mapModelToTaskItem(todo),
+                                  onToggle: () async {
+                                    await _todoService.toggleTodoStatus(todo.id, todo.isCompleted);
+                                  },
+                                  onDelete: () => _todoService.deleteTodo(todo.id),
+                                )),
+                                const SizedBox(height: 24),
+                              ],
+
+                              _buildSectionHeaderWithAction(
+                                icon: Icons.calendar_today,
+                                iconColor: const Color(0xFF0D5F5F),
+                                title: "Today's Event",
+                                actionText: 'View All →',
+                                onActionTap: _navigateToEventsPage,
+                              ),
+                              const SizedBox(height: 12),
+                              _buildEventsStream(),
+                              const SizedBox(height: 24),
+
+                              _buildSectionHeaderWithAction(
+                                icon: Icons.note_outlined,
+                                iconColor: const Color(0xFFFF9800),
+                                title: "Today's Notes",
+                                actionText: 'View All →',
+                                onActionTap: _navigateToNotesPage,
+                              ),
+                              const SizedBox(height: 12),
+                              _buildNotesStream(),
+                              const SizedBox(height: 20),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        bottomNavigationBar: _buildBottomNavigationBar(),
+      ),
+    );
+  }
+
+  // --- WIDGET HELPERS --- (Sama seperti sebelumnya)
+
   Widget _buildNotesStream() {
     return StreamBuilder<List<NoteModel>>(
       stream: _noteStream,
@@ -317,7 +325,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           );
         }
 
-        // Prioritize favorite notes first
         todayNotes.sort((a, b) {
           if (a.isFavorite && !b.isFavorite) return -1;
           if (!a.isFavorite && b.isFavorite) return 1;
@@ -332,7 +339,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     );
   }
 
-  // Build individual note card
   Widget _buildNoteCard(NoteModel note) {
     final plainTextContent = _getPlainText(note.content);
     return GestureDetector(
@@ -341,7 +347,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Color(note.color ?? 0xFFE6C4DE),
+          color: Color(note.color),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -368,7 +374,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               ),
             ),
             const SizedBox(width: 8),
-            // Favorite toggle button
             GestureDetector(
               onTap: () {
                 _noteService.toggleFavorite(note.id, note.isFavorite);
@@ -385,7 +390,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     );
   }
 
-  // Build events stream widget
   Widget _buildEventsStream() {
     if (_currentUserId == null) {
       return Container(
@@ -426,7 +430,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     );
   }
 
-  // Build individual event card
   Widget _buildRealEventCard(Event event, Category? category) {
     final categoryColor = category != null ? _getColorFromHex(category.color) : const Color(0xFF5683EB);
     return Container(
@@ -470,7 +473,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     );
   }
 
-  // Build greeting section with real-time user data stream
   Widget _buildGreetingSectionWithStream() {
     final userDataStream = AuthService.getUserDataStream();
     if (userDataStream == null) {
@@ -502,7 +504,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     );
   }
 
-  // Build daily progress card showing completion percentage
   Widget _buildDailyProgressCard(double progress, int completed, int total) {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -534,7 +535,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     );
   }
 
-  // Build simple section header
   Widget _buildSectionHeader({required IconData icon, required Color iconColor, required String title}) {
     return Row(
       children: [
@@ -545,7 +545,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     );
   }
 
-  // Build section header with action button
   Widget _buildSectionHeaderWithAction({required IconData icon, required Color iconColor, required String title, required String actionText, required VoidCallback onActionTap}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -565,7 +564,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     );
   }
 
-  // Build animated bottom navigation bar that hides on scroll
   Widget _buildBottomNavigationBar() {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),

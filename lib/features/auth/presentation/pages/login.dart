@@ -115,7 +115,21 @@ class LoginAccountScreenState extends State<LoginAccountScreen> {
 
         await Future.delayed(const Duration(milliseconds: 500));
         if (mounted) {
-          Navigator.pushReplacementNamed(context, AppRoutes.home);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Welcome back!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+
+          await Future.delayed(const Duration(milliseconds: 500));
+          if (mounted) {
+            Navigator.pushNamedAndRemoveUntil(
+                context,
+                AppRoutes.home,
+                    (route) => false
+            );
+          }
         }
       }
     } catch (e) {
@@ -142,19 +156,13 @@ class LoginAccountScreenState extends State<LoginAccountScreen> {
     if (_isLoading) return;
 
     if (mounted) {
-      setState(() {
-        if (_emailController.text.trim().isEmpty) {
-          _emailError = 'Please enter your email';
-        } else {
-          _validateEmail();
-        }
-
-        if (_passwordController.text.isEmpty) {
-          _passwordError = 'Please enter your password';
-        } else {
-          _validatePassword();
-        }
-      });
+      // GUNAKAN INI: Menghapus semua route di belakang (Welcome, Login)
+      // dan menjadikan Home sebagai halaman pertama
+      Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRoutes.home,
+              (route) => false
+      );
     }
 
     if (_emailError != null || _passwordError != null) {

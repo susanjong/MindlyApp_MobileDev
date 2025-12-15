@@ -18,7 +18,6 @@ import 'package:notesapp/features/calendar/data/models/event_model.dart';
 import '../../data/services/category_service.dart';
 import '../../data/services/event_service.dart';
 
-// Enum untuk mengatur Mode Tampilan
 enum CalendarViewMode { daily, monthly, yearly }
 
 class CalendarMainPage extends StatefulWidget {
@@ -29,22 +28,17 @@ class CalendarMainPage extends StatefulWidget {
 }
 
 class _CalendarMainPageState extends State<CalendarMainPage> {
-  // --- SERVICES & DATA ---
   final EventService _eventService = EventService();
   final CategoryService _categoryService = CategoryService();
   final String userId = FirebaseAuth.instance.currentUser!.uid;
 
-  // --- STATE ---
-  CalendarViewMode _currentView = CalendarViewMode.daily; // Default Daily
+  CalendarViewMode _currentView = CalendarViewMode.daily;
   DateTime _selectedDate = DateTime.now();
-  DateTime _focusedMonth = DateTime.now(); // Untuk Monthly/Yearly navigation
+  DateTime _focusedMonth = DateTime.now();
 
   Map<String, Category> _categories = {};
   StreamSubscription? _categorySubscription;
   final ScrollController _scrollController = ScrollController();
-
-  // Dummy data untuk Yearly View (karena logic yearly complex)
-  // Anda bisa menggantinya nanti dengan logic fetch setahun
   final Map<DateTime, List<dynamic>> _yearlyEventsDummy = {};
 
   @override
@@ -59,8 +53,6 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
     _scrollController.dispose();
     super.dispose();
   }
-
-  // --- LOGIC DATA ---
 
   void _loadCategories() {
     _categorySubscription = _categoryService.getCategories(userId).listen((categories) {
@@ -80,9 +72,6 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
     return Color(int.parse(hexColor, radix: 16));
   }
 
-  // --- LOGIC UI & NAVIGASI ---
-
-  // Toggle: Daily -> Monthly -> Yearly -> Daily
   void _toggleViewMode() {
     setState(() {
       if (_currentView == CalendarViewMode.daily) {
@@ -99,14 +88,12 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
     setState(() {
       _selectedDate = date;
       _focusedMonth = date;
-      // Jika user memilih tanggal di monthly/yearly, kembali ke daily view
       if (_currentView != CalendarViewMode.daily) {
         _currentView = CalendarViewMode.daily;
       }
     });
   }
 
-  // Navigasi Bottom Bar
   void _handleNavigation(int index) {
     final routes = [
       AppRoutes.home,
@@ -114,7 +101,6 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
       AppRoutes.todo,
       AppRoutes.calendar
     ];
-    // Index 3 adalah halaman ini sendiri
     if (index != 3) {
       Navigator.pushReplacementNamed(context, routes[index]);
     }
@@ -131,12 +117,9 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
 
   Future<void> _handleSearch() async {
     try {
-      // Ambil data events sekali saja
       final allEvents = await _eventService.getAllEvents(userId).first;
-
       if (!mounted) return;
 
-      // Navigasi ke Halaman Custom Search
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -155,52 +138,70 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
+    // ✅ IMPLEMENTASI POPSCOPE UNTUK BACK NAVIGATION
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (bool didPop, dynamic result) async {
+        if (didPop) return;
 
-      // 1. APP BAR
-      appBar: CustomTopAppBar(
-        isCalendarMode: true, // Aktifkan mode kalender
-        isYearView: _currentView == CalendarViewMode.yearly,
-        onSearchTap: _handleSearch,
-        onToggleView: _toggleViewMode,
-        onProfileTap: () => Navigator.pushNamed(context, AppRoutes.profile),
-        onNotificationTap: () {},
-      ),
+        // 1. Jika di Yearly View -> Balik ke Monthly
+        if (_currentView == CalendarViewMode.yearly) {
+          setState(() => _currentView = CalendarViewMode.monthly);
+          return;
+        }
 
-      // 2. BODY CONTENT (SWITCHER)
-      body: _buildBodyContent(),
+        // 2. Jika di Monthly View -> Balik ke Daily
+        if (_currentView == CalendarViewMode.monthly) {
+          setState(() => _currentView = CalendarViewMode.daily);
+          return;
+        }
 
-      // 3. GLOBAL EXPANDABLE FAB (Replaces standard FAB)
-      floatingActionButton: GlobalExpandableFab(
-        actions: [
-          FabActionModel(
-            icon: Icons.edit_calendar_rounded, // Icon untuk Add Event
-            tooltip: 'Add Event',
-            onTap: _showAddEventDialog,
-          ),
-          // Anda bisa menambahkan aksi lain di sini jika perlu (misal Add Task)
-        ],
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+        // 3. Jika sudah di Daily View -> Balik ke Home Page
+        Navigator.pushReplacementNamed(context, AppRoutes.home);
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
 
-      // 4. BOTTOM NAVBAR
-      bottomNavigationBar: CustomNavBar(
-        selectedIndex: 3,
-        onItemTapped: _handleNavigation,
+        // 1. APP BAR
+        appBar: CustomTopAppBar(
+          isCalendarMode: true,
+          isYearView: _currentView == CalendarViewMode.yearly,
+          onSearchTap: _handleSearch,
+          onToggleView: _toggleViewMode,
+          onProfileTap: () => Navigator.pushNamed(context, AppRoutes.profile),
+          onNotificationTap: () {},
+        ),
+
+        // 2. BODY CONTENT (SWITCHER)
+        body: _buildBodyContent(),
+
+        // 3. GLOBAL EXPANDABLE FAB
+        floatingActionButton: GlobalExpandableFab(
+          actions: [
+            FabActionModel(
+              icon: Icons.edit_calendar_rounded,
+              tooltip: 'Add Event',
+              onTap: _showAddEventDialog,
+            ),
+          ],
+        ),
+        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+
+        // 4. BOTTOM NAVBAR
+        bottomNavigationBar: CustomNavBar(
+          selectedIndex: 3,
+          onItemTapped: _handleNavigation,
+        ),
       ),
     );
   }
 
   // --- WIDGET SWITCHER ---
-
   Widget _buildBodyContent() {
     switch (_currentView) {
-    // TAMPILAN HARIAN (DEFAULT)
       case CalendarViewMode.daily:
         return _buildDailyView();
 
-    // TAMPILAN BULANAN (MENGGUNAKAN LOGIC LAMA/FIREBASE)
       case CalendarViewMode.monthly:
         return StreamBuilder<List<Event>>(
           stream: _eventService.getEventsForMonth(userId, _focusedMonth),
@@ -213,10 +214,9 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
             return MonthlyViewWidget(
               currentMonth: _focusedMonth,
               selectedDate: _selectedDate,
-              events: monthEvents, // Pass real events
+              events: monthEvents,
               categories: _categories,
               onDateSelected: (date) {
-                // Saat tanggal dipilih di monthly view, masuk ke daily view tanggal tsb
                 _onDateSelected(date);
               },
               onPreviousMonth: () {
@@ -233,11 +233,10 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
           },
         );
 
-    // TAMPILAN TAHUNAN
       case CalendarViewMode.yearly:
         return YearlyViewWidget(
           currentYear: _focusedMonth.year,
-          events: _yearlyEventsDummy, // Sementara dummy/kosong
+          events: _yearlyEventsDummy,
           onMonthTap: (month) {
             setState(() {
               _focusedMonth = month;
@@ -249,20 +248,15 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
   }
 
   // --- DAILY VIEW IMPLEMENTATION ---
-
   Widget _buildDailyView() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 1. Mini Calendar (Horizontal)
         MiniCalendarWidget(
           selectedDate: _selectedDate,
           onDateSelected: _onDateSelected,
         ),
-
         const SizedBox(height: 10),
-
-        // 2. Header Schedule
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Row(
@@ -286,10 +280,7 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
             ],
           ),
         ),
-
         const SizedBox(height: 16),
-
-        // 3. Timeline / List Event (Real-time Firebase)
         Expanded(
           child: StreamBuilder<List<Event>>(
             stream: _eventService.getEventsForDate(userId, _selectedDate),
@@ -297,9 +288,7 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
               }
-
               final events = snapshot.data ?? [];
-
               if (events.isEmpty) {
                 return Column(
                   children: [
@@ -316,8 +305,6 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
                   ],
                 );
               }
-
-              // Render Timeline List
               return ListView.builder(
                 controller: _scrollController,
                 physics: const BouncingScrollPhysics(),
@@ -333,7 +320,6 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 16),
                     child: GestureDetector(
-                      // Tambahkan interaksi tap untuk membuka detail
                       onTap: () {
                         showModalBottomSheet(
                           context: context,
@@ -348,7 +334,6 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Time Label
                           SizedBox(
                             width: 50,
                             child: Text(
@@ -360,8 +345,6 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
                               ),
                             ),
                           ),
-
-                          // Schedule Card
                           Expanded(
                             child: ScheduleCardWidget(
                               title: event.title,
