@@ -236,22 +236,10 @@ class LoginAccountScreenState extends State<LoginAccountScreen> {
                         child: Container(
                           width: 40,
                           height: 40,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.grey.withValues(alpha: 0.2),
-                                spreadRadius: 1,
-                                blurRadius: 3,
-                                offset: const Offset(0, 1),
-                              ),
-                            ],
-                          ),
                           child: const Icon(
                             Icons.arrow_back,
-                            color: Colors.black54,
-                            size: 20,
+                            color: Colors.black,
+                            size: 24,
                           ),
                         ),
                       ),
