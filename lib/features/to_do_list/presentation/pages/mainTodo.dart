@@ -1,22 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-
-// ✅ Import Services & Models (Pastikan path sesuai)
 import '../../data/models/todo_model.dart';
 import '../../data/services/todo_services.dart';
-
-// Import Core & Config
 import '../../../../core/services/auth_service.dart';
 import '../../../../config/routes/routes.dart';
 import '../../../../core/widgets/navigation/custom_top_app_bar.dart';
 import '../../../../core/widgets/navigation/custom_navbar_widget.dart';
-
-// Import Widgets
 import '../widgets/task_item.dart';
 import '../widgets/add_task_bottom_sheet.dart';
-
-// Import Pages
 import 'all_category_screen.dart';
 import 'overdue_screen.dart';
 import 'urgent_screen.dart';
@@ -33,7 +25,6 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
   DateTime _selectedDate = DateTime.now();
   String _username = 'User';
 
-  // ✅ Panggil Service
   final TodoService _todoService = TodoService();
 
   @override
@@ -80,7 +71,6 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
         onProfileTap: () => Navigator.pushNamed(context, AppRoutes.profile),
         onNotificationTap: () {},
       ),
-      // ✅ Gunakan StreamBuilder untuk Realtime Update
       body: StreamBuilder<List<TodoModel>>(
         stream: _todoService.getTodosStream(),
         builder: (context, snapshot) {
@@ -91,7 +81,6 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
 
           final allTodos = snapshot.data ?? [];
 
-          // ✅ 2. Logic Hitung Statistik (Urgent, Overdue, All)
           final now = DateTime.now();
           final incompleteTodos = allTodos.where((t) => !t.isCompleted).toList();
 
@@ -109,100 +98,105 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
             return _isSameDate(todo.deadline, _selectedDate);
           }).toList();
 
-          return Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildGreetingStream(),
-                    const SizedBox(height: 12),
-                    RichText(
-                      text: TextSpan(
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
-                        children: [
-                          const TextSpan(text: 'You have '),
-                          TextSpan(
-                            text: '$allCount things to do', // ✅ Data Realtime
-                            style: const TextStyle(color: Color(0xFFFFB74D)),
-                          ),
-                          const TextSpan(text: ' for today'),
-                        ],
+          return SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildGreetingStream(),
+                      const SizedBox(height: 12),
+                      RichText(
+                        text: TextSpan(
+                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
+                          children: [
+                            const TextSpan(text: 'You have '),
+                            TextSpan(
+                              text: '$allCount things to do', // ✅ Data Realtime
+                              style: const TextStyle(color: Color(0xFFFFB74D)),
+                            ),
+                            const TextSpan(text: ' for today'),
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 20),
+                      const SizedBox(height: 20),
 
-                    // Status Cards (Data Realtime)
-                    SizedBox(
-                      height: 130,
-                      child: Row(
-                        children: [
-                          Expanded(child: _buildStatusCard('$allCount', 'All', const Color(0xFF318F61), const Color(0xFFFEF4FC))),
-                          const SizedBox(width: 12),
-                          Expanded(child: _buildStatusCard('$urgentCount', 'Urgent', const Color(0xFFF4BF2A), const Color(0xFFF6FAFD))),
-                          const SizedBox(width: 12),
-                          Expanded(child: _buildStatusCard('$overdueCount', 'Overdue', const Color(0xFFE5526E), const Color(0xFFF8F4FF))),
-                        ],
+                      // Status Cards (Data Realtime)
+                      SizedBox(
+                        height: 130,
+                        child: Row(
+                          children: [
+                            Expanded(child: _buildStatusCard('$allCount', 'All', const Color(0xFF318F61), const Color(0xFFFEF4FC))),
+                            const SizedBox(width: 12),
+                            Expanded(child: _buildStatusCard('$urgentCount', 'Urgent', const Color(0xFFF4BF2A), const Color(0xFFF6FAFD))),
+                            const SizedBox(width: 12),
+                            Expanded(child: _buildStatusCard('$overdueCount', 'Overdue', const Color(0xFFE5526E), const Color(0xFFF8F4FF))),
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 20),
+                      const SizedBox(height: 20),
 
-                    // Add Task Button
-                    _buildAddTaskButton(),
-                    const SizedBox(height: 20),
+                      // Add Task Button
+                      _buildAddTaskButton(),
+                      const SizedBox(height: 20),
 
-                    // Week Days (Static Visual Only)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: List.generate(7, (index) {
-                        // Generate tanggal untuk minggu ini (Senin - Minggu)
-                        final now = DateTime.now();
-                        // Anggap minggu dimulai dari Senin (weekday 1)
-                        final firstDayOfWeek = now.subtract(Duration(days: now.weekday - 1));
-                        final date = firstDayOfWeek.add(Duration(days: index));
+                      // Week Days
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: List.generate(7, (index) {
+                            final now = DateTime.now();
+                            final firstDayOfWeek = now.subtract(Duration(days: now.weekday - 1));
+                            final date = firstDayOfWeek.add(Duration(days: index));
+                            final isSelected = _isSameDate(date, _selectedDate);
 
-                        final isSelected = _isSameDate(date, _selectedDate);
-
-                        return GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _selectedDate = date;
-                            });
-                          },
-                          child: _buildDayItem(
-                              DateFormat('E').format(date),
-                              date.day,
-                              isSelected
-                          ),
-                        );
-                      }),
-                    ),
-                    const SizedBox(height: 20),
-                  ],
+                            return GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _selectedDate = date;
+                                });
+                              },
+                              child: _buildDayItem(
+                                  DateFormat('E').format(date),
+                                  date.day,
+                                  isSelected
+                              ),
+                            );
+                          }),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                    ],
+                  ),
                 ),
-              ),
 
-              // ✅ Task List Realtime (Firebase)
-              Expanded(
-                child: displayList.isEmpty
-                    ? const Center(child: Text("No tasks yet!"))
+                displayList.isEmpty
+                    ? const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 40),
+                  child: Center(child: Text("No tasks yet!")),
+                )
                     : ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  physics: const NeverScrollableScrollPhysics(), // Scroll dikendalikan oleh parent
+                  shrinkWrap: true, // Agar tidak error unbounded height
                   itemCount: displayList.length,
                   itemBuilder: (context, index) {
                     final todo = displayList[index];
                     return TaskItem(
                       task: _mapModelToTaskItem(todo),
-
                       onToggle: () => _todoService.toggleTodoStatus(todo.id, todo.isCompleted),
                       onDelete: () => _todoService.deleteTodo(todo.id),
                     );
                   },
                 ),
-              ),
-            ],
+
+                const SizedBox(height: 80),
+              ],
+            ),
           );
         },
       ),
@@ -211,8 +205,6 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
       ),
     );
   }
-
-  // --- Widget Helpers ---
 
   Widget _buildGreetingStream() {
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
@@ -260,7 +252,7 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
     );
   }
 
-  // ✅ Logic Simpan ke Firebase saat Add Task
+  // Logic Simpan ke Firebase saat Add Task
   void _showAddTaskDialog() {
     AddTaskBottomSheet.show(
       context,
