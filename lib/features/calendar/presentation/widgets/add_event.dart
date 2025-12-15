@@ -1,8 +1,11 @@
+import 'dart:math' as math;
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:notesapp/features/calendar/data/models/event_model.dart';
+import '../../../../core/widgets/dialog/alert_dialog.dart';
 import '../../../../core/widgets/others/snackbar.dart';
 import '../../../../features/calendar/data/services/category_service.dart';
 import '../../../../features/calendar/data/services/event_service.dart';
@@ -193,20 +196,15 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
   }
 
   void _showErrorDialog(String title, String content) {
-    showDialog(
+    showIOSDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFFFCFCFC),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(title, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: const Color(0xFFD4183D))),
-        content: Text(content, style: GoogleFonts.poppins(fontSize: 14)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('OK', style: GoogleFonts.poppins(color: const Color(0xFFD732A8))),
-          ),
-        ],
-      ),
+      title: title,
+      message: content,
+      confirmText: "OK",
+      confirmTextColor: const Color(0xFFD732A8),
+      singleButton: true, // Hanya muncul tombol OK
+      onConfirm: () {
+      },
     );
   }
 
@@ -523,203 +521,305 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
   Widget build(BuildContext context) {
     final double keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
     final double screenHeight = MediaQuery.of(context).size.height;
-    final double availableHeight = (screenHeight * 0.88) - keyboardHeight;
+    final double screenWidth = MediaQuery.of(context).size.width;
+
+    final bool isTablet = screenWidth > 600;
+    final double widthConstraint = isTablet ? 600 : double.infinity;
+
+    // 1. Hitung ruang vertikal yang tersedia (90% layar dikurangi keyboard)
+    final double availableSpace = (screenHeight * 0.9) - keyboardHeight;
+
+    // 2. Tentukan Max Height yang aman (Pastikan tidak negatif)
+    // Jika availableSpace terlalu kecil (misal keyboard menutupi layar), gunakan minimal 100 atau availableSpace itu sendiri
+    final double safeMaxHeight = math.max(availableSpace, 0.0);
+
+    // 3. Tentukan Min Height (40% layar)
+    final double desiredMinHeight = screenHeight * 0.4;
+
+    // 4. FIX UTAMA: Normalisasi Min Height
+    // Jika desiredMinHeight lebih besar dari safeMaxHeight (kasus landscape + keyboard),
+    // paksa minHeight turun mengikuti safeMaxHeight.
+    final double safeMinHeight = math.min(desiredMinHeight, safeMaxHeight);
 
     return Padding(
-      padding: EdgeInsets.only(bottom: keyboardHeight),
-      child: Container(
-        constraints: BoxConstraints(
-          minHeight: screenHeight * 0.4,
-          maxHeight: availableHeight > 0 ? availableHeight : screenHeight * 0.88,
-        ),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFCFCFC),
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(32),
-            topRight: Radius.circular(32),
-          ),
-          border: Border.all(color: Colors.black.withValues(alpha: 0.15), width: 1),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Handle bar
-            Container(
-              margin: const EdgeInsets.symmetric(vertical: 10),
-              width: 80,
-              height: 3,
-              decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.7), borderRadius: BorderRadius.circular(2)),
-            ),
-
-            // Header
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const SizedBox(width: 24),
-                  Text(_isEditMode ? 'Edit Event' : 'Add New Event', style: GoogleFonts.poppins(color: const Color(0xFF222B45), fontSize: 20, fontWeight: FontWeight.w600)),
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: const Icon(Icons.close, size: 24, color: Color(0xFF222B45)),
-                  ),
-                ],
+        padding: EdgeInsets.only(bottom: keyboardHeight),
+        child: Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: widthConstraint,
+                // Gunakan nilai yang sudah dinormalisasi (Safe Values)
+                minHeight: safeMinHeight,
+                maxHeight: safeMaxHeight,
               ),
-            ),
-
-            // Content
-            Expanded(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 17),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFCFCFC),
+                  borderRadius: BorderRadius.vertical(
+                    top: const Radius.circular(32),
+                    bottom: isTablet ? const Radius.circular(32) : Radius.zero,
+                  ),
+                  border: Border.all(color: Colors.black.withValues(alpha: 0.15), width: 1),
+                ),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    _buildTextField(controller: _eventNameController, hint: 'Event name*', isRequired: true),
-                    const SizedBox(height: 14),
+                    // Handle bar
+                    Container(
+                      margin: const EdgeInsets.symmetric(vertical: 10),
+                      width: 80,
+                      height: 3,
+                      decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.7),
+                          borderRadius: BorderRadius.circular(2)),
+                    ),
 
-                    _buildTextField(controller: _noteController, hint: 'Type the note here...', maxLines: 3, height: 70),
-                    const SizedBox(height: 14),
+                    // Header
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const SizedBox(width: 24),
+                          Text(_isEditMode ? 'Edit Event' : 'Add New Event',
+                              style: GoogleFonts.poppins(
+                                  color: const Color(0xFF222B45),
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600)),
+                          GestureDetector(
+                            onTap: () => Navigator.pop(context),
+                            child: const Icon(Icons.close,
+                                size: 24, color: Color(0xFF222B45)),
+                          ),
+                        ],
+                      ),
+                    ),
 
-                    GestureDetector(
-                      onTap: _pickDate,
-                      child: Container(
-                        height: 40,
-                        decoration: BoxDecoration(
-                          border: Border.all(color: const Color(0xFFD1D1D1)),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 14),
-                        child: Row(
+                    // Content
+                    Expanded(
+                      child: SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                        padding: const EdgeInsets.symmetric(horizontal: 17),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Icon(Icons.calendar_today_outlined, size: 18, color: Color(0xFF8F9BB3)),
-                            const SizedBox(width: 10),
-                            Text(_selectedDateStr.isEmpty ? 'Date' : _selectedDateStr,
-                                style: GoogleFonts.poppins(color: _selectedDateStr.isEmpty ? const Color(0xFF8F9BB3) : const Color(0xFF222B45))),
+                            // GUNAKAN LAYOUT RESPONSIVE UNTUK LANDSCAPE/TABLET
+                            // Agar tidak terlalu sempit saat keyboard muncul
+                            if (isTablet || MediaQuery.of(context).orientation == Orientation.landscape) ...[
+                              Row(
+                                children: [
+                                  Expanded(child: _buildTextField(controller: _eventNameController, hint: 'Event name*', isRequired: true)),
+                                  const SizedBox(width: 16),
+                                  Expanded(child: _buildLocationField()),
+                                ],
+                              )
+                            ] else ...[
+                              _buildTextField(controller: _eventNameController, hint: 'Event name*', isRequired: true),
+                              const SizedBox(height: 14),
+                              _buildLocationField(),
+                            ],
+
+                            const SizedBox(height: 14),
+                            _buildTextField(
+                                controller: _noteController,
+                                hint: 'Type the note here...',
+                                maxLines: 3,
+                                height: 70),
+                            const SizedBox(height: 14),
+
+                            GestureDetector(
+                              onTap: _pickDate,
+                              child: Container(
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: const Color(0xFFD1D1D1)),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                padding: const EdgeInsets.symmetric(horizontal: 14),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.calendar_today_outlined,
+                                        size: 18, color: Color(0xFF8F9BB3)),
+                                    const SizedBox(width: 10),
+                                    Text(
+                                        _selectedDateStr.isEmpty
+                                            ? 'Date'
+                                            : _selectedDateStr,
+                                        style: GoogleFonts.poppins(
+                                            color: _selectedDateStr.isEmpty
+                                                ? const Color(0xFF8F9BB3)
+                                                : const Color(0xFF222B45))),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: GestureDetector(
+                                    onTap: () => _pickTime(true),
+                                    child: Container(
+                                      height: 40,
+                                      decoration: BoxDecoration(
+                                          border: Border.all(
+                                              color: const Color(0xFFD1D1D1)),
+                                          borderRadius: BorderRadius.circular(8)),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 14),
+                                      child: Row(
+                                        children: [
+                                          const Icon(Icons.access_time_outlined,
+                                              size: 18, color: Color(0xFF8F9BB3)),
+                                          const SizedBox(width: 10),
+                                          Text(
+                                              _startTimeStr.isEmpty
+                                                  ? 'Start time'
+                                                  : _startTimeStr,
+                                              style: GoogleFonts.poppins(
+                                                  color: _startTimeStr.isEmpty
+                                                      ? const Color(0xFF8F9BB3)
+                                                      : const Color(0xFF222B45))),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 18),
+                                Expanded(
+                                  child: GestureDetector(
+                                    onTap: () => _pickTime(false),
+                                    child: Container(
+                                      height: 40,
+                                      decoration: BoxDecoration(
+                                          border: Border.all(
+                                              color: const Color(0xFFD1D1D1)),
+                                          borderRadius: BorderRadius.circular(8)),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 14),
+                                      child: Row(
+                                        children: [
+                                          const Icon(Icons.access_time_outlined,
+                                              size: 18, color: Color(0xFF8F9BB3)),
+                                          const SizedBox(width: 10),
+                                          Text(
+                                              _endTimeStr.isEmpty
+                                                  ? 'End time'
+                                                  : _endTimeStr,
+                                              style: GoogleFonts.poppins(
+                                                  color: _endTimeStr.isEmpty
+                                                      ? const Color(0xFF8F9BB3)
+                                                      : const Color(0xFF222B45))),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 14),
+                            // Location field sudah dipindah ke atas untuk logic landscape,
+                            // tapi jika portrait tetap di render ulang di bawah (lihat logic if-else di atas).
+                            // Untuk amannya, hapus pemanggilan _buildLocationField() DISINI
+                            // dan ikuti struktur if-else responsive di awal children Column.
+
+                            Text('Reminder',
+                                style: GoogleFonts.poppins(
+                                    color: const Color(0xFF131313),
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w500)),
+                            const SizedBox(height: 10),
+                            _buildDropdownField(
+                                value: _reminder,
+                                onTap: _showReminderPicker,
+                                icon: Icons.notifications_outlined),
+                            const SizedBox(height: 17),
+                            Text('Repeat',
+                                style: GoogleFonts.poppins(
+                                    color: const Color(0xFF131313),
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w500)),
+                            const SizedBox(height: 10),
+                            _buildDropdownField(
+                                value: _repeat,
+                                onTap: _showRepeatPicker,
+                                icon: Icons.repeat_outlined),
+                            const SizedBox(height: 17),
+                            Text('Select Category',
+                                style: GoogleFonts.poppins(
+                                    color: const Color(0xFF222B45),
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w500)),
+                            const SizedBox(height: 10),
+                            SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                children: [
+                                  ..._categories.map((category) {
+                                    return Padding(
+                                      padding: const EdgeInsets.only(right: 10),
+                                      child: _buildCategoryChip(
+                                        label: category.name,
+                                        color: _getColorFromHex(category.color),
+                                        isSelected:
+                                        _selectedCategoryId == category.id,
+                                        onTap: () {
+                                          setState(() {
+                                            _selectedCategoryId = category.id;
+                                          });
+                                        },
+                                      ),
+                                    );
+                                  }),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Center(
+                              child: GestureDetector(
+                                onTap: _showAddCategoryDialog,
+                                child: Text('+ Add new',
+                                    style: GoogleFonts.poppins(
+                                        color: const Color(0xFFD732A8),
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500)),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            GestureDetector(
+                              onTap: _isLoading ? null : _validateAndSave,
+                              child: Container(
+                                width: double.infinity,
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFD732A8),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Center(
+                                  child: _isLoading
+                                      ? const CircularProgressIndicator(
+                                      color: Colors.white)
+                                      : Text(
+                                    _isEditMode
+                                        ? 'Update'
+                                        : 'Create',
+                                    style: GoogleFonts.poppins(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w600),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 30),
                           ],
                         ),
                       ),
                     ),
-                    const SizedBox(height: 14),
-
-                    Row(
-                      children: [
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () => _pickTime(true),
-                            child: Container(
-                              height: 40,
-                              decoration: BoxDecoration(border: Border.all(color: const Color(0xFFD1D1D1)), borderRadius: BorderRadius.circular(8)),
-                              padding: const EdgeInsets.symmetric(horizontal: 14),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.access_time_outlined, size: 18, color: Color(0xFF8F9BB3)),
-                                  const SizedBox(width: 10),
-                                  Text(_startTimeStr.isEmpty ? 'Start time' : _startTimeStr,
-                                      style: GoogleFonts.poppins(color: _startTimeStr.isEmpty ? const Color(0xFF8F9BB3) : const Color(0xFF222B45))),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 18),
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () => _pickTime(false),
-                            child: Container(
-                              height: 40,
-                              decoration: BoxDecoration(border: Border.all(color: const Color(0xFFD1D1D1)), borderRadius: BorderRadius.circular(8)),
-                              padding: const EdgeInsets.symmetric(horizontal: 14),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.access_time_outlined, size: 18, color: Color(0xFF8F9BB3)),
-                                  const SizedBox(width: 10),
-                                  Text(_endTimeStr.isEmpty ? 'End time' : _endTimeStr,
-                                      style: GoogleFonts.poppins(color: _endTimeStr.isEmpty ? const Color(0xFF8F9BB3) : const Color(0xFF222B45))),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 14),
-                    _buildLocationField(), // Input Lokasi Sederhana
-                    const SizedBox(height: 14),
-
-                    Text('Reminder', style: GoogleFonts.poppins(color: const Color(0xFF131313), fontSize: 15, fontWeight: FontWeight.w500)),
-                    const SizedBox(height: 10),
-                    _buildDropdownField(value: _reminder, onTap: _showReminderPicker, icon: Icons.notifications_outlined),
-                    const SizedBox(height: 17),
-
-                    Text('Repeat', style: GoogleFonts.poppins(color: const Color(0xFF131313), fontSize: 15, fontWeight: FontWeight.w500)),
-                    const SizedBox(height: 10),
-                    _buildDropdownField(value: _repeat, onTap: _showRepeatPicker, icon: Icons.repeat_outlined),
-                    const SizedBox(height: 17),
-
-                    Text('Select Category', style: GoogleFonts.poppins(color: const Color(0xFF222B45), fontSize: 15, fontWeight: FontWeight.w500)),
-                    const SizedBox(height: 10),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          ..._categories.map((category) {
-                            return Padding(
-                              padding: const EdgeInsets.only(right: 10),
-                              child: _buildCategoryChip(
-                                label: category.name,
-                                color: _getColorFromHex(category.color),
-                                isSelected: _selectedCategoryId == category.id,
-                                onTap: () {
-                                  setState(() {
-                                    _selectedCategoryId = category.id;
-                                  });
-                                },
-                              ),
-                            );
-                          }),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Center(
-                      child: GestureDetector(
-                        onTap: _showAddCategoryDialog,
-                        child: Text('+ Add new', style: GoogleFonts.poppins(color: const Color(0xFFD732A8), fontSize: 14, fontWeight: FontWeight.w500)),
-                      ),
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    GestureDetector(
-                      onTap: _isLoading ? null : _validateAndSave,
-                      child: Container(
-                        width: double.infinity,
-                        height: 50,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFD732A8),
-                          borderRadius: BorderRadius.circular(7),
-                          boxShadow: [BoxShadow(color: const Color(0xFFD732A8).withValues(alpha:0.3), blurRadius: 12, offset: const Offset(0, 4))],
-                        ),
-                        child: Center(
-                          child: _isLoading
-                              ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                              : Text(
-                            _isEditMode ? 'Update Event' : 'Create Event',
-                            style: GoogleFonts.poppins(color: const Color(0xFFF2F2F2), fontSize: 16, fontWeight: FontWeight.w600),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 30),
                   ],
                 ),
               ),
             ),
-          ],
         ),
-      ),
     );
   }
 }

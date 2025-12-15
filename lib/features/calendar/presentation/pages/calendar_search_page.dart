@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import '../../data/models/event_model.dart';
+import 'package:notesapp/features/calendar/data/models/event_model.dart';
 import '../../data/services/category_service.dart';
 
 class CalendarSearchPage extends StatefulWidget {
@@ -64,12 +64,14 @@ class _CalendarSearchPageState extends State<CalendarSearchPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+      // resizeToAvoidBottomInset: true memastikan layout menyesuaikan saat keyboard muncul
+      resizeToAvoidBottomInset: true,
       body: SafeArea(
         child: Column(
           children: [
-            // --- HEADER & SEARCH BAR (DIGABUNG DALAM SATU ROW) ---
+            // --- HEADER & SEARCH BAR ---
             Padding(
-              padding: const EdgeInsets.fromLTRB(5, 10, 21.5, 10), // Adjust padding kiri dikit utk icon
+              padding: const EdgeInsets.fromLTRB(5, 10, 21.5, 10),
               child: Row(
                 children: [
                   // 1. Back Button
@@ -78,7 +80,7 @@ class _CalendarSearchPageState extends State<CalendarSearchPage> {
                     onPressed: () => Navigator.pop(context),
                   ),
 
-                  // 2. Search Bar (Menggunakan Expanded agar mengisi sisa ruang)
+                  // 2. Search Bar
                   Expanded(
                     child: Container(
                       height: 40,
@@ -89,6 +91,7 @@ class _CalendarSearchPageState extends State<CalendarSearchPage> {
                         borderRadius: BorderRadius.circular(50),
                       ),
                       child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center, // Pastikan icon & text center vertikal
                         children: [
                           const Icon(
                             Icons.search,
@@ -99,7 +102,13 @@ class _CalendarSearchPageState extends State<CalendarSearchPage> {
                           Expanded(
                             child: TextField(
                               controller: _searchController,
-                              autofocus: true, // Langsung aktif saat dibuka
+                              // PERBAIKAN 1: Keyboard tidak langsung aktif
+                              autofocus: false,
+
+                              // PERBAIKAN 2: Mencegah overflow teks vertikal
+                              textAlignVertical: TextAlignVertical.center,
+                              textInputAction: TextInputAction.search,
+
                               style: GoogleFonts.poppins(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w400,
@@ -114,7 +123,8 @@ class _CalendarSearchPageState extends State<CalendarSearchPage> {
                                 ),
                                 border: InputBorder.none,
                                 isDense: true,
-                                contentPadding: EdgeInsets.zero,
+                                // Padding diatur agar teks pas di tengah container 40px
+                                contentPadding: const EdgeInsets.symmetric(vertical: 0),
                               ),
                             ),
                           ),
@@ -143,13 +153,15 @@ class _CalendarSearchPageState extends State<CalendarSearchPage> {
             Expanded(
               child: _query.isEmpty
                   ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.event_note, size: 60, color: Colors.grey.shade300),
-                    const SizedBox(height: 16),
-                    Text('Type to search events', style: GoogleFonts.poppins(color: Colors.grey)),
-                  ],
+                child: SingleChildScrollView( // Agar aman saat keyboard muncul
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.event_note, size: 60, color: Colors.grey.shade300),
+                      const SizedBox(height: 16),
+                      Text('Type to search events', style: GoogleFonts.poppins(color: Colors.grey)),
+                    ],
+                  ),
                 ),
               )
                   : _searchResults.isEmpty
@@ -164,8 +176,7 @@ class _CalendarSearchPageState extends State<CalendarSearchPage> {
                   final event = _searchResults[index];
                   final category = widget.categories[event.categoryId];
 
-                  // Warna card
-                  Color cardColor = const Color(0xFFFBAE38); // Default
+                  Color cardColor = const Color(0xFFFBAE38);
                   if (category != null) {
                     try {
                       cardColor = _getColorFromHex(category.color);
@@ -177,7 +188,7 @@ class _CalendarSearchPageState extends State<CalendarSearchPage> {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        // --- BAGIAN KIRI: TANGGAL ---
+                        // KIRI: TANGGAL
                         SizedBox(
                           width: 50,
                           child: Column(
@@ -207,7 +218,7 @@ class _CalendarSearchPageState extends State<CalendarSearchPage> {
 
                         const SizedBox(width: 16),
 
-                        // --- BAGIAN KANAN: AGENDA CARD ---
+                        // KANAN: CARD
                         Expanded(
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),

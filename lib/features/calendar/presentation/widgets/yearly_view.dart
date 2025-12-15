@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:notesapp/features/calendar/data/models/event_model.dart';
 
 class YearlyViewWidget extends StatefulWidget {
   final int currentYear;
-  final Map<DateTime, List<dynamic>> events;
+  final List<Event> events;
   final Function(DateTime) onMonthTap;
 
   const YearlyViewWidget({
     super.key,
     required this.currentYear,
-    required this.events,
+    required this.events, // Masih diterima tapi tidak digunakan untuk visual di sini
     required this.onMonthTap,
   });
 
@@ -20,13 +21,11 @@ class YearlyViewWidget extends StatefulWidget {
 
 class _YearlyViewWidgetState extends State<YearlyViewWidget> {
   late PageController _pageController;
-  // A large number to allow scrolling back many years (e.g., index 1000 = currentYear)
   final int _initialPage = 1000;
 
   @override
   void initState() {
     super.initState();
-    // Initialize controller starting at the "middle" (current year)
     _pageController = PageController(initialPage: _initialPage);
   }
 
@@ -36,143 +35,186 @@ class _YearlyViewWidgetState extends State<YearlyViewWidget> {
     super.dispose();
   }
 
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
   @override
   Widget build(BuildContext context) {
     return PageView.builder(
       controller: _pageController,
-      scrollDirection: Axis.vertical, // Vertical scroll like standard calendar apps
-      // Allows scrolling "infinitely" in both directions
+      scrollDirection: Axis.horizontal,
       itemBuilder: (context, index) {
-        // Calculate the year based on the page index
-        // If index == _initialPage (1000), year = widget.currentYear
-        // If index == 999, year = widget.currentYear - 1
         final int year = widget.currentYear + (index - _initialPage);
-
         return _buildYearPage(year);
       },
     );
   }
 
   Widget _buildYearPage(int year) {
-    return Column(
-      children: [
-        // Year Header
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16.0),
-          child: Text(
-            year.toString(),
-            style: GoogleFonts.poppins(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFF1E293B),
-            ),
-          ),
-        ),
-        // Months Grid
-        Expanded(
-          child: GridView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            physics: const NeverScrollableScrollPhysics(), // Disable grid scroll, use PageView scroll
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3, // 3 Months per row
-              childAspectRatio: 0.7, // Aspect ratio
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-            ),
-            itemCount: 12,
-            itemBuilder: (context, index) {
-              final monthDate = DateTime(year, index + 1);
-              return GestureDetector(
-                onTap: () => widget.onMonthTap(monthDate),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.03),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      )
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 8),
-                      // Month Name
-                      Text(
-                        DateFormat('MMMM').format(monthDate),
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFFD732A8), // Pink accent for month name
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      // Mini Calendar Grid
-                      Expanded(
-                        child: _buildMiniMonthGrid(monthDate),
-                      ),
-                    ],
+    // CATATAN: Filter event dihapus karena tidak lagi ditampilkan di view tahunan ini
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bool isLandscape = constraints.maxWidth > constraints.maxHeight;
+
+        int crossAxisCount;
+        double childAspectRatio;
+
+        if (isLandscape) {
+          crossAxisCount = 4;
+          childAspectRatio = 1.1;
+        } else {
+          crossAxisCount = 3;
+          childAspectRatio = 0.75;
+        }
+
+        double horizontalPadding = constraints.maxWidth > 600 ? 32.0 : 16.0;
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header Tahun
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16.0),
+                child: Text(
+                  year.toString(),
+                  style: GoogleFonts.poppins(
+                    fontSize: isLandscape ? 24 : 32,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF1E293B),
                   ),
                 ),
-              );
-            },
+              ),
+
+              // Grid Bulan
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                child: GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: crossAxisCount,
+                    childAspectRatio: childAspectRatio,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                  ),
+                  itemCount: 12,
+                  itemBuilder: (context, index) {
+                    final monthDate = DateTime(year, index + 1);
+                    return _buildMonthCard(monthDate);
+                  },
+                ),
+              ),
+            ],
           ),
+        );
+      },
+    );
+  }
+
+  Widget _buildMonthCard(DateTime monthDate) {
+    return GestureDetector(
+      onTap: () => widget.onMonthTap(monthDate),
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            )
+          ],
         ),
-      ],
+        child: Column(
+          children: [
+            // Nama Bulan
+            Text(
+              DateFormat('MMMM').format(monthDate),
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFFD732A8),
+              ),
+            ),
+            const SizedBox(height: 4),
+
+            // Grid Tanggal Mini
+            Expanded(
+              child: _buildMiniMonthGrid(monthDate),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
   Widget _buildMiniMonthGrid(DateTime monthDate) {
     final daysInMonth = DateUtils.getDaysInMonth(monthDate.year, monthDate.month);
     final firstWeekday = DateTime(monthDate.year, monthDate.month, 1).weekday;
+    final DateTime now = DateTime.now();
 
-    return AbsorbPointer(
-      child: Padding(
-        padding: const EdgeInsets.all(4.0),
-        child: GridView.builder(
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 7,
-            mainAxisSpacing: 2,
-            crossAxisSpacing: 2,
-          ),
-          // Total cells = days in month + offset for starting day
-          itemCount: daysInMonth + (firstWeekday - 1),
-          itemBuilder: (context, index) {
-            // Empty slots before the 1st of the month
-            if (index < firstWeekday - 1) return const SizedBox.shrink();
+    return LayoutBuilder(
+        builder: (context, constraints) {
+          double cellHeight = constraints.maxHeight / 6;
 
-            final day = index - (firstWeekday - 1) + 1;
-            final date = DateTime(monthDate.year, monthDate.month, day);
+          double fontSize = cellHeight * 0.5; // Font sedikit diperbesar karena tidak ada dot
+          if (fontSize > 11) fontSize = 11;
+          if (fontSize < 8) fontSize = 8;
 
-            // Check for events using key equality
-            // Note: Ensure your events map keys normalize time to 00:00:00 for accurate matching
-            final bool hasEvent = widget.events.keys.any((eventDate) =>
-            eventDate.year == date.year &&
-                eventDate.month == date.month &&
-                eventDate.day == date.day
-            );
+          return GridView.builder(
+            physics: const NeverScrollableScrollPhysics(),
+            padding: EdgeInsets.zero,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 7,
+              mainAxisSpacing: 0,
+              crossAxisSpacing: 0,
+            ),
+            itemCount: daysInMonth + (firstWeekday - 1),
+            itemBuilder: (context, index) {
+              if (index < firstWeekday - 1) return const SizedBox.shrink();
 
-            return Container(
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: hasEvent ? const Color(0xFFFBAE38) : Colors.transparent,
-                shape: BoxShape.circle,
-              ),
-              child: Text(
-                '$day',
-                style: TextStyle(
-                  fontSize: 8,
-                  color: hasEvent ? Colors.white : Colors.black54,
-                  fontWeight: hasEvent ? FontWeight.bold : FontWeight.normal,
-                ),
-              ),
-            );
-          },
-        ),
-      ),
+              final day = index - (firstWeekday - 1) + 1;
+              final dateToCheck = DateTime(monthDate.year, monthDate.month, day);
+
+              final bool isToday = _isSameDay(dateToCheck, now);
+
+              // Stack tetap digunakan untuk background lingkaran hari ini
+              return Stack(
+                alignment: Alignment.center,
+                children: [
+                  // 1. Lingkaran Background Hari Ini (Hanya jika Today)
+                  if (isToday)
+                    Container(
+                      width: cellHeight * 0.9,
+                      height: cellHeight * 0.9,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFFBAE38),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+
+                  // 2. Angka Tanggal
+                  Text(
+                    '$day',
+                    style: TextStyle(
+                      fontSize: fontSize,
+                      // Warna: Putih jika hari ini, Hitam pudar (biasa) jika bukan
+                      color: isToday ? Colors.white : const Color(0xFF475569),
+                      // Bold: Hanya jika hari ini
+                      fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
+                    ),
+                  ),
+                ],
+              );
+            },
+          );
+        }
     );
   }
 }

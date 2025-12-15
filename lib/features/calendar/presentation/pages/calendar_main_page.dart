@@ -39,7 +39,6 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
   Map<String, Category> _categories = {};
   StreamSubscription? _categorySubscription;
   final ScrollController _scrollController = ScrollController();
-  final Map<DateTime, List<dynamic>> _yearlyEventsDummy = {};
 
   @override
   void initState() {
@@ -55,13 +54,16 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
   }
 
   void _loadCategories() {
-    _categorySubscription = _categoryService.getCategories(userId).listen((categories) {
-      if (mounted) {
-        setState(() {
-          _categories = {for (var cat in categories) cat.id!: cat};
+    _categorySubscription =
+        _categoryService.getCategories(userId).listen((categories) {
+          if (!mounted) return;
+
+          setState(() {
+            _categories = {
+              for (final cat in categories) cat.id!: cat,
+            };
+          });
         });
-      }
-    });
   }
 
   Color _getColorFromHex(String hexColor) {
@@ -74,12 +76,16 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
 
   void _toggleViewMode() {
     setState(() {
-      if (_currentView == CalendarViewMode.daily) {
-        _currentView = CalendarViewMode.monthly;
-      } else if (_currentView == CalendarViewMode.monthly) {
-        _currentView = CalendarViewMode.yearly;
-      } else {
-        _currentView = CalendarViewMode.daily;
+      switch (_currentView) {
+        case CalendarViewMode.daily:
+          _currentView = CalendarViewMode.monthly;
+          break;
+        case CalendarViewMode.monthly:
+          _currentView = CalendarViewMode.yearly;
+          break;
+        case CalendarViewMode.yearly:
+          _currentView = CalendarViewMode.daily;
+          break;
       }
     });
   }
@@ -88,6 +94,7 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
     setState(() {
       _selectedDate = date;
       _focusedMonth = date;
+
       if (_currentView != CalendarViewMode.daily) {
         _currentView = CalendarViewMode.daily;
       }
@@ -99,8 +106,9 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
       AppRoutes.home,
       AppRoutes.notes,
       AppRoutes.todo,
-      AppRoutes.calendar
+      AppRoutes.calendar,
     ];
+
     if (index != 3) {
       Navigator.pushReplacementNamed(context, routes[index]);
     }
@@ -111,7 +119,7 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => const AddEventBottomSheet(),
+      builder: (_) => const AddEventBottomSheet(),
     );
   }
 
@@ -123,7 +131,7 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => CalendarSearchPage(
+          builder: (_) => CalendarSearchPage(
             allEvents: allEvents,
             categories: _categories,
           ),
@@ -131,51 +139,45 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to load events for search: $e")),
+        SnackBar(content: Text('Failed to load events for search: $e')),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // ✅ IMPLEMENTASI POPSCOPE UNTUK BACK NAVIGATION
     return PopScope(
       canPop: false,
-      onPopInvokedWithResult: (bool didPop, dynamic result) async {
+      onPopInvokedWithResult: (didPop, _) async {
         if (didPop) return;
 
-        // 1. Jika di Yearly View -> Balik ke Monthly
         if (_currentView == CalendarViewMode.yearly) {
           setState(() => _currentView = CalendarViewMode.monthly);
           return;
         }
 
-        // 2. Jika di Monthly View -> Balik ke Daily
         if (_currentView == CalendarViewMode.monthly) {
           setState(() => _currentView = CalendarViewMode.daily);
           return;
         }
 
-        // 3. Jika sudah di Daily View -> Balik ke Home Page
         Navigator.pushReplacementNamed(context, AppRoutes.home);
       },
       child: Scaffold(
         backgroundColor: Colors.white,
 
-        // 1. APP BAR
         appBar: CustomTopAppBar(
           isCalendarMode: true,
           isYearView: _currentView == CalendarViewMode.yearly,
           onSearchTap: _handleSearch,
           onToggleView: _toggleViewMode,
-          onProfileTap: () => Navigator.pushNamed(context, AppRoutes.profile),
+          onProfileTap: () =>
+              Navigator.pushNamed(context, AppRoutes.profile),
           onNotificationTap: () {},
         ),
 
-        // 2. BODY CONTENT (SWITCHER)
         body: _buildBodyContent(),
 
-        // 3. GLOBAL EXPANDABLE FAB
         floatingActionButton: GlobalExpandableFab(
           actions: [
             FabActionModel(
@@ -185,9 +187,9 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
             ),
           ],
         ),
-        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+        floatingActionButtonLocation:
+        FloatingActionButtonLocation.endFloat,
 
-        // 4. BOTTOM NAVBAR
         bottomNavigationBar: CustomNavBar(
           selectedIndex: 3,
           onItemTapped: _handleNavigation,
@@ -196,7 +198,6 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
     );
   }
 
-  // --- WIDGET SWITCHER ---
   Widget _buildBodyContent() {
     switch (_currentView) {
       case CalendarViewMode.daily:
@@ -206,19 +207,13 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
         return StreamBuilder<List<Event>>(
           stream: _eventService.getEventsForMonth(userId, _focusedMonth),
           builder: (context, snapshot) {
-            List<Event> monthEvents = [];
-            if (snapshot.hasData) {
-              monthEvents = snapshot.data!;
-            }
-
+            final monthEvents = snapshot.data ?? [];
             return MonthlyViewWidget(
               currentMonth: _focusedMonth,
               selectedDate: _selectedDate,
               events: monthEvents,
               categories: _categories,
-              onDateSelected: (date) {
-                _onDateSelected(date);
-              },
+              onDateSelected: _onDateSelected,
               onPreviousMonth: () {
                 setState(() {
                   _focusedMonth = DateTime(_focusedMonth.year, _focusedMonth.month - 1);
@@ -234,136 +229,173 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
         );
 
       case CalendarViewMode.yearly:
-        return YearlyViewWidget(
-          currentYear: _focusedMonth.year,
-          events: _yearlyEventsDummy,
-          onMonthTap: (month) {
-            setState(() {
-              _focusedMonth = month;
-              _currentView = CalendarViewMode.monthly;
-            });
+      // PERUBAHAN DISINI: Gunakan StreamBuilder untuk mengambil Data REAL
+      // Kita ambil semua event agar bisa ditampilkan di view tahunan
+        return StreamBuilder<List<Event>>(
+          stream: _eventService.getAllEvents(userId),
+          builder: (context, snapshot) {
+            // Jika loading, atau error, atau kosong, kita tetap tampilkan kalender tapi tanpa dot
+            final allEvents = snapshot.data ?? [];
+
+            return YearlyViewWidget(
+              currentYear: _focusedMonth.year,
+              events: allEvents, // PASS REAL DATA
+              onMonthTap: (month) {
+                setState(() {
+                  _focusedMonth = month;
+                  _currentView = CalendarViewMode.monthly;
+                });
+              },
+            );
           },
         );
     }
   }
 
-  // --- DAILY VIEW IMPLEMENTATION ---
   Widget _buildDailyView() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        MiniCalendarWidget(
-          selectedDate: _selectedDate,
-          onDateSelected: _onDateSelected,
-        ),
-        const SizedBox(height: 10),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Schedule Today',
-                style: GoogleFonts.poppins(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFF1E293B),
-                ),
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 800),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            MiniCalendarWidget(
+              selectedDate: _selectedDate,
+              onDateSelected: _onDateSelected,
+            ),
+            const SizedBox(height: 10),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Schedule Today',
+                    style: GoogleFonts.poppins(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF1E293B),
+                    ),
+                  ),
+                  Text(
+                    DateFormat('d MMM yyyy').format(_selectedDate),
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ],
               ),
-              Text(
-                DateFormat('d MMM yyyy').format(_selectedDate),
-                style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  color: Colors.grey,
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: StreamBuilder<List<Event>>(
+                stream: _eventService.getEventsForDate(
+                  userId,
+                  _selectedDate,
                 ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        Expanded(
-          child: StreamBuilder<List<Event>>(
-            stream: _eventService.getEventsForDate(userId, _selectedDate),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              final events = snapshot.data ?? [];
-              if (events.isEmpty) {
-                return Column(
-                  children: [
-                    const SizedBox(height: 40),
-                    Center(
-                      child: Text(
-                        'No events for this date',
-                        style: GoogleFonts.poppins(
-                          color: const Color(0xFF94A3B8),
-                          fontSize: 14,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState ==
+                      ConnectionState.waiting) {
+                    return const Center(
+                      child: CircularProgressIndicator(),
+                    );
+                  }
+
+                  final events = snapshot.data ?? [];
+
+                  if (events.isEmpty) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 40),
+                        child: Text(
+                          'No events for this date',
+                          style: GoogleFonts.poppins(
+                            color: const Color(0xFF94A3B8),
+                            fontSize: 14,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                );
-              }
-              return ListView.builder(
-                controller: _scrollController,
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-                itemCount: events.length,
-                itemBuilder: (context, index) {
-                  final event = events[index];
-                  final category = _categories[event.categoryId];
-                  final color = category != null
-                      ? _getColorFromHex(category.color)
-                      : const Color(0xFF5683EB);
+                    );
+                  }
 
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: GestureDetector(
-                      onTap: () {
-                        showModalBottomSheet(
-                          context: context,
-                          isScrollControlled: true,
-                          backgroundColor: Colors.transparent,
-                          builder: (context) => EventDetailSheet(
-                            event: event,
-                            category: category,
-                          ),
-                        );
-                      },
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SizedBox(
-                            width: 50,
-                            child: Text(
-                              DateFormat('HH:mm').format(event.startTime),
-                              style: GoogleFonts.poppins(
-                                color: const Color(0xFF94A3B8),
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            child: ScheduleCardWidget(
-                              title: event.title,
-                              startTime: DateFormat('HH:mm').format(event.startTime),
-                              endTime: DateFormat('HH:mm').format(event.endTime),
-                              color: color,
-                              height: 80,
-                            ),
-                          ),
-                        ],
-                      ),
+                  return ListView.builder(
+                    controller: _scrollController,
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 10,
                     ),
+                    itemCount: events.length,
+                    itemBuilder: (context, index) {
+                      final event = events[index];
+                      final category =
+                      _categories[event.categoryId];
+                      final color = category != null
+                          ? _getColorFromHex(category.color)
+                          : const Color(0xFF5683EB);
+
+                      return Padding(
+                        padding:
+                        const EdgeInsets.only(bottom: 16),
+                        child: GestureDetector(
+                          onTap: () {
+                            showModalBottomSheet(
+                              context: context,
+                              isScrollControlled: true,
+                              backgroundColor:
+                              Colors.transparent,
+                              builder: (_) => EventDetailSheet(
+                                event: event,
+                                category: category,
+                              ),
+                            );
+                          },
+                          child: Row(
+                            crossAxisAlignment:
+                            CrossAxisAlignment.start,
+                            children: [
+                              SizedBox(
+                                width: 50,
+                                child: Text(
+                                  DateFormat('HH:mm')
+                                      .format(event.startTime),
+                                  style: GoogleFonts.poppins(
+                                    color:
+                                    const Color(0xFF94A3B8),
+                                    fontSize: 12,
+                                    fontWeight:
+                                    FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                child: ScheduleCardWidget(
+                                  title: event.title,
+                                  startTime:
+                                  DateFormat('HH:mm')
+                                      .format(
+                                      event.startTime),
+                                  endTime:
+                                  DateFormat('HH:mm')
+                                      .format(
+                                      event.endTime),
+                                  color: color,
+                                  height: 80,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
                   );
                 },
-              );
-            },
-          ),
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

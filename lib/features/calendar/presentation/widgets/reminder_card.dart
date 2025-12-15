@@ -344,17 +344,3 @@ class ReminderCardWidget extends StatelessWidget {
     }
   }
 }
-
-// ========================================
-// CARA PENGGUNAAN:
-// ========================================
-//
-// ReminderCardWidget(
-//   time: '09:00 AM - 10:00 AM',
-//   title: 'Team Meeting',
-//   eventId: event.id,
-//   eventTime: event.startTime,
-// )
-//
-// User akan langsung dapat memilih waktu reminder
-// dari bottom sheet yang muncul saat card di-tap!
