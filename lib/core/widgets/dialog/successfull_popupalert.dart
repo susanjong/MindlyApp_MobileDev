@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 
 class SuccessDialog {
   static Future<void> show(
-    BuildContext context, {
-    required String title,
-    required String message,
-    VoidCallback? onClose,
-    Duration autoCloseDuration = const Duration(seconds: 2),
-  }) {
+      BuildContext context, {
+        required String title,
+        required String message,
+        VoidCallback? onClose,
+        Duration autoCloseDuration = const Duration(seconds: 2),
+      }) {
     return showDialog(
       context: context,
       barrierDismissible: false,

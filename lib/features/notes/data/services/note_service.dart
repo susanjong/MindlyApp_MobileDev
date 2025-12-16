@@ -39,14 +39,11 @@ class NoteService {
 
   Stream<List<CategoryModel>> getCategoriesStream() {
     if (_uid == null) return Stream.value([]);
-
-    // HANYA ambil kategori yang dibuat user dari Firestore
-    // Tidak ada lagi injeksi 'All' atau 'Bookmarks'
     return _firestore
         .collection('users')
         .doc(_uid)
-        .collection('categories')
-        .orderBy('name', descending: false) // Urutkan sesuai nama
+        .collection('note_categories') // Beda path dengan calendar
+        .orderBy('name', descending: false)
         .snapshots()
         .map((snapshot) {
       return snapshot.docs
@@ -164,7 +161,7 @@ class NoteService {
 
   Future<void> addCategory(CategoryModel category) async {
     if (_uid == null) return;
-    final docRef = _firestore.collection('users').doc(_uid).collection('categories').doc();
+    final docRef = _firestore.collection('users').doc(_uid).collection('note_categories').doc();
     await docRef.set(category.copyWith(id: docRef.id).toMap());
   }
 
@@ -173,7 +170,7 @@ class NoteService {
     await _firestore
         .collection('users')
         .doc(_uid)
-        .collection('categories')
+        .collection('note_categories')
         .doc(category.id)
         .update(category.toMap());
   }
@@ -184,7 +181,7 @@ class NoteService {
     await _firestore
         .collection('users')
         .doc(_uid)
-        .collection('categories')
+        .collection('note_categories')
         .doc(categoryId)
         .delete();
 
@@ -208,7 +205,7 @@ class NoteService {
     await _firestore
         .collection('users')
         .doc(_uid)
-        .collection('categories')
+        .collection('note_categories')
         .doc(categoryId)
         .update({'isFavorite': !currentStatus});
   }

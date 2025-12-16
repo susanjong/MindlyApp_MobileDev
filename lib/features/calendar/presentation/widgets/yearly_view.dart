@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:notesapp/features/calendar/data/model/event_model.dart';
+import 'package:notesapp/features/calendar/data/models/event_model.dart';
 
 class YearlyViewWidget extends StatefulWidget {
   final int currentYear;

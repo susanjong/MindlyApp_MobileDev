@@ -435,9 +435,8 @@ class _AddTaskBottomSheetState extends State<AddTaskBottomSheet> {
   }
 }
 
-//  DIALOG ADD CATEGORY (UI Only - Return Data)
 class _IOSAddCategoryDialogContent extends StatefulWidget {
-  const _IOSAddCategoryDialogContent({super.key});
+  const _IOSAddCategoryDialogContent();
 
   @override
   State<_IOSAddCategoryDialogContent> createState() =>

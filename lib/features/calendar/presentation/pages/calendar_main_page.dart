@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:notesapp/core/widgets/navigation/custom_top_app_bar.dart';
 import '../../../../config/routes/routes.dart';
 import '../../../../core/widgets/navigation/custom_navbar_widget.dart';
 import '../../../../core/widgets/buttons/global_expandable_fab.dart';
+import '../../../../core/widgets/navigation/custom_top_app_bar.dart';
 import 'calendar_search_page.dart';
 import '../widgets/mini_calendar.dart';
 import '../widgets/monthly_view.dart';
@@ -14,10 +14,9 @@ import '../widgets/yearly_view.dart';
 import '../widgets/schedule_card.dart';
 import '../widgets/add_event.dart';
 import '../widgets/event_detail_sheet.dart';
-import 'package:notesapp/features/calendar/data/model/event_model.dart';
+import 'package:notesapp/features/calendar/data/models/event_model.dart';
 import '../../data/services/category_service.dart';
 import '../../data/services/event_service.dart';
-
 
 enum CalendarViewMode { daily, monthly, yearly }
 
@@ -30,7 +29,7 @@ class CalendarMainPage extends StatefulWidget {
 
 class _CalendarMainPageState extends State<CalendarMainPage> {
   final EventService _eventService = EventService();
-  final CategoryService _categoryService = CategoryService();
+  final EventCategoryService _categoryService = EventCategoryService();
   final String userId = FirebaseAuth.instance.currentUser!.uid;
 
   CalendarViewMode _currentView = CalendarViewMode.daily;
@@ -45,7 +44,7 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
   void initState() {
     super.initState();
     _loadCategories();
-    // Check pending notifications on init
+    // ✅ Optional: Check pending notifications on init
     _checkPendingNotifications();
   }
 
@@ -189,6 +188,7 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
       },
       child: Scaffold(
         backgroundColor: Colors.white,
+        resizeToAvoidBottomInset: false,
         appBar: CustomTopAppBar(
           isCalendarMode: true,
           isYearView: _currentView == CalendarViewMode.yearly,

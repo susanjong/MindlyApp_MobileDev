@@ -176,7 +176,6 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
       confirmText: 'Delete All',
       confirmTextColor: const Color(0xFFFF453A),  // iOS Red
       onConfirm: () async {
-        final navigator = Navigator.of(context);
         final messenger = ScaffoldMessenger.of(context);
 
         try {

@@ -20,7 +20,6 @@ class NoteSearchBar extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Search Field
           Container(
             height: 40,
             padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -31,48 +30,31 @@ class NoteSearchBar extends StatelessWidget {
             ),
             child: Row(
               children: [
-                const Icon(
-                  Icons.search,
-                  color: Color(0xFF6A6E76),
-                  size: 20,
-                ),
+                const Icon(Icons.search, color: Color(0xFF6A6E76), size: 20),
                 const SizedBox(width: 8),
                 Expanded(
                   child: TextField(
                     controller: controller,
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w400,
-                      color: Colors.black,
-                    ),
+                    // ✅ FIX: Pastikan autofocus false
+                    autofocus: false,
+                    style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w400, color: Colors.black),
                     decoration: InputDecoration(
                       hintText: hintText,
-                      hintStyle: GoogleFonts.poppins(
-                        color: const Color(0xFF6A6E76),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
+                      hintStyle: GoogleFonts.poppins(color: const Color(0xFF6A6E76), fontSize: 12, fontWeight: FontWeight.w500),
                       border: InputBorder.none,
                       isDense: true,
                       contentPadding: EdgeInsets.zero,
                     ),
                   ),
                 ),
-                // Clear button
+                // ... (Clear button code remains same)
                 ValueListenableBuilder<TextEditingValue>(
                   valueListenable: controller,
                   builder: (context, value, child) {
                     if (value.text.isEmpty) return const SizedBox.shrink();
                     return GestureDetector(
-                      onTap: () {
-                        controller.clear();
-                        onClear?.call();
-                      },
-                      child: const Icon(
-                        Icons.clear,
-                        color: Color(0xFF6A6E76),
-                        size: 18,
-                      ),
+                      onTap: () { controller.clear(); onClear?.call(); },
+                      child: const Icon(Icons.clear, color: Color(0xFF6A6E76), size: 18),
                     );
                   },
                 ),

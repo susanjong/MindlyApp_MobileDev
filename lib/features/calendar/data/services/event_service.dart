@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:notesapp/features/calendar/data/model/event_model.dart';
+import 'package:notesapp/features/calendar/data/models/event_model.dart';
 import 'package:notesapp/features/home/data/services/notification_service.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter/foundation.dart';
@@ -125,7 +125,6 @@ class EventService {
     }
   }
 
-  // ✅ PERBAIKAN: Schedule reminder dengan error handling
   Future<void> scheduleEventReminder({
     required String userId,
     required String eventId,
@@ -135,6 +134,7 @@ class EventService {
   }) async {
     try {
       final now = DateTime.now();
+      // Hitung waktu mundur (misal 15 menit sebelum event)
       final reminderTime = eventTime.subtract(Duration(minutes: minutesBefore));
 
       if (kDebugMode) {
@@ -142,33 +142,24 @@ class EventService {
         print('Event: $eventTitle');
         print('Event Time: $eventTime');
         print('Reminder Time: $reminderTime');
-        print('Current Time: $now');
       }
 
       if (reminderTime.isBefore(now)) {
-        throw Exception('Cannot set reminder for past time');
+        if (kDebugMode) print('⚠️ Reminder time is in the past, skipping schedule.');
+        return;
       }
 
       final notificationId = eventId.hashCode;
-
-      // ✅ PERBAIKAN: Pastikan timezone sudah diinisialisasi
       final scheduledDate = tz.TZDateTime.from(reminderTime, tz.local);
 
-      // Schedule notification
       await _notificationHelper.scheduleNotification(
         id: notificationId,
-        title: '⏰ Event Reminder',
-        body: '$eventTitle starts at ${_formatTime(eventTime)}',
+        title: 'Reminder: $eventTitle',
+        body: 'Event starts in $minutesBefore minutes (${_formatTime(eventTime)})',
         scheduledDate: scheduledDate,
       );
 
-      if (kDebugMode) {
-        final pending = await _notificationHelper.getPendingNotifications();
-        print('📋 Pending notifications: ${pending.length}');
-        print('=== END ===\n');
-      }
-
-      // Save to Firestore
+      // 2. SIMPAN KE FIRESTORE (Untuk dicek nanti agar masuk ke Notification Page)
       await _saveReminderToFirestore(
         userId: userId,
         eventId: eventId,
@@ -179,36 +170,11 @@ class EventService {
         notificationId: notificationId,
       );
 
-      // ✅ Create in-app notification
-      await _notificationService.createNotification(
-        title: '⏰ Reminder Set',
-        description: 'You will be reminded about "$eventTitle" ${_getTimeUntilMessage(reminderTime)}',
-        type: 'event_reminder',
-        priority: 'high',
-        relatedEventId: eventId,
-      );
-
     } catch (e) {
       if (kDebugMode) {
         print('❌ Error scheduling reminder: $e');
       }
       rethrow;
-    }
-  }
-
-  // ✅ Helper untuk format waktu tersisa
-  String _getTimeUntilMessage(DateTime reminderTime) {
-    final now = DateTime.now();
-    final difference = reminderTime.difference(now);
-
-    if (difference.inDays > 0) {
-      return 'in ${difference.inDays} day${difference.inDays > 1 ? 's' : ''}';
-    } else if (difference.inHours > 0) {
-      return 'in ${difference.inHours} hour${difference.inHours > 1 ? 's' : ''}';
-    } else if (difference.inMinutes > 0) {
-      return 'in ${difference.inMinutes} minute${difference.inMinutes > 1 ? 's' : ''}';
-    } else {
-      return 'now';
     }
   }
 
@@ -234,6 +200,7 @@ class EventService {
       'minutesBefore': minutesBefore,
       'notificationId': notificationId,
       'createdAt': FieldValue.serverTimestamp(),
+      'isProcessed': false, // ✅ Flag penting: belum masuk ke list notifikasi home
     });
   }
 
