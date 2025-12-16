@@ -18,7 +18,6 @@ class SelectionActionBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 75,
       padding: const EdgeInsets.symmetric(vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -30,28 +29,34 @@ class SelectionActionBar extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _ActionItem(
-            icon: Icons.folder_open_outlined,
-            label: 'Move to',
-            onTap: onMove,
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 60, // Tinggi konten fixed, tapi diluar SafeArea
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _ActionItem(
+                icon: Icons.folder_open_outlined,
+                label: 'Move to',
+                onTap: onMove,
+              ),
+              _ActionItem(
+                icon: isAllSelectedFavorite ? Icons.favorite : Icons.favorite_border,
+                iconColor: isAllSelectedFavorite ? Colors.red : Colors.black,
+                label: 'Favorite',
+                onTap: onFavorite,
+              ),
+              _ActionItem(
+                icon: Icons.delete_outline,
+                label: 'Delete',
+                iconColor: const Color(0xFFB90000),
+                textColor: const Color(0xFFB90000),
+                onTap: onDelete,
+              ),
+            ],
           ),
-          _ActionItem(
-            icon: isAllSelectedFavorite ? Icons.favorite : Icons.favorite_border,
-            iconColor: isAllSelectedFavorite ? Colors.red : Colors.black,
-            label: 'Favorite',
-            onTap: onFavorite,
-          ),
-          _ActionItem(
-            icon: Icons.delete_outline,
-            label: 'Delete',
-            iconColor: const Color(0xFFB90000),
-            textColor: const Color(0xFFB90000),
-            onTap: onDelete,
-          ),
-        ],
+        ),
       ),
     );
   }

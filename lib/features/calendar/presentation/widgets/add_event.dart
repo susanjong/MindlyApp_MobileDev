@@ -2,13 +2,14 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:notesapp/core/widgets/dialog/global_add_category_dialog.dart';
 import 'package:notesapp/features/calendar/data/models/event_model.dart';
 import '../../../../core/widgets/dialog/alert_dialog.dart';
 import '../../../../core/widgets/others/snackbar.dart';
 import '../../../../features/calendar/data/services/category_service.dart';
 import '../../../../features/calendar/data/services/event_service.dart';
 
-// --- MAIN WIDGET ---
+
 class AddEventBottomSheet extends StatefulWidget {
   final Event? eventToEdit;
   const AddEventBottomSheet({super.key, this.eventToEdit});
@@ -173,7 +174,6 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
         location: _locationController.text,
         reminder: _reminder,
         repeat: _repeat,
-        // Penting untuk delete logic: parentEventId
         parentEventId: _isEditMode ? widget.eventToEdit!.parentEventId : null,
       );
 
@@ -198,13 +198,16 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
     showIOSDialog(context: context, title: title, message: content, confirmText: "OK", singleButton: true, onConfirm: () {});
   }
 
-  // --- BUILD METHOD ---
   @override
   Widget build(BuildContext context) {
-    final double screenHeight = MediaQuery.of(context).size.height;
     final double keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
     final double screenWidth = MediaQuery.of(context).size.width;
+    final double screenHeight = MediaQuery.of(context).size.height;
     final bool isTablet = screenWidth > 600;
+
+    // Hitung tinggi maksimal yang aman
+    // 90% dari tinggi layar dikurangi keyboard dan safe area
+    final double maxHeight = (screenHeight * 0.9) - keyboardHeight;
 
     return Padding(
       padding: EdgeInsets.only(bottom: keyboardHeight),
@@ -212,20 +215,33 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
         child: ConstrainedBox(
           constraints: BoxConstraints(
             maxWidth: isTablet ? 600 : double.infinity,
-            maxHeight: screenHeight * 0.85,
+            // Gunakan max height yang sudah dihitung
+            maxHeight: maxHeight,
           ),
           child: Container(
+            // Hilangkan margin vertikal untuk menghemat space
+            margin: EdgeInsets.only(
+              top: keyboardHeight > 0 ? 8 : 24,
+              bottom: keyboardHeight > 0 ? 8 : 24,
+            ),
             decoration: BoxDecoration(
               color: const Color(0xFFFCFCFC),
-              borderRadius: BorderRadius.vertical(top: const Radius.circular(32), bottom: isTablet ? const Radius.circular(32) : Radius.zero),
-              border: Border.all(color: Colors.black.withValues(alpha: 0.15), width: 1),
+              borderRadius: BorderRadius.vertical(
+                top: const Radius.circular(32),
+                bottom: isTablet ? const Radius.circular(32) : Radius.zero,
+              ),
+              border: Border.all(
+                color: Colors.black.withValues(alpha: 0.15),
+                width: 1,
+              ),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 _EventHeader(isEditMode: _isEditMode),
 
-                Flexible(
+                // Gunakan Expanded dengan Flexible di dalam ScrollView
+                Expanded(
                   child: SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
                     keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
@@ -242,7 +258,9 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
                         const SizedBox(height: 14),
 
                         _EventDateTime(
-                          dateStr: _selectedDateObj != null ? DateFormat('dd/MM/yyyy').format(_selectedDateObj!) : '',
+                          dateStr: _selectedDateObj != null
+                              ? DateFormat('dd/MM/yyyy').format(_selectedDateObj!)
+                              : '',
                           startTimeStr: _startTimeObj?.format(context) ?? '',
                           endTimeStr: _endTimeObj?.format(context) ?? '',
                           onDateTap: _pickDate,
@@ -265,8 +283,73 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
                           categories: _categories,
                           selectedId: _selectedCategoryId,
                           onCategorySelected: (id) => setState(() => _selectedCategoryId = id),
+
+                          // Logika Add (yang sudah dibuat sebelumnya)
                           onAddCategory: () {
-                            // Implementasi logika add category dialog di sini atau pass function
+                            showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (context) => GlobalAddCategoryDialog(
+                                onAdd: (name) async {
+                                  try {
+                                    final newId = await _categoryService.addCategory(
+                                      name: name,
+                                      userId: _userId,
+                                    );
+                                    if (mounted) {
+                                      setState(() => _selectedCategoryId = newId);
+                                      Navigator.pop(context); // Tutup dialog
+                                    }
+                                  } catch (e) {
+                                    // Handle error
+                                  }
+                                },
+                              ),
+                            );
+                          },
+
+                          // ✅ LOGIKA DELETE BARU
+                          onDeleteCategory: (id, name) {
+                            showIOSDialog(
+                              context: context,
+                              title: "Delete Category",
+                              message: "Are you sure you want to delete '$name'?\nExisting events will keep their color.",
+                              confirmText: "Delete",
+                              confirmTextColor: const Color(0xFFFF453A), // Merah untuk bahaya
+                              onConfirm: () async {
+                                try {
+                                  // 1. Panggil service delete
+                                  await _categoryService.deleteCategory(_userId, id);
+
+                                  // 2. Jika kategori yang dihapus sedang dipilih, reset pilihan
+                                  if (_selectedCategoryId == id) {
+                                    setState(() {
+                                      _selectedCategoryId = null;
+                                      // Jika ada kategori lain, pilih yang pertama, jika tidak biarkan null
+                                      if (_categories.isNotEmpty) {
+                                        // _categories belum terupdate realtime di frame ini,
+                                        // tapi StreamBuilder akan me-refresh UI otomatis.
+                                        // Kita set null dulu agar aman.
+                                      }
+                                    });
+                                  }
+
+                                  if (mounted) {
+                                    Navigator.pop(context); // Tutup dialog konfirmasi
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Category deleted')),
+                                    );
+                                  }
+                                } catch (e) {
+                                  if (mounted) {
+                                    Navigator.pop(context);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Error: $e')),
+                                    );
+                                  }
+                                }
+                              },
+                            );
                           },
                         ),
                         const SizedBox(height: 20),
@@ -489,8 +572,16 @@ class _EventCategory extends StatelessWidget {
   final String? selectedId;
   final ValueChanged<String> onCategorySelected;
   final VoidCallback onAddCategory;
+  // ✅ Callback baru untuk delete
+  final Function(String id, String name) onDeleteCategory;
 
-  const _EventCategory({required this.categories, required this.selectedId, required this.onCategorySelected, required this.onAddCategory});
+  const _EventCategory({
+    required this.categories,
+    required this.selectedId,
+    required this.onCategorySelected,
+    required this.onAddCategory,
+    required this.onDeleteCategory, // ✅ Required
+  });
 
   Color _getColor(String hex) {
     hex = hex.replaceAll('#', '');
@@ -516,6 +607,8 @@ class _EventCategory extends StatelessWidget {
                   padding: const EdgeInsets.only(right: 10),
                   child: GestureDetector(
                     onTap: () => onCategorySelected(cat.id!),
+                    // ✅ DETEKSI LONG PRESS UNTUK HAPUS
+                    onLongPress: () => onDeleteCategory(cat.id!, cat.name),
                     child: Container(
                       height: 32, padding: const EdgeInsets.symmetric(horizontal: 16),
                       decoration: BoxDecoration(border: Border.all(color: color, width: 1.5), borderRadius: BorderRadius.circular(16), color: isSelected ? color.withValues(alpha: 0.15) : Colors.transparent),
