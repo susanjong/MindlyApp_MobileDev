@@ -7,7 +7,7 @@ import '../widgets/urgent_overdue_taskItem.dart';
 import 'folder_screen.dart';
 
 class OverdueTaskScreen extends StatefulWidget {
-  const OverdueTaskScreen({super.key});
+  const OverdueTaskScreen({Key? key}) : super(key: key);
 
   @override
   State<OverdueTaskScreen> createState() => _OverdueTaskScreenState();
@@ -98,101 +98,103 @@ class _OverdueTaskScreenState extends State<OverdueTaskScreen> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
+      body: SafeArea(
+        child: StreamBuilder<List<TodoModel>>(
+          stream: _todoService.getTodosStream(),
+          builder: (context, snapshot) {
+            // Loading State
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-      body: StreamBuilder<List<TodoModel>>(
-        stream: _todoService.getTodosStream(),
-        builder: (context, snapshot) {
-          // Loading State
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+            final allTodos = snapshot.data ?? [];
+            final now = DateTime.now();
 
-          final allTodos = snapshot.data ?? [];
-          final now = DateTime.now();
+            final overdueTasks = allTodos.where((task) {
+              // isBefore(now) berarti waktu deadline sudah berlalu
+              return !task.isCompleted && task.deadline.isBefore(now);
+            }).toList();
 
-          final overdueTasks = allTodos.where((task) {
-            // isBefore(now) berarti waktu deadline sudah berlalu
-            return !task.isCompleted && task.deadline.isBefore(now);
-          }).toList();
-
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.notifications_active,
-                      color: primaryRed,
-                      size: 40,
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Overdue',
-                      style: GoogleFonts.poppins(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-
-                // Subtitle Count
-                RichText(
-                  text: TextSpan(
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      color: const Color(0xFF535353),
-                    ),
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      const TextSpan(text: 'You have '),
-                      TextSpan(
-                        text: '${overdueTasks.length}', // Hitung realtime
-                        style: const TextStyle(
-                          color: primaryRed,
-                          fontWeight: FontWeight.bold,
+                      const Icon(
+                        Icons.notifications_active,
+                        color: primaryRed,
+                        size: 40,
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Overdue',
+                        style: GoogleFonts.poppins(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.black,
                         ),
                       ),
-                      const TextSpan(text: ' overdue task'),
                     ],
                   ),
-                ),
+                  const SizedBox(height: 8),
 
-                const SizedBox(height: 32),
-
-                // List Overdue Tasks
-                Expanded(
-                  child: overdueTasks.isEmpty
-                      ? Center(
-                    child: Text(
-                      "No overdue tasks! Great job.",
-                      style: GoogleFonts.poppins(color: Colors.grey),
+                  // Subtitle Count
+                  RichText(
+                    text: TextSpan(
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        color: const Color(0xFF535353),
+                      ),
+                      children: [
+                        const TextSpan(text: 'You have '),
+                        TextSpan(
+                          text: '${overdueTasks.length}', // Hitung realtime
+                          style: const TextStyle(
+                            color: primaryRed,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const TextSpan(text: ' overdue task'),
+                      ],
                     ),
-                  )
-                      : ListView.builder(
-                    itemCount: overdueTasks.length,
-                    itemBuilder: (context, index) {
-                      final taskModel = overdueTasks[index];
-                      final taskMap = _mapModelToItem(taskModel);
-
-                      return UrgentOverdueTaskItem(
-                        task: taskMap,
-                        themeColor: primaryRed, // Warna Merah
-                        timeText: _getOverdueTime(taskModel.deadline),
-                        onTapArrow: () => _navigateToFolder(taskModel.category, allTodos),
-                      );
-                    },
                   ),
-                ),
-              ],
-            ),
-          );
-        },
+
+                  const SizedBox(height: 32),
+
+                  // List Overdue Tasks
+                  Expanded(
+                    child: overdueTasks.isEmpty
+                        ? Center(
+                      child: Text(
+                        "No overdue tasks! Great job.",
+                        style: GoogleFonts.poppins(color: Colors.grey),
+                      ),
+                    )
+                        : ListView.builder(
+                      physics: const BouncingScrollPhysics(),
+                      itemCount: overdueTasks.length,
+                      itemBuilder: (context, index) {
+                        final taskModel = overdueTasks[index];
+                        final taskMap = _mapModelToItem(taskModel);
+
+                        return UrgentOverdueTaskItem(
+                          task: taskMap,
+                          themeColor: primaryRed, // Warna Merah
+                          timeText: _getOverdueTime(taskModel.deadline),
+                          onTapArrow: () => _navigateToFolder(taskModel.category, allTodos),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
