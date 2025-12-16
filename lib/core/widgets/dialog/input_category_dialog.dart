@@ -2,16 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/widgets/dialog/alert_dialog.dart';
 
-class AddCategoryDialog extends StatefulWidget {
-  final Function(String name) onAdd;
+class InputCategoryDialog extends StatefulWidget {
+  // Callback ini yang akan membedakan logicnya nanti
+  final Future<void> Function(String name) onSave;
+  final String title;
+  final String hintText;
 
-  const AddCategoryDialog({super.key, required this.onAdd});
+  const InputCategoryDialog({
+    super.key,
+    required this.onSave,
+    this.title = 'New Category',
+    this.hintText = 'Category Name',
+  });
 
   @override
-  State<AddCategoryDialog> createState() => _AddCategoryDialogState();
+  State<InputCategoryDialog> createState() => _InputCategoryDialogState();
 }
 
-class _AddCategoryDialogState extends State<AddCategoryDialog> {
+class _InputCategoryDialogState extends State<InputCategoryDialog> {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   bool _isLoading = false;
@@ -19,13 +27,8 @@ class _AddCategoryDialogState extends State<AddCategoryDialog> {
   @override
   void initState() {
     super.initState();
-    // ✅ FIX: Delay focus untuk smooth keyboard animation
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Future.delayed(const Duration(milliseconds: 100), () {
-        if (mounted) {
-          _focusNode.requestFocus();
-        }
-      });
+      if (mounted) _focusNode.requestFocus();
     });
   }
 
@@ -36,54 +39,55 @@ class _AddCategoryDialogState extends State<AddCategoryDialog> {
     super.dispose();
   }
 
-  Future<void> _handleAdd() async {
+  Future<void> _handleSubmit() async {
     final name = _controller.text.trim();
     if (name.isEmpty) return;
 
-    // ✅ FIX: Tutup keyboard dulu sebelum loading
     _focusNode.unfocus();
-
     setState(() => _isLoading = true);
 
     try {
-      await widget.onAdd(name);
+      // Panggil fungsi yang dilempar dari parent (Calendar atau Notes)
+      await widget.onSave(name);
+
       if (mounted) {
-        Navigator.pop(context);
+        Navigator.pop(context); // Tutup dialog setelah sukses
       }
     } catch (e) {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+        // Bisa tambah snackbar error disini
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return IOSDialog(
-      title: 'New Category',
+      title: widget.title,
       message: 'Enter a name for this category.',
       confirmText: 'Add',
       cancelText: 'Cancel',
-      confirmTextColor: const Color(0xFF007AFF),
+      confirmTextColor: const Color(0xFF5784EB),
       isLoading: _isLoading,
-      autoDismiss: false,
-      onConfirm: _handleAdd,
-      onCancel: () {
-        _focusNode.unfocus();
-      },
+      autoDismiss: false, // Kita handle dismiss manual saat sukses
+      onConfirm: _handleSubmit,
+      onCancel: () => _focusNode.unfocus(),
       content: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
           color: Colors.transparent,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: const Color(0xFF007AFF)),
+          border: Border.all(color: const Color(0xFF5784EB)),
         ),
         child: TextField(
           controller: _controller,
           focusNode: _focusNode,
           style: GoogleFonts.poppins(fontSize: 14, color: Colors.black),
           decoration: InputDecoration(
-            hintText: 'Category Name',
+            hintText: widget.hintText,
             hintStyle: GoogleFonts.poppins(
-              color: const Color(0xFF111111),
+              color: const Color(0xFFC7C7CC),
               fontSize: 14,
             ),
             border: InputBorder.none,
@@ -91,7 +95,7 @@ class _AddCategoryDialogState extends State<AddCategoryDialog> {
             contentPadding: const EdgeInsets.symmetric(vertical: 10),
           ),
           textCapitalization: TextCapitalization.sentences,
-          onSubmitted: (_) => _handleAdd(),
+          onSubmitted: (_) => _handleSubmit(),
         ),
       ),
     );

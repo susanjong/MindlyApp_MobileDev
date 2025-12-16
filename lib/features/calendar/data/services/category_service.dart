@@ -31,24 +31,44 @@ class Category {
   }
 }
 
-class CategoryService {
+class EventCategoryService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  CollectionReference _getCategoriesCollection(String userId) {
-    return _firestore.collection('users').doc(userId).collection('categories');
+  // List warna & Helper _getHexColorForId tetap sama...
+  static const List<int> categoryColors = [
+    0xFFFBAE38, 0xFFBEE973, 0xFF5784EB, 0xFFD732A8,
+    0xFFAB5CFF, 0xFF00A89D, 0xFF009B7D, 0xFFBEE973,
+  ];
+
+  String _getHexColorForId(String id) {
+    final hash = id.hashCode.abs();
+    final colorInt = categoryColors[hash % categoryColors.length];
+    return '#${colorInt.toRadixString(16).substring(2).toUpperCase()}';
   }
 
-  // Add category
-  Future<String> addCategory(Category category) async {
+  CollectionReference _getCategoriesCollection(String userId) {
+    return _firestore.collection('users').doc(userId).collection('event_categories');
+  }
+
+  Future<String> addCategory({required String name, required String userId}) async {
     try {
-      DocumentReference docRef = await _getCategoriesCollection(category.userId).add(category.toMap());
+      DocumentReference docRef = _getCategoriesCollection(userId).doc();
+      String autoColor = _getHexColorForId(docRef.id);
+
+      final categoryToSave = {
+        'name': name,
+        'color': autoColor,
+        'userId': userId,
+        'createdAt': FieldValue.serverTimestamp(), // Optional: tambah timestamp
+      };
+
+      await docRef.set(categoryToSave);
       return docRef.id;
     } catch (e) {
-      throw Exception('Failed to add category: $e');
+      throw Exception('Failed to add event category: $e');
     }
   }
 
-  // Get all categories
   Stream<List<Category>> getCategories(String userId) {
     return _getCategoriesCollection(userId).snapshots().map((snapshot) {
       return snapshot.docs.map((doc) {
@@ -57,7 +77,6 @@ class CategoryService {
     });
   }
 
-  // Update category
   Future<void> updateCategory(String userId, Category category) async {
     try {
       await _getCategoriesCollection(userId).doc(category.id).update(category.toMap());
@@ -66,7 +85,6 @@ class CategoryService {
     }
   }
 
-  // Delete category
   Future<void> deleteCategory(String userId, String categoryId) async {
     try {
       await _getCategoriesCollection(userId).doc(categoryId).delete();

@@ -2,19 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
-// ✅ Import Services & Models
+// Import Services & Models
 import '../../data/models/todo_model.dart';
 import '../../data/services/todo_services.dart';
 import '../../data/models/category_model.dart';
 import '../../data/services/category_service.dart';
 
-// ✅ Import Widgets (Termasuk Alert Dialog dari Core)
+// Import Widgets (Termasuk Alert Dialog dari Core)
 import '../../../../core/widgets/dialog/alert_dialog.dart';
 import '../widgets/task_item.dart';
 import 'folder_screen.dart';
 
 class AllCategoryScreen extends StatefulWidget {
-  const AllCategoryScreen({Key? key}) : super(key: key);
+  const AllCategoryScreen({super.key});
 
   @override
   State<AllCategoryScreen> createState() => _AllCategoryScreenState();
@@ -53,7 +53,7 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
     });
   }
 
-  // ✅ LOGIC DELETE SELECTED TASKS
+  // LOGIC DELETE SELECTED TASKS
   void _deleteSelectedTasks() {
     if (_selectedTaskIds.isEmpty) return;
 
@@ -82,7 +82,7 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
     );
   }
 
-  // ✅ LOGIC DELETE CATEGORY
+  // LOGIC DELETE CATEGORY
   void _deleteCategory(String categoryId, String categoryName) {
     showIOSDialog(
       context: context,
@@ -127,6 +127,10 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Get safe area padding for FAB positioning
+    final mediaQuery = MediaQuery.of(context);
+    final bottomPadding = mediaQuery.padding.bottom;
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -154,149 +158,153 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
           ),
         ),
       ),
-      body: StreamBuilder<List<TodoModel>>(
-        stream: _todoService.getTodosStream(),
-        builder: (context, snapshotTasks) {
-          final allTasks = snapshotTasks.data ?? [];
+      body: SafeArea(
+        bottom: false, // Handle bottom padding manually for FAB
+        child: StreamBuilder<List<TodoModel>>(
+          stream: _todoService.getTodosStream(),
+          builder: (context, snapshotTasks) {
+            final allTasks = snapshotTasks.data ?? [];
 
-          // Filter Uncategorized Tasks
-          final uncategorizedList = allTasks
-              .where((t) => t.category == 'Uncategorized' || t.category.isEmpty)
-              .toList();
+            // Filter Uncategorized Tasks
+            final uncategorizedList = allTasks
+                .where((t) => t.category == 'Uncategorized' || t.category.isEmpty)
+                .toList();
 
-          uncategorizedList.sort((a, b) => b.deadline.compareTo(a.deadline));
+            uncategorizedList.sort((a, b) => b.deadline.compareTo(a.deadline));
 
-          return StreamBuilder<List<CategoryModel>>(
-            stream: _categoryService.getCategoriesStream(),
-            builder: (context, snapshotCategories) {
-              final categories = snapshotCategories.data ?? [];
+            return StreamBuilder<List<CategoryModel>>(
+              stream: _categoryService.getCategoriesStream(),
+              builder: (context, snapshotCategories) {
+                final categories = snapshotCategories.data ?? [];
 
-              return SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 20),
+                return SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 20),
 
-                    // --- HORIZONTAL CATEGORY LIST ---
-                    // --- HORIZONTAL CATEGORY LIST ---
-                    SizedBox(
-                      // 1. TINGKATKAN TINGGI AGAR SHADOW TIDAK TERPOTONG
-                      height: 130, // Sebelumnya 110, tambah jadi 130 atau lebih
-                      child: categories.isEmpty
-                          ? const Center(child: Text("No categories"))
-                          : ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        // 2. TAMBAHKAN PADDING VERTIKAL
-                        // Agar ada ruang untuk shadow di atas dan bawah
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                        itemCount: categories.length,
-                        itemBuilder: (context, index) {
-                          final category = categories[index];
+                      // HORIZONTAL CATEGORY LIST
+                      SizedBox(
+                        // Tingkatkan tinggi agar shadow tidak terpotong
+                        height: 130,
+                        child: categories.isEmpty
+                            ? const Center(child: Text("No categories"))
+                            : ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          // Tambahkan padding vertikal agar ada ruang untuk shadow
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                          itemCount: categories.length,
+                          itemBuilder: (context, index) {
+                            final category = categories[index];
 
-                          // Hitung statistik task
-                          final categoryTasks = allTasks
-                              .where((t) => t.category == category.name)
-                              .toList();
-                          final total = categoryTasks.length;
-                          final completed = categoryTasks.where((t) => t.isCompleted).length;
+                            // Hitung statistik task
+                            final categoryTasks = allTasks
+                                .where((t) => t.category == category.name)
+                                .toList();
+                            final total = categoryTasks.length;
+                            final completed = categoryTasks.where((t) => t.isCompleted).length;
 
-                          return _buildCategoryCard(
-                            category,
-                            total,
-                            completed,
-                            category.gradientIndex,
-                            categoryTasks,
-                          );
-                        },
+                            return _buildCategoryCard(
+                              category,
+                              total,
+                              completed,
+                              category.gradientIndex,
+                              categoryTasks,
+                            );
+                          },
+                        ),
                       ),
-                    ),
 
-                    const SizedBox(height: 20),
+                      const SizedBox(height: 20),
 
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Column(
-                        children: [
-                          // --- HEADER UNCATEGORIZED ---
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                'Uncategorized Task',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.black,
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Column(
+                          children: [
+                            // HEADER UNCATEGORIZED
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'Uncategorized Task',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.black,
+                                  ),
                                 ),
-                              ),
-                              if (uncategorizedList.isNotEmpty)
-                                _buildPopupMenu(uncategorizedList),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-
-                          // --- TASK LIST (VERTICAL) ---
-                          if (uncategorizedList.isEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 40),
-                              child: Text(
-                                "No uncategorized tasks",
-                                style: GoogleFonts.poppins(color: Colors.grey),
-                              ),
-                            )
-                          else
-                            ListView.builder(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              itemCount: uncategorizedList.length,
-                              itemBuilder: (context, index) {
-                                final task = uncategorizedList[index];
-                                final isSelected = _selectedTaskIds.contains(task.id);
-
-                                return _isSelectMode
-                                    ? _buildSelectableTaskItem(task, isSelected)
-                                    : TaskItem(
-                                  task: _mapModelToTaskItem(task),
-                                  onToggle: () => _toggleTaskStatus(task),
-                                  onDelete: () => _todoService.deleteTodo(task.id),
-                                );
-                              },
+                                if (uncategorizedList.isNotEmpty)
+                                  _buildPopupMenu(uncategorizedList),
+                              ],
                             ),
-                          const SizedBox(height: 100),
-                        ],
+                            const SizedBox(height: 16),
+
+                            // TASK LIST (VERTICAL)
+                            if (uncategorizedList.isEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 40),
+                                child: Text(
+                                  "No uncategorized tasks",
+                                  style: GoogleFonts.poppins(color: Colors.grey),
+                                ),
+                              )
+                            else
+                              ListView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: uncategorizedList.length,
+                                itemBuilder: (context, index) {
+                                  final task = uncategorizedList[index];
+                                  final isSelected = _selectedTaskIds.contains(task.id);
+
+                                  return _isSelectMode
+                                      ? _buildSelectableTaskItem(task, isSelected)
+                                      : TaskItem(
+                                    task: _mapModelToTaskItem(task),
+                                    onToggle: () => _toggleTaskStatus(task),
+                                    onDelete: () => _todoService.deleteTodo(task.id),
+                                  );
+                                },
+                              ),
+
+                            // Bottom spacing considering FAB and safe area
+                            SizedBox(height: 100 + bottomPadding),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          );
-        },
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        ),
       ),
 
-      // FAB Logic
-      floatingActionButton: _isSelectMode
-          ? GestureDetector(
-        onTap: _deleteSelectedTasks,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.delete_outline, color: Colors.red, size: 28),
-            const SizedBox(height: 4),
-            Text(
-              "Delete",
-              style: GoogleFonts.poppins(
-                color: const Color(0xFFB90000),
-                fontWeight: FontWeight.w600,
-                fontSize: 12,
-              ),
-            )
-          ],
-        ),
-      )
-          : Padding(
-        padding: const EdgeInsets.only(bottom: 12, right: 8),
-        child: FloatingActionButton.extended(
+      // FAB Logic with safe area consideration
+      floatingActionButton: Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom + 12, right: 8),
+        child: _isSelectMode
+            ? GestureDetector(
+          onTap: _deleteSelectedTasks,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.delete_outline, color: Colors.red, size: 28),
+              const SizedBox(height: 4),
+              Text(
+                "Delete",
+                style: GoogleFonts.poppins(
+                  color: const Color(0xFFB90000),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                ),
+              )
+            ],
+          ),
+        )
+            : FloatingActionButton.extended(
           onPressed: _showAddCategoryDialog,
           backgroundColor: const Color(0xFFD732A8),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
@@ -412,7 +420,7 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
     );
   }
 
-  // ✅ WIDGET CATEGORY CARD (UPDATED WITH TRANSFORM)
+  // WIDGET CATEGORY CARD (UPDATED WITH TRANSFORM)
   Widget _buildCategoryCard(CategoryModel category, int taskCount, int completedCount, int gradientIndex, List<TodoModel> tasks) {
     final gradient = availableGradients[gradientIndex % availableGradients.length];
     final List<Map<String, dynamic>> folderTasksMap = tasks.map((t) => _mapModelToTaskItem(t)).toList();
@@ -444,7 +452,7 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.25),
+              color: Colors.black.withValues(alpha: 0.25),
               offset: const Offset(0, 4),
               blurRadius: 4,
               spreadRadius: 0,
@@ -471,7 +479,7 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.4),
+                    color: Colors.white.withValues(alpha: 0.4),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -557,7 +565,7 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
 }
 
 class _IOSAddCategoryDialogContent extends StatefulWidget {
-  const _IOSAddCategoryDialogContent({Key? key}) : super(key: key);
+  const _IOSAddCategoryDialogContent();
   @override
   State<_IOSAddCategoryDialogContent> createState() => _IOSAddCategoryDialogContentState();
 }

@@ -9,13 +9,12 @@ import 'package:flutter_quill/flutter_quill.dart' as quill;
 class FavoritesTab extends StatefulWidget {
   final List<NoteModel> notes;
   final List<CategoryModel> favoriteCategories;
-  final ScrollController? scrollController;
   final Function(String) onNoteSelected;
   final Function(String) onCategoryToggleFavorite;
   final String searchQuery;
 
   // Note Selection Props
-  final bool isSelectionMode; // Note selection mode
+  final bool isSelectionMode;
   final Set<String> selectedNoteIds;
   final Function(String) onNoteTap;
   final Function(String) onNoteLongPress;
@@ -31,17 +30,14 @@ class FavoritesTab extends StatefulWidget {
     super.key,
     required this.notes,
     required this.favoriteCategories,
-    this.scrollController,
     required this.onNoteSelected,
     required this.onCategoryToggleFavorite,
     this.searchQuery = '',
-    // Note Params
     required this.isSelectionMode,
     required this.selectedNoteIds,
     required this.onNoteTap,
     required this.onNoteLongPress,
     required this.onToggleFavorite,
-    // Category Params
     required this.isCategorySelectionMode,
     required this.selectedCategoryIds,
     required this.onCategoryTap,
@@ -55,8 +51,6 @@ class FavoritesTab extends StatefulWidget {
 class _FavoritesTabState extends State<FavoritesTab> {
   bool _isCategoriesExpanded = true;
   bool _isAllNotesExpanded = true;
-
-  // State untuk melacak kategori favorit mana yang sedang dibuka
   final Set<String> _expandedCategories = {};
 
   String _getPlainText(String jsonContent) {
@@ -68,14 +62,11 @@ class _FavoritesTabState extends State<FavoritesTab> {
     }
   }
 
-  // Logika toggle expand kategori (mirip dengan CategoriesTab)
   void _toggleCategoryExpand(String categoryId) {
-    // Jika sedang mode seleksi kategori, tap berfungsi sebagai select, bukan expand
     if (widget.isCategorySelectionMode) {
       widget.onCategoryTap(categoryId);
       return;
     }
-
     setState(() {
       if (_expandedCategories.contains(categoryId)) {
         _expandedCategories.remove(categoryId);
@@ -85,131 +76,159 @@ class _FavoritesTabState extends State<FavoritesTab> {
     });
   }
 
+  int _getCrossAxisCount(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    return width < 600 ? 2 : (width < 900 ? 3 : 4);
+  }
+
+  double _getChildAspectRatio(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    return width < 600 ? 0.85 : 1.25;
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (widget.notes.isEmpty && widget.favoriteCategories.isEmpty) {
-      return _buildEmptyState();
-    }
+    // ✅ Menggunakan CustomScrollView untuk mengatasi Overflow
+    return CustomScrollView(
+      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+      slivers: [
+        const SliverPadding(padding: EdgeInsets.only(top: 10)),
 
-    return ListView(
-      controller: widget.scrollController,
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.only(bottom: 120),
-      children: [
-        // === Categories Section ===
-        if (widget.favoriteCategories.isNotEmpty) ...[
-          _buildSectionHeader(
-            title: 'Categories',
-            isExpanded: _isCategoriesExpanded,
-            onTap: () => setState(() => _isCategoriesExpanded = !_isCategoriesExpanded),
-          ),
-          AnimatedCrossFade(
-            firstChild: const SizedBox.shrink(),
-            secondChild: ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: widget.favoriteCategories.length,
-              padding: const EdgeInsets.only(bottom: 16),
-              itemBuilder: (context, index) {
-                final category = widget.favoriteCategories[index];
-                final isCatSelected = widget.selectedCategoryIds.contains(category.id);
-
-                // Cari notes yang termasuk dalam kategori ini
-                // Catatan: Ini mengambil dari widget.notes (yang mungkin hanya berisi Favorite Notes)
-                final notesInCategory = widget.notes
-                    .where((n) => n.categoryId == category.id)
-                    .toList();
-
-                return _FavoriteCategoryItem(
-                  category: category,
-                  notes: notesInCategory,
-                  isSelected: widget.isCategorySelectionMode && isCatSelected,
-                  isSelectionMode: widget.isCategorySelectionMode,
-                  isExpanded: _expandedCategories.contains(category.id),
-                  getPlainText: _getPlainText,
-
-                  // Logic Expand / Select Category
-                  onTap: () => _toggleCategoryExpand(category.id),
-                  onLongPress: () {
-                    if (!widget.isSelectionMode) {
-                      widget.onCategoryLongPress(category.id);
-                    }
-                  },
-                  onFavoriteTap: () {
-                    if (!widget.isCategorySelectionMode && !widget.isSelectionMode) {
-                      widget.onCategoryToggleFavorite(category.id);
-                    }
-                  },
-
-                  // Logic Note Selection didalam Kategori
-                  isNoteSelectionMode: widget.isSelectionMode,
-                  selectedNoteIds: widget.selectedNoteIds,
-                  onNoteTap: widget.onNoteTap,
-                  onNoteLongPress: widget.onNoteLongPress,
-                );
-              },
-            ),
-            crossFadeState: _isCategoriesExpanded
-                ? CrossFadeState.showSecond
-                : CrossFadeState.showFirst,
-            duration: const Duration(milliseconds: 250),
-          ),
-        ],
-
-        // === All Favorites Section ===
-        // Menampilkan semua note favorit (sebagai fallback atau akses cepat)
-        if (widget.notes.isNotEmpty) ...[
-          _buildSectionHeader(
-            title: 'All Favorite Notes',
-            isExpanded: _isAllNotesExpanded,
-            onTap: () => setState(() => _isAllNotesExpanded = !_isAllNotesExpanded),
-          ),
-          AnimatedCrossFade(
-            firstChild: const SizedBox.shrink(),
-            secondChild: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 8),
-              child: GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 0.85,
-                ),
-                itemCount: widget.notes.length,
-                itemBuilder: (context, index) {
-                  final note = widget.notes[index];
-                  final isNoteSelected = widget.selectedNoteIds.contains(note.id);
-
-                  return NoteCard(
-                    title: note.title,
-                    content: _getPlainText(note.content),
-                    date: note.formattedDate,
-                    color: Color(note.color),
-                    isFavorite: note.isFavorite,
-                    isSelected: widget.isSelectionMode && isNoteSelected,
-                    onTap: () => widget.onNoteTap(note.id),
-                    onLongPress: () {
-                      if (!widget.isCategorySelectionMode) {
-                        widget.onNoteLongPress(note.id);
-                      }
-                    },
-                    onFavoriteTap: () {
-                      if (!widget.isSelectionMode && !widget.isCategorySelectionMode) {
-                        widget.onToggleFavorite(note.id);
-                      }
-                    },
-                  );
-                },
+        // === EMPTY STATE ===
+        if (widget.notes.isEmpty && widget.favoriteCategories.isEmpty)
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.favorite_outline, size: 80, color: Colors.grey.shade300),
+                  const SizedBox(height: 16),
+                  Text('No favorites yet', style: GoogleFonts.poppins(color: Colors.grey)),
+                ],
               ),
             ),
-            crossFadeState: _isAllNotesExpanded
-                ? CrossFadeState.showSecond
-                : CrossFadeState.showFirst,
-            duration: const Duration(milliseconds: 250),
-          ),
-        ],
+          )
+        else ...[
+          // === CATEGORIES SECTION ===
+          if (widget.favoriteCategories.isNotEmpty) ...[
+            SliverToBoxAdapter(
+              child: _buildSectionHeader(
+                title: 'Categories',
+                isExpanded: _isCategoriesExpanded,
+                onTap: () => setState(() => _isCategoriesExpanded = !_isCategoriesExpanded),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: AnimatedCrossFade(
+                firstChild: const SizedBox.shrink(),
+                secondChild: ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: widget.favoriteCategories.length,
+                  padding: const EdgeInsets.only(bottom: 16),
+                  itemBuilder: (context, index) {
+                    final category = widget.favoriteCategories[index];
+                    final isCatSelected = widget.selectedCategoryIds.contains(category.id);
+                    final notesInCategory = widget.notes
+                        .where((n) => n.categoryId == category.id)
+                        .toList();
+
+                    return _FavoriteCategoryItem(
+                      category: category,
+                      notes: notesInCategory,
+                      isSelected: widget.isCategorySelectionMode && isCatSelected,
+                      isSelectionMode: widget.isCategorySelectionMode,
+                      isExpanded: _expandedCategories.contains(category.id),
+                      getPlainText: _getPlainText,
+                      onTap: () => _toggleCategoryExpand(category.id),
+                      onLongPress: () {
+                        if (!widget.isSelectionMode) {
+                          widget.onCategoryLongPress(category.id);
+                        }
+                      },
+                      onFavoriteTap: () {
+                        if (!widget.isCategorySelectionMode && !widget.isSelectionMode) {
+                          widget.onCategoryToggleFavorite(category.id);
+                        }
+                      },
+                      isNoteSelectionMode: widget.isSelectionMode,
+                      selectedNoteIds: widget.selectedNoteIds,
+                      onNoteTap: widget.onNoteTap,
+                      onNoteLongPress: widget.onNoteLongPress,
+                    );
+                  },
+                ),
+                crossFadeState: _isCategoriesExpanded
+                    ? CrossFadeState.showSecond
+                    : CrossFadeState.showFirst,
+                duration: const Duration(milliseconds: 250),
+              ),
+            ),
+          ],
+
+          // === ALL FAVORITES NOTES SECTION ===
+          if (widget.notes.isNotEmpty) ...[
+            SliverToBoxAdapter(
+              child: _buildSectionHeader(
+                title: 'All Favorite Notes',
+                isExpanded: _isAllNotesExpanded,
+                onTap: () => setState(() => _isAllNotesExpanded = !_isAllNotesExpanded),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: AnimatedCrossFade(
+                firstChild: const SizedBox.shrink(),
+                secondChild: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 8),
+                  child: GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: _getCrossAxisCount(context),
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      childAspectRatio: _getChildAspectRatio(context),
+                    ),
+                    itemCount: widget.notes.length,
+                    itemBuilder: (context, index) {
+                      final note = widget.notes[index];
+                      final isNoteSelected = widget.selectedNoteIds.contains(note.id);
+
+                      return NoteCard(
+                        title: note.title,
+                        content: _getPlainText(note.content),
+                        date: note.formattedDate,
+                        color: Color(note.color),
+                        isFavorite: note.isFavorite,
+                        isSelected: widget.isSelectionMode && isNoteSelected,
+                        onTap: () => widget.onNoteTap(note.id),
+                        onLongPress: () {
+                          if (!widget.isCategorySelectionMode) {
+                            widget.onNoteLongPress(note.id);
+                          }
+                        },
+                        onFavoriteTap: () {
+                          if (!widget.isSelectionMode && !widget.isCategorySelectionMode) {
+                            widget.onToggleFavorite(note.id);
+                          }
+                        },
+                      );
+                    },
+                  ),
+                ),
+                crossFadeState: _isAllNotesExpanded
+                    ? CrossFadeState.showSecond
+                    : CrossFadeState.showFirst,
+                duration: const Duration(milliseconds: 250),
+              ),
+            ),
+          ],
+
+          // Extra padding for bottom navigation
+          const SliverPadding(padding: EdgeInsets.only(bottom: 120)),
+        ]
       ],
     );
   }
@@ -238,19 +257,6 @@ class _FavoritesTabState extends State<FavoritesTab> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.favorite_outline, size: 80, color: Colors.grey.shade300),
-          const SizedBox(height: 16),
-          Text('No favorites yet', style: GoogleFonts.poppins(color: Colors.grey)),
-        ],
       ),
     );
   }
@@ -295,6 +301,10 @@ class _FavoriteCategoryItem extends StatelessWidget {
     const Color borderPink = Color(0xFFD732A8);
     const Color selectedGrey = Color(0xFFBABABA);
     const Color checkCircleColor = Color(0xFF777777);
+
+    final width = MediaQuery.of(context).size.width;
+    final int crossAxisCount = width < 600 ? 2 : (width < 900 ? 3 : 4);
+    final double childAspectRatio = width < 600 ? 0.85 : 1.25;
 
     return Column(
       children: [
@@ -373,11 +383,11 @@ class _FavoriteCategoryItem extends StatelessWidget {
               child: GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
-                  childAspectRatio: 0.85,
+                  childAspectRatio: childAspectRatio,
                 ),
                 itemCount: notes.length,
                 itemBuilder: (context, index) {

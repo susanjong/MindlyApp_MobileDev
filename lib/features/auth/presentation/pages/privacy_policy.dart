@@ -16,7 +16,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            // top app bar
+            // top navigation bar
             Padding(
               padding: EdgeInsets.symmetric(
                 horizontal: 8.0,
@@ -24,7 +24,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  // back button
+                  // back button icon
                   IconButton(
                     onPressed: () => Navigator.pop(context),
                     icon: const Icon(
@@ -38,7 +38,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
                   ),
                   const SizedBox(width: 12),
 
-                  // Title
+                  // page title text
                   Expanded(
                     child: Text(
                       'Privacy Policy',
@@ -55,20 +55,20 @@ class PrivacyPolicyScreen extends StatelessWidget {
               ),
             ),
 
-            // Divider
+            // horizontal divider line
             Container(
               height: 1,
               color: const Color(0x9B999191),
             ),
 
-            // Content
+            // scrollable content area
             Expanded(
               child: SingleChildScrollView(
                 padding: EdgeInsets.all(horizontalPadding),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // App Name & Logo
+                    // application name and logo section
                     Center(
                       child: Column(
                         children: [
@@ -79,7 +79,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
                               mainAxisAlignment: MainAxisAlignment.center,
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                // Logo
+                                // application logo svg
                                 SizedBox(
                                   width: 32.36,
                                   height: 30,
@@ -103,7 +103,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
                                 ),
                                 const SizedBox(width: 14),
 
-                                // logo mindly
+                                // application name text
                                 Flexible(
                                   child: Text.rich(
                                     TextSpan(
@@ -130,7 +130,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
 
                           const SizedBox(height: 16),
 
-                          // tagline
+                          // application tagline text
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 16),
                             child: Text(
@@ -151,7 +151,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
 
                     const SizedBox(height: 32),
 
-                    // last update badge
+                    // last updated date badge
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(12),
@@ -181,7 +181,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
                       number: '1',
                       title: 'Information We Collect',
                       content:
-                      'We collect information you provide directly to us when you create an account, use our services, or communicate with us. This includes your name, email address, and the notes and content you create within Mindly.',
+                      'We collect your name, email, and notes you create in Mindly when you use our services.',
                       isSmallScreen: isSmallScreen,
                     ),
 
@@ -189,79 +189,31 @@ class PrivacyPolicyScreen extends StatelessWidget {
                       number: '2',
                       title: 'How We Use Your Information',
                       content:
-                      'We use the information we collect to provide, maintain, and improve our services, to communicate with you, to monitor and analyze trends and usage, and to personalize your experience with Mindly.',
+                      'We use your information to provide and improve our services, and to personalize your experience.',
                       isSmallScreen: isSmallScreen,
                     ),
 
                     _buildSection(
                       number: '3',
-                      title: 'Data Storage & Security',
+                      title: 'Data Security',
                       content:
-                      'Your data is encrypted both in transit and at rest. We implement industry-standard security measures to protect your information from unauthorized access, alteration, or destruction. We use secure servers and regularly update our security protocols.',
+                      'Your data is encrypted and protected with industry-standard security measures.',
                       isSmallScreen: isSmallScreen,
                     ),
 
                     _buildSection(
                       number: '4',
-                      title: 'Data Sharing & Third Parties',
+                      title: 'Data Sharing',
                       content:
-                      'We do not sell, trade, or rent your personal information to third parties. We may share your information only with service providers who assist us in operating our app, conducting our business, or serving our users, and only under strict confidentiality agreements.',
+                      'We do not sell your personal information to third parties.',
                       isSmallScreen: isSmallScreen,
                     ),
 
                     _buildSection(
                       number: '5',
-                      title: 'Your Privacy Rights',
+                      title: 'Your Rights',
                       content:
-                      'You have the right to access, update, or delete your personal information at any time. You can export your data, modify your account settings, or request complete account deletion through the app settings.',
-                      isSmallScreen: isSmallScreen,
-                    ),
-
-                    _buildSection(
-                      number: '6',
-                      title: 'Cookies & Tracking',
-                      content:
-                      'We use cookies and similar tracking technologies to enhance your experience, understand how you use our services, and improve our app. You can control cookie preferences through your device settings.',
-                      isSmallScreen: isSmallScreen,
-                    ),
-
-                    _buildSection(
-                      number: '7',
-                      title: 'Data Retention',
-                      content:
-                      'We retain your information for as long as your account is active or as needed to provide you services. If you delete your account, we will delete your data within 30 days, except where we are required to retain it for legal purposes.',
-                      isSmallScreen: isSmallScreen,
-                    ),
-
-                    _buildSection(
-                      number: '8',
-                      title: 'Children\'s Privacy',
-                      content:
-                      'Mindly is not intended for children under 13 years of age. We do not knowingly collect personal information from children under 13. If you believe we have collected information from a child under 13, please contact us immediately.',
-                      isSmallScreen: isSmallScreen,
-                    ),
-
-                    _buildSection(
-                      number: '9',
-                      title: 'International Data Transfers',
-                      content:
-                      'Your information may be transferred to and processed in countries other than your country of residence. We ensure that such transfers comply with applicable data protection laws and that your data receives adequate protection.',
-                      isSmallScreen: isSmallScreen,
-                    ),
-
-                    _buildSection(
-                      number: '10',
-                      title: 'Changes to This Policy',
-                      content:
-                      'We may update this Privacy Policy from time to time. We will notify you of any material changes by posting the new policy on this page and updating the "Last Updated" date. Your continued use of Mindly after changes constitutes acceptance of the updated policy.',
-                      isSmallScreen: isSmallScreen,
-                    ),
-
-                    _buildSection(
-                      number: '11',
-                      title: 'Contact Us',
-                      content:
-                      'If you have any questions about this Privacy Policy or our data practices, please contact us at privacy@mindly.com or support@mindly.com',
+                      'You can access, update, or delete your data anytime through app settings.',
                       isLast: true,
                       isSmallScreen: isSmallScreen,
                     ),
@@ -272,43 +224,6 @@ class PrivacyPolicyScreen extends StatelessWidget {
 
                     const SizedBox(height: 44),
 
-                    // footer
-                    Center(
-                      child: Column(
-                        children: [
-                          Container(
-                            height: 2,
-                            width: 100,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF004455),
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            '@mindly 2025',
-                            style: GoogleFonts.poppins(
-                              fontSize: isSmallScreen ? 11 : 12,
-                              fontWeight: FontWeight.w400,
-                              color: Colors.black54,
-                              letterSpacing: -0.24,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'All Rights Reserved',
-                            style: GoogleFonts.poppins(
-                              fontSize: isSmallScreen ? 9 : 10,
-                              fontWeight: FontWeight.w300,
-                              color: Colors.black38,
-                              letterSpacing: -0.20,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 52),
                   ],
                 ),
               ),
@@ -319,6 +234,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
     );
   }
 
+  // build privacy introduction section with gradient background
   Widget _buildIntroSection(bool isSmallScreen) {
     return Container(
       width: double.infinity,
@@ -346,6 +262,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
         children: [
           Row(
             children: [
+              // shield icon container with semi-transparent background
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
@@ -359,6 +276,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
+              // section title text
               Expanded(
                 child: Text(
                   'Your Privacy is Protected',
@@ -373,8 +291,9 @@ class PrivacyPolicyScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
+          // description paragraph text
           Text(
-            'At Mindly, we are committed to protecting your privacy and ensuring the security of your personal information. This Privacy Policy explains how we collect, use, and safeguard your data when you use our note-taking application.',
+            'We are committed to protecting your privacy and ensuring the security of your personal information.',
             style: GoogleFonts.poppins(
               fontSize: isSmallScreen ? 13 : 14,
               fontWeight: FontWeight.w400,
@@ -382,13 +301,13 @@ class PrivacyPolicyScreen extends StatelessWidget {
               height: 1.5,
               letterSpacing: -0.28,
             ),
-            textAlign: TextAlign.justify,
           ),
         ],
       ),
     );
   }
 
+  // build privacy commitment card with border
   Widget _buildPrivacyCommitmentCard(bool isSmallScreen) {
     return Container(
       width: double.infinity,
@@ -406,15 +325,17 @@ class PrivacyPolicyScreen extends StatelessWidget {
         children: [
           Row(
             children: [
+              // verified user icon
               const Icon(
                 Icons.verified_user_outlined,
                 color: Color(0xFF004455),
                 size: 24,
               ),
               const SizedBox(width: 12),
+              // commitment card title
               Expanded(
                 child: Text(
-                  'Our Privacy Commitment',
+                  'Our Commitment',
                   style: GoogleFonts.poppins(
                     fontSize: isSmallScreen ? 16 : 18,
                     fontWeight: FontWeight.w600,
@@ -426,27 +347,24 @@ class PrivacyPolicyScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
+          // first commitment item with icon
           _buildCommitmentItem(
             icon: Icons.lock_outline,
-            text: 'End-to-end encryption for your notes',
+            text: 'End-to-end encryption',
             isSmallScreen: isSmallScreen,
           ),
           const SizedBox(height: 12),
+          // second commitment item with icon
           _buildCommitmentItem(
             icon: Icons.block_outlined,
-            text: 'We never sell your data to third parties',
+            text: 'No data selling to third parties',
             isSmallScreen: isSmallScreen,
           ),
           const SizedBox(height: 12),
-          _buildCommitmentItem(
-            icon: Icons.visibility_off_outlined,
-            text: 'Your notes remain private and confidential',
-            isSmallScreen: isSmallScreen,
-          ),
-          const SizedBox(height: 12),
+          // third commitment item with icon
           _buildCommitmentItem(
             icon: Icons.delete_outline,
-            text: 'Full control to export or delete your data anytime',
+            text: 'Full control of your data',
             isSmallScreen: isSmallScreen,
           ),
         ],
@@ -454,6 +372,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
     );
   }
 
+  // build single commitment item row with icon and text
   Widget _buildCommitmentItem({
     required IconData icon,
     required String text,
@@ -462,12 +381,14 @@ class PrivacyPolicyScreen extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // commitment icon
         Icon(
           icon,
           color: const Color(0xFF5784EB),
           size: 20,
         ),
         const SizedBox(width: 12),
+        // commitment description text
         Expanded(
           child: Text(
             text,
@@ -484,6 +405,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
     );
   }
 
+  // build numbered privacy policy section with badge
   Widget _buildSection({
     required String number,
     required String title,
@@ -499,7 +421,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Number Badge
+              // circular number badge container
               Container(
                 width: 32,
                 height: 32,
@@ -520,7 +442,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
               ),
               const SizedBox(width: 12),
 
-              // Title
+              // section title heading
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.only(top: 4),
@@ -541,7 +463,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
 
           const SizedBox(height: 12),
 
-          // Content
+          // section content paragraph with left padding
           Padding(
             padding: const EdgeInsets.only(left: 44),
             child: Text(
@@ -553,7 +475,6 @@ class PrivacyPolicyScreen extends StatelessWidget {
                 height: 1.5,
                 letterSpacing: -0.28,
               ),
-              textAlign: TextAlign.justify,
               overflow: TextOverflow.visible,
             ),
           ),

@@ -165,41 +165,51 @@ class NotificationService {
     }
   }
 
-  // ✅ NEW: Create notification for calendar event
-  Future<void> createEventNotification({
-    required String eventId,
-    required String eventTitle,
-    required DateTime eventTime,
-    required int minutesBefore,
-  }) async {
+  Future<void> checkAndNotifyEventReminders() async {
     try {
-      final isEnabled = await areNotificationsEnabled();
-      if (!isEnabled) return;
+      final user = _auth.currentUser;
+      if (user == null) return;
 
       final now = DateTime.now();
-      final reminderTime = eventTime.subtract(Duration(minutes: minutesBefore));
 
-      // Jika waktu reminder sudah lewat, kirim notifikasi sekarang
-      if (reminderTime.isBefore(now)) {
-        await createNotification(
-          title: '📅 Event Reminder',
-          description: 'Event "$eventTitle" is coming up soon!',
-          type: 'event_reminder',
-          priority: 'high',
-          relatedEventId: eventId,
-        );
-      } else {
-        // TODO: Schedule notification untuk waktu yang tepat
-        await createNotification(
-          title: '📅 Event Created',
-          description: 'Event "$eventTitle" has been scheduled',
-          type: 'event_created',
-          priority: 'medium',
-          relatedEventId: eventId,
-        );
+      // Ambil reminder yang waktunya sudah lewat atau sekarang, tapi belum diproses
+      final remindersSnapshot = await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('event_reminders')
+          .where('isProcessed', isEqualTo: false)
+          .where('reminderTime', isLessThanOrEqualTo: Timestamp.fromDate(now))
+          .get();
+
+      final batch = _firestore.batch();
+      bool hasUpdates = false;
+
+      for (var doc in remindersSnapshot.docs) {
+        final data = doc.data();
+        final eventTitle = data['eventTitle'] ?? 'Event';
+        final minutesBefore = data['minutesBefore'] ?? 0;
+
+        final notifRef = _notificationsCollection.doc();
+        batch.set(notifRef, {
+          'title': '📅 Upcoming Event',
+          'description': '"$eventTitle" starts in $minutesBefore minutes.',
+          'timestamp': Timestamp.now(),
+          'isRead': false,
+          'type': 'event_reminder',
+          'priority': 'high',
+          'relatedEventId': data['eventId'],
+        });
+
+        batch.update(doc.reference, {'isProcessed': true});
+        hasUpdates = true;
+      }
+
+      if (hasUpdates) {
+        await batch.commit();
+        debugPrint('✅ Processed ${remindersSnapshot.docs.length} event reminders into in-app notifications.');
       }
     } catch (e) {
-      debugPrint('Error creating event notification: $e');
+      debugPrint('Error checking event reminders: $e');
     }
   }
 

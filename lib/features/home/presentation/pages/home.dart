@@ -10,15 +10,16 @@ import '../../../../config/routes/routes.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../../core/widgets/navigation/custom_navbar_widget.dart';
 import '../../../../core/widgets/navigation/custom_top_app_bar.dart';
+import '../../../calendar/data/models/event_model.dart';
 import '../../../notes/presentation/pages/note_editor_page.dart';
 import '../../../notes/data/models/note_model.dart';
 import '../../../notes/data/services/note_service.dart';
-import '../../../calendar/data/model/event_model.dart';
 import '../../../to_do_list/data/models/todo_model.dart';
 import '../../../to_do_list/data/services/todo_services.dart';
 import '../../../to_do_list/presentation/widgets/task_item.dart';
 import '../../../calendar/data/services/event_service.dart';
 import '../../../calendar/data/services/category_service.dart';
+import '../../data/services/overdue_checker_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -35,7 +36,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   final TodoService _todoService = TodoService();
   final NoteService _noteService = NoteService();
   final EventService _eventService = EventService();
-  final CategoryService _categoryService = CategoryService();
+  final EventCategoryService _categoryService = EventCategoryService();
 
   // Data and state management
   Map<String, Category> _categories = {};
@@ -56,10 +57,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     _todoStream = _todoService.getTodosStream();
     _noteStream = _noteService.getNotesStream();
     _eventStream = Stream.value([]);
-
     _scrollController.addListener(_onScroll);
     _loadUserData();
     _initCalendarData();
+    OverdueCheckerService.startPeriodicCheck();
   }
 
   @override
@@ -203,7 +204,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
                         // Filter pending tasks only (no completed tasks shown)
                         final pendingTodos = allTodos.where((t) => !t.isCompleted).toList();
-                        final topTwoNeedsAttention = pendingTodos.take(2).toList();
 
                         // Calculate daily progress (only count pending tasks)
                         final totalTasks = allTodos.length;
@@ -218,23 +218,17 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                             _buildDailyProgressCard(progress, completedCount, totalTasks),
                             const SizedBox(height: 24),
 
-                            // Show pending tasks that need attention
-                            if (topTwoNeedsAttention.isNotEmpty) ...[
-                              _buildSectionHeader(
-                                icon: Icons.error_outline,
-                                iconColor: const Color(0xFFFF6B6B),
-                                title: 'Needs Attention',
-                              ),
-                              const SizedBox(height: 12),
-                              ...topTwoNeedsAttention.map((todo) => TaskItem(
-                                task: _mapModelToTaskItem(todo),
-                                onToggle: () async {
-                                  await _todoService.toggleTodoStatus(todo.id, todo.isCompleted);
-                                },
-                                onDelete: () => _todoService.deleteTodo(todo.id),
-                              )),
-                              const SizedBox(height: 24),
-                            ],
+                            // Needs Attention section - always show with empty state if no tasks
+                            _buildSectionHeaderWithAction(
+                              icon: Icons.error_outline,
+                              iconColor: const Color(0xFFFF6B6B),
+                              title: 'Needs Attention',
+                              actionText: 'View All →',
+                              onActionTap: () => Navigator.pushNamed(context, AppRoutes.todo),
+                            ),
+                            const SizedBox(height: 13),
+                            _buildNeedsAttentionSection(pendingTodos),
+                            const SizedBox(height: 24),
 
                             // Today's events section
                             _buildSectionHeaderWithAction(
@@ -290,6 +284,38 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
   }
 
+  // Build Needs Attention section with empty state
+  Widget _buildNeedsAttentionSection(List<TodoModel> pendingTodos) {
+    if (pendingTodos.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: const Color(0xFFF5F5F5),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          "No tasks for today",
+          style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey),
+          textAlign: TextAlign.center,
+        ),
+      );
+    }
+
+    // Show top 2 tasks that need attention
+    final topTwoTasks = pendingTodos.take(2).toList();
+
+    return Column(
+      children: topTwoTasks.map((todo) => TaskItem(
+        task: _mapModelToTaskItem(todo),
+        onToggle: () async {
+          await _todoService.toggleTodoStatus(todo.id, todo.isCompleted);
+        },
+        onDelete: () => _todoService.deleteTodo(todo.id),
+      )).toList(),
+    );
+  }
+
   // Build notes stream widget
   Widget _buildNotesStream() {
     return StreamBuilder<List<NoteModel>>(
@@ -313,7 +339,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               color: const Color(0xFFF5F5F5),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Text("No notes updated today", style: GoogleFonts.poppins(color: Colors.grey), textAlign: TextAlign.center),
+            child: Text("No notes updated today", style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey), textAlign: TextAlign.center),
           );
         }
 
@@ -341,7 +367,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Color(note.color ?? 0xFFE6C4DE),
+          color: Color(note.color),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -392,7 +418,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         padding: const EdgeInsets.all(16),
         width: double.infinity,
         decoration: BoxDecoration(color: const Color(0xFFF5F5F5), borderRadius: BorderRadius.circular(12)),
-        child: Text("Please sign in to view events", style: GoogleFonts.poppins(color: Colors.grey), textAlign: TextAlign.center),
+        child: Text("Please sign in to view events", style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey), textAlign: TextAlign.center),
       );
     }
 
@@ -412,7 +438,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             padding: const EdgeInsets.all(16),
             width: double.infinity,
             decoration: BoxDecoration(color: const Color(0xFFF5F5F5), borderRadius: BorderRadius.circular(12)),
-            child: Text("No events scheduled for today", style: GoogleFonts.poppins(color: Colors.grey), textAlign: TextAlign.center),
+            child: Text("No events scheduled for today", style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey), textAlign: TextAlign.center),
           );
         }
 
@@ -519,7 +545,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('Daily Progress', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: const Color(0xFF1A1A1A))),
-              Text('${(progress * 100).toInt()}%', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFF4CAF50))),
+              Text('${(progress * 100).toInt()}%', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFF5784EB))),
             ],
           ),
           const SizedBox(height: 16),
@@ -531,17 +557,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           Text('$completed of $total tasks completed', style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF6B6B6B))),
         ],
       ),
-    );
-  }
-
-  // Build simple section header
-  Widget _buildSectionHeader({required IconData icon, required Color iconColor, required String title}) {
-    return Row(
-      children: [
-        Icon(icon, color: iconColor, size: 20),
-        const SizedBox(width: 8),
-        Text(title, style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: const Color(0xFF1A1A1A))),
-      ],
     );
   }
 

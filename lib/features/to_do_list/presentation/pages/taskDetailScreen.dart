@@ -13,12 +13,12 @@ class TaskDetailScreen extends StatefulWidget {
   final Function(String newDescription)? onDescriptionChanged;
 
   const TaskDetailScreen({
-    Key? key,
+    super.key,
     required this.task,
     required this.onDelete,
     this.onTitleChanged,
     this.onDescriptionChanged,
-  }) : super(key: key);
+  });
 
   @override
   State<TaskDetailScreen> createState() => _TaskDetailScreenState();
@@ -41,7 +41,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     _descriptionController = TextEditingController(text: widget.task['description'] ?? '');
     _titleFocusNode = FocusNode();
 
-    // ✅ FETCH DATA TERBARU DARI FIREBASE
     _fetchLatestData();
   }
 
@@ -133,7 +132,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       deadline = (widget.task['deadline'] as Timestamp).toDate();
     }
 
-    // ✅ 2. FORMAT TANGGAL UNTUK TAMPILAN
     String dateText = "No Deadline";
     if (deadline != null) {
       final now = DateTime.now();
@@ -187,7 +185,10 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           ],
         ),
         body: SafeArea(
-          child: SingleChildScrollView(
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -328,6 +329,8 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                     ),
                   ),
                 ),
+
+                const SizedBox(height: 40),
               ],
             ),
           ),

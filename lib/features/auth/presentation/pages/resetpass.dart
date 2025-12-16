@@ -17,6 +17,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   final _emailController = TextEditingController();
 
   bool _isLoading = false;
+  bool _showEmailError = false;
 
   @override
   void dispose() {
@@ -26,7 +27,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
   String? _validateEmail(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Email cannot be empty';
+      return 'Please enter your email address';
     }
     if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
       return 'Please enter a valid email';
@@ -50,7 +51,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Success Icon
                   Container(
                     width: 60,
                     height: 60,
@@ -65,8 +65,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-
-                  // Title
                   Text(
                     'Email Sent!',
                     style: GoogleFonts.poppins(
@@ -76,8 +74,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
-
-                  // Message
                   Text(
                     'Password reset link has been sent to',
                     textAlign: TextAlign.center,
@@ -88,8 +84,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     ),
                   ),
                   const SizedBox(height: 4),
-
-                  // Email address
                   Text(
                     _emailController.text.trim(),
                     textAlign: TextAlign.center,
@@ -102,8 +96,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-
-                  // Instructions
                   Text(
                     'Please check your inbox and follow the instructions to reset your password.',
                     textAlign: TextAlign.center,
@@ -114,8 +106,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-
-                  // Back to Login Button
                   SizedBox(
                     width: double.infinity,
                     height: 44,
@@ -150,6 +140,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   }
 
   Future<void> _continue() async {
+    setState(() {
+      _showEmailError = true;
+    });
+
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -165,8 +159,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         setState(() {
           _isLoading = false;
         });
-
-        // Show success dialog
         _showSuccessDialog();
       }
     } catch (e) {
@@ -175,7 +167,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           _isLoading = false;
         });
 
-        // get error message
         String errorMessage = e.toString().replaceAll('Exception: ', '');
 
         if (errorMessage.toLowerCase().contains('not registered') ||
@@ -184,7 +175,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           errorMessage = 'Email not registered. Please sign up first.';
         }
 
-        // show error snackbar
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
@@ -223,6 +213,14 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final isPortrait = size.height > size.width;
+    final isSmallScreen = size.width < 600;
+    final isMediumScreen = size.width >= 600 && size.width < 1024;
+
+    // Responsive padding
+    final horizontalPadding = isSmallScreen ? 24.0 : (isMediumScreen ? 40.0 : 60.0);
+
+    // Responsive max width for content
+    final maxContentWidth = isSmallScreen ? double.infinity : (isMediumScreen ? 500.0 : 600.0);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -238,142 +236,137 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                       minHeight: constraints.maxHeight,
                     ),
                     child: IntrinsicHeight(
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: isPortrait ? 24.0 : 40.0,
-                          vertical: 16.0,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            // Back button
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: GestureDetector(
-                                onTap: _isLoading ? null : () {
-                                  Navigator.pushReplacementNamed(context, AppRoutes.introApp);
-                                },
-
-                                child: Container(
-                                  width: 40,
-                                  height: 40,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    shape: BoxShape.circle,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.grey.withValues(alpha: 0.2),
-                                        spreadRadius: 1,
-                                        blurRadius: 3,
-                                        offset: const Offset(0, 1),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Icon(
+                      child: Center(
+                        child: Container(
+                          constraints: BoxConstraints(maxWidth: maxContentWidth),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: horizontalPadding,
+                            vertical: 16.0,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              // Back button
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: IconButton(
+                                  onPressed: _isLoading ? null : () {
+                                    Navigator.pushReplacementNamed(context, AppRoutes.signIn);
+                                  },
+                                  icon: const Icon(
                                     Icons.arrow_back,
-                                    color: _isLoading ? Colors.grey : Colors.black54,
-                                    size: 20,
+                                    color: Colors.black,
+                                    size: 24,
                                   ),
+                                  padding: const EdgeInsets.only(right: 20),
+                                  constraints: const BoxConstraints(),
+                                  splashRadius: 24,
                                 ),
                               ),
-                            ),
 
-                            SizedBox(height: isPortrait ? 24 : 16),
+                              const SizedBox(height: 24),
 
-                            Text(
-                              'Reset Password',
-                              textAlign: TextAlign.center,
-                              style: GoogleFonts.poppins(
-                                color: Colors.black,
-                                fontSize: isPortrait ? 24 : 20,
-                                fontWeight: FontWeight.w600,
-                                height: 1.2,
-                                letterSpacing: -0.48,
+                              // Title
+                              Text(
+                                'Reset Password',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.poppins(
+                                  color: Colors.black,
+                                  fontSize: isSmallScreen ? 24 : 28,
+                                  fontWeight: FontWeight.w600,
+                                  height: 1.2,
+                                  letterSpacing: -0.48,
+                                ),
                               ),
-                            ),
 
-                            SizedBox(height: isPortrait ? 12 : 8),
+                              const SizedBox(height: 12),
 
-                            Text(
-                              'Enter your email account to reset password',
-                              textAlign: TextAlign.center,
-                              style: GoogleFonts.poppins(
-                                color: Colors.black87,
-                                fontSize: 15,
-                                fontWeight: FontWeight.w400,
-                                height: 2.5,
-                                letterSpacing: -0.30,
+                              // Subtitle
+                              Text(
+                                'Enter your email account to reset password',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.poppins(
+                                  color: Colors.black87,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w400,
+                                  height: 1.5,
+                                  letterSpacing: -0.30,
+                                ),
                               ),
-                            ),
 
-                            SizedBox(height: isPortrait ? 24 : 16),
+                              const SizedBox(height: 32),
 
-                            if (isPortrait)
-                              Center(
-                                child: SizedBox(
-                                  width: size.width * 0.5,
-                                  height: 200,
-                                  child: SvgPicture.asset(
-                                    'assets/images/resetpass_elemen.svg',
-                                    fit: BoxFit.contain,
-                                    placeholderBuilder: (context) => const Center(
-                                      child: SizedBox(
-                                        width: 30,
-                                        height: 30,
-                                        child: CircularProgressIndicator(strokeWidth: 2),
+                              // SVG Illustration - Responsive
+                              if (isPortrait)
+                                Center(
+                                  child: SizedBox(
+                                    width: size.width * 0.5,
+                                    height: 200,
+                                    child: SvgPicture.asset(
+                                      'assets/images/resetpass_elemen.svg',
+                                      fit: BoxFit.contain,
+                                      placeholderBuilder: (context) => const Center(
+                                        child: SizedBox(
+                                          width: 30,
+                                          height: 30,
+                                          child: CircularProgressIndicator(strokeWidth: 2),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              else
+                                Center(
+                                  child: SizedBox(
+                                    width: isSmallScreen ? size.width * 0.4 : 300,
+                                    height: isSmallScreen ? 150 : 180,
+                                    child: SvgPicture.asset(
+                                      'assets/images/resetpass_elemen.svg',
+                                      fit: BoxFit.contain,
+                                      placeholderBuilder: (context) => const Center(
+                                        child: SizedBox(
+                                          width: 30,
+                                          height: 30,
+                                          child: CircularProgressIndicator(strokeWidth: 2),
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
-                              )
-                            else
-                              Center(
-                                child: SizedBox(
-                                  width: size.width * 0.25,
-                                  height: 100,
-                                  child: SvgPicture.asset(
-                                    'assets/images/resetpass_elemen.svg',
-                                    fit: BoxFit.contain,
-                                    placeholderBuilder: (context) => const Center(
-                                      child: SizedBox(
-                                        width: 30,
-                                        height: 30,
-                                        child: CircularProgressIndicator(strokeWidth: 2),
+
+                              const SizedBox(height: 32),
+
+                              // Email Form
+                              Form(
+                                key: _formKey,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Email Label
+                                    Text(
+                                      'Email',
+                                      style: GoogleFonts.poppins(
+                                        color: Colors.black,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500,
+                                        height: 1,
+                                        letterSpacing: -0.26,
                                       ),
                                     ),
-                                  ),
-                                ),
-                              ),
 
-                            SizedBox(height: isPortrait ? 32 : 20),
+                                    const SizedBox(height: 8),
 
-                            // Email Form
-                            Form(
-                              key: _formKey,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Email',
-                                    style: GoogleFonts.poppins(
-                                      color: Colors.black,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w500,
-                                      height: 1,
-                                      letterSpacing: -0.26,
-                                    ),
-                                  ),
-
-                                  const SizedBox(height: 8),
-
-                                  // Email Input Field
-                                  SizedBox(
-                                    height: 44,
-                                    child: TextFormField(
+                                    // Email Input Field
+                                    TextFormField(
                                       controller: _emailController,
                                       validator: _validateEmail,
                                       keyboardType: TextInputType.emailAddress,
                                       enabled: !_isLoading,
+                                      onChanged: (value) {
+                                        if (_showEmailError) {
+                                          setState(() {});
+                                        }
+                                      },
                                       style: GoogleFonts.poppins(
                                         color: Colors.black,
                                         fontSize: 13,
@@ -431,47 +424,47 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                         ),
                                       ),
                                     ),
-                                  ),
 
-                                  // error message below field
-                                  ValueListenableBuilder(
-                                    valueListenable: _emailController,
-                                    builder: (context, value, child) {
-                                      final error = _validateEmail(_emailController.text);
-                                      if (error != null && _emailController.text.isNotEmpty) {
-                                        return Padding(
-                                          padding: const EdgeInsets.only(top: 6, left: 2),
-                                          child: Text(
-                                            error,
-                                            style: GoogleFonts.poppins(
-                                              color: Colors.red,
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w400,
-                                            ),
-                                          ),
-                                        );
-                                      }
-                                      return const SizedBox(height: 0);
-                                    },
-                                  ),
-                                ],
+                                    // Error message below field
+                                    if (_showEmailError)
+                                      Builder(
+                                        builder: (context) {
+                                          final error = _validateEmail(_emailController.text);
+                                          if (error != null) {
+                                            return Padding(
+                                              padding: const EdgeInsets.only(top: 6, left: 2),
+                                              child: Text(
+                                                error,
+                                                style: GoogleFonts.poppins(
+                                                  color: Colors.red,
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w400,
+                                                ),
+                                              ),
+                                            );
+                                          }
+                                          return const SizedBox.shrink();
+                                        },
+                                      ),
+                                  ],
+                                ),
                               ),
-                            ),
 
-                            SizedBox(height: isPortrait ? 32 : 24),
+                              const SizedBox(height: 32),
 
-                            // Continue Button
-                            PrimaryButton(
-                              label: _isLoading ? 'Sending...' : 'Continue',
-                              onPressed: _isLoading ? null : _continue,
-                              width: double.infinity,
-                              height: 44,
-                              showArrow: !_isLoading,
-                              enabled: !_isLoading,
-                            ),
+                              // Continue Button
+                              PrimaryButton(
+                                label: _isLoading ? 'Sending...' : 'Continue',
+                                onPressed: _isLoading ? null : _continue,
+                                width: double.infinity,
+                                height: 44,
+                                showArrow: !_isLoading,
+                                enabled: !_isLoading,
+                              ),
 
-                            SizedBox(height: isPortrait ? 24 : 16),
-                          ],
+                              const SizedBox(height: 24),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -480,7 +473,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
               },
             ),
 
-            // loading Overlay
+            // Loading Overlay
             if (_isLoading)
               Positioned.fill(
                 child: Container(
@@ -488,6 +481,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                   child: Center(
                     child: Container(
                       padding: const EdgeInsets.all(24),
+                      margin: const EdgeInsets.symmetric(horizontal: 32),
+                      constraints: const BoxConstraints(maxWidth: 300),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),

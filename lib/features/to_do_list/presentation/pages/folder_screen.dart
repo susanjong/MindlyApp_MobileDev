@@ -94,15 +94,16 @@ class _FolderScreenState extends State<FolderScreen> {
       'deadline': todo.deadline,
       'completed': todo.isCompleted,
       'category': todo.category,
+      'description': todo.description,
     };
   }
 
   void _showAddTaskDialog() {
     AddTaskBottomSheet.show(
       context,
-      // ✅ 1. Set initial category to current folder
+      //  1. Set initial category to current folder
       initialCategory: widget.folderName,
-      // ✅ 2. UNLOCK category so user can select "Add New Category"
+      //  2. UNLOCK category so user can select "Add New Category"
       isCategoryLocked: false,
 
       onSave: (taskData) async {
@@ -117,12 +118,13 @@ class _FolderScreenState extends State<FolderScreen> {
           DateTime deadline = taskData['deadline'] ?? DateTime.now();
 
           String category = taskData['category'] ?? widget.folderName;
+          String description = taskData['description'] ?? '';
 
           await _todoService.addTodo(
             taskData['title'],
             category,
             deadline,
-            taskData['description'] ?? '',
+            description,
           );
 
           if (mounted) Navigator.pop(context);
@@ -162,6 +164,10 @@ class _FolderScreenState extends State<FolderScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Get safe area padding for FAB positioning
+    final mediaQuery = MediaQuery.of(context);
+    final bottomPadding = mediaQuery.padding.bottom;
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -175,143 +181,152 @@ class _FolderScreenState extends State<FolderScreen> {
           _buildPopupMenu(),
         ],
       ),
-      // ✅ Gunakan StreamBuilder agar realtime
-      body: StreamBuilder<List<TodoModel>>(
-          stream: _todoService.getTodosStream(),
-          builder: (context, snapshot) {
-            final allTodos = snapshot.data ?? [];
+      // Gunakan StreamBuilder agar realtime
+      body: SafeArea(
+        bottom: false, // Handle bottom padding manually for FAB
+        child: StreamBuilder<List<TodoModel>>(
+            stream: _todoService.getTodosStream(),
+            builder: (context, snapshot) {
+              final allTodos = snapshot.data ?? [];
 
-            // ✅ FILTER: Hanya ambil task yang sesuai dengan kategori folder ini
-            final folderTasks = allTodos
-                .where((t) => t.category == widget.folderName)
-                .toList();
+              // Hanya ambil task yang sesuai dengan kategori folder ini
+              final folderTasks = allTodos
+                  .where((t) => t.category == widget.folderName)
+                  .toList();
 
-            // Hitung Progress
-            final total = folderTasks.length;
-            final completed = folderTasks.where((t) => t.isCompleted).length;
-            final progress = total > 0 ? (completed / total) : 0.0;
-            final percentage = (progress * 100).toInt();
+              // Hitung Progress
+              final total = folderTasks.length;
+              final completed = folderTasks.where((t) => t.isCompleted).length;
+              final progress = total > 0 ? (completed / total) : 0.0;
+              final percentage = (progress * 100).toInt();
 
-            return SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Title
-                  Text(
-                    widget.folderName,
-                    style: GoogleFonts.poppins(
-                      fontSize: 25,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.black,
+              return SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Title
+                    Text(
+                      widget.folderName,
+                      style: GoogleFonts.poppins(
+                        fontSize: 25,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 28),
+                    const SizedBox(height: 28),
 
-                  // Progress Section
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Progress',
+                    // Progress Section
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Progress',
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                color: Colors.grey,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            Text(
+                              '$percentage%',
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: LinearProgressIndicator(
+                            value: progress,
+                            minHeight: 10,
+                            backgroundColor: const Color(0xFFE8E8E8),
+                            valueColor: AlwaysStoppedAnimation<Color>(_progressColor),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 36),
+
+                    // Task List (REALTIME FIREBASE)
+                    if (folderTasks.isNotEmpty)
+                      ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: folderTasks.length,
+                        itemBuilder: (context, index) {
+                          final task = folderTasks[index];
+                          final isSelected = _selectedTaskIds.contains(task.id);
+
+                          return _isSelectMode
+                              ? _buildSelectableTaskItem(task, isSelected)
+                              : TaskItem(
+                            task: _mapModelToTaskItem(task),
+                            onToggle: () => _toggleTaskStatus(task),
+                            onDelete: () => _todoService.deleteTodo(task.id),
+                          );
+                        },
+                      )
+                    else
+                      Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 40),
+                          child: Text(
+                            'No tasks yet',
                             style: GoogleFonts.poppins(
-                              fontSize: 14,
+                              fontSize: 16,
                               color: Colors.grey,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
-                          Text(
-                            '$percentage%',
-                            style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: LinearProgressIndicator(
-                          value: progress,
-                          minHeight: 10,
-                          backgroundColor: const Color(0xFFE8E8E8),
-                          valueColor: AlwaysStoppedAnimation<Color>(_progressColor),
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 36),
 
-                  // Task List (REALTIME FIREBASE)
-                  if (folderTasks.isNotEmpty)
-                    ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: folderTasks.length,
-                      itemBuilder: (context, index) {
-                        final task = folderTasks[index];
-                        final isSelected = _selectedTaskIds.contains(task.id);
-
-                        return _isSelectMode
-                            ? _buildSelectableTaskItem(task, isSelected)
-                            : TaskItem(
-                          task: _mapModelToTaskItem(task),
-                          onToggle: () => _toggleTaskStatus(task),
-                          onDelete: () => _todoService.deleteTodo(task.id),
-                        );
-                      },
-                    )
-                  else
-                    Center(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 40),
-                        child: Text(
-                          'No tasks yet',
-                          style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            color: Colors.grey,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ),
-                  const SizedBox(height: 50),
-                ],
-              ),
-            );
-          }
+                    // Bottom spacing considering FAB and safe area
+                    SizedBox(height: 100 + bottomPadding),
+                  ],
+                ),
+              );
+            }
+        ),
       ),
 
-      // FAB Logic (Delete / Add)
-      floatingActionButton: _isSelectMode
-          ? GestureDetector(
-        onTap: _deleteSelectedTasks,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.delete_outline, color: Colors.red, size: 28),
-            const SizedBox(height: 4),
-            Text(
-              "Delete",
-              style: GoogleFonts.poppins(
-                color: const Color(0xFFB90000),
-                fontWeight: FontWeight.w600,
-                fontSize: 12,
-              ),
-            )
-          ],
+      // FAB Logic (Delete / Add) with safe area consideration
+      floatingActionButton: Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom),
+        child: _isSelectMode
+            ? GestureDetector(
+          onTap: _deleteSelectedTasks,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.delete_outline, color: Colors.red, size: 28),
+              const SizedBox(height: 4),
+              Text(
+                "Delete",
+                style: GoogleFonts.poppins(
+                  color: const Color(0xFFB90000),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                ),
+              )
+            ],
+          ),
+        )
+            : FloatingActionButton(
+          backgroundColor: const Color(0xFFD732A8),
+          shape: const CircleBorder(),
+          child: const Icon(Icons.add, color: Colors.white, size: 28),
+          onPressed: _showAddTaskDialog,
         ),
-      )
-          : FloatingActionButton(
-        backgroundColor: const Color(0xFFD732A8),
-        shape: const CircleBorder(),
-        child: const Icon(Icons.add, color: Colors.white, size: 28),
-        onPressed: _showAddTaskDialog,
       ),
     );
   }

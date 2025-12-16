@@ -1,9 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:notesapp/features/calendar/data/model/event_model.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:notesapp/features/calendar/data/models/event_model.dart';
 import 'package:notesapp/features/home/data/services/notification_service.dart';
-import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter/foundation.dart';
 import 'package:notesapp/features/home/data/services/notification_helper.dart';
+import '../../presentation/widgets/delete_repeated_event.dart';
 
 class EventService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -14,9 +15,50 @@ class EventService {
     return _firestore.collection('users').doc(userId).collection('events');
   }
 
+  int _reminderToMinutes(String reminder) {
+    switch (reminder) {
+      case 'None':
+        return 0;
+      case '5 minutes before':
+        return 5;
+      case '10 minutes before':
+        return 10;
+      case '15 minutes before':
+        return 15;
+      case '30 minutes before':
+        return 30;
+      case '1 hour before':
+        return 60;
+      case '1 day before':
+        return 1440;
+      default:
+        return 15; // fallback
+    }
+  }
+
+  // Add event dengan auto multi level reminder
   Future<String> addEvent(Event event) async {
     try {
       DocumentReference docRef = await _getEventsCollection(event.userId).add(event.toMap());
+
+      // SCHEDULE REMINDER berdasarkan pilihan user
+      final reminderMinutes = _reminderToMinutes(event.reminder);
+      if (reminderMinutes > 0) {
+        await _scheduleEventReminder(
+          userId: event.userId,
+          eventId: docRef.id,
+          eventTitle: event.title,
+          eventTime: event.startTime,
+          minutesBefore: reminderMinutes,
+        );
+      }
+
+      // Handle repeat events dengan reminders
+      if (event.repeat != 'Does not repeat') {
+        await _createRepeatInstances(event, docRef.id, reminderMinutes);
+      }
+
+      // Create in-app notification
       await _notificationService.createNotification(
         title: '📅 Event Created',
         description: 'Event "${event.title}" has been scheduled',
@@ -24,15 +66,276 @@ class EventService {
         priority: 'medium',
         relatedEventId: docRef.id,
       );
+
       return docRef.id;
     } catch (e) {
       throw Exception('Failed to add event: $e');
     }
   }
 
+  Future<void> _createRepeatInstances(
+      Event event,
+      String parentEventId,
+      int reminderMinutes,
+      ) async {
+    try {
+      int maxInstances;
+      DateTime nextEventDate = event.startTime;
+
+      switch (event.repeat) {
+        case 'Every day':
+          maxInstances = 30; // 1 bulan
+          break;
+        case 'Every week':
+          maxInstances = 12; // 3 bulan
+          break;
+        case 'Every month':
+          maxInstances = 12; // 1 tahun
+          break;
+        case 'Every year':
+          maxInstances = 5; // 5 tahun
+          break;
+        default:
+          return;
+      }
+
+      final batch = _firestore.batch();
+      final List<Map<String, dynamic>> pendingReminders = [];
+      int createdCount = 0;
+      final now = DateTime.now();
+
+      for (int i = 1; i <= maxInstances; i++) {
+        // Calculate next event date
+        switch (event.repeat) {
+          case 'Every day':
+            nextEventDate = nextEventDate.add(const Duration(days: 1));
+            break;
+          case 'Every week':
+            nextEventDate = nextEventDate.add(const Duration(days: 7));
+            break;
+          case 'Every month':
+            nextEventDate = DateTime(
+              nextEventDate.year,
+              nextEventDate.month + 1,
+              nextEventDate.day,
+              nextEventDate.hour,
+              nextEventDate.minute,
+            );
+            break;
+          case 'Every year':
+            nextEventDate = DateTime(
+              nextEventDate.year + 1,
+              nextEventDate.month,
+              nextEventDate.day,
+              nextEventDate.hour,
+              nextEventDate.minute,
+            );
+            break;
+        }
+
+        final duration = event.endTime.difference(event.startTime);
+        final newEndTime = nextEventDate.add(duration);
+
+        final repeatEvent = event.copyWith(
+          id: null,
+          startTime: nextEventDate,
+          endTime: newEndTime,
+          parentEventId: parentEventId,
+        );
+
+        final docRef = _getEventsCollection(event.userId).doc();
+        batch.set(docRef, repeatEvent.toMap());
+
+        // Simpan info untuk schedule reminder setelah batch commit
+        if (nextEventDate.isAfter(now) && reminderMinutes > 0) {
+          pendingReminders.add({
+            'userId': event.userId,
+            'eventId': docRef.id,
+            'eventTitle': event.title,
+            'eventTime': nextEventDate,
+            'minutesBefore': reminderMinutes,
+          });
+        }
+
+        createdCount++;
+      }
+
+      await batch.commit();
+
+      // Schedule reminders untuk semua repeat instances
+      for (var reminderInfo in pendingReminders) {
+        try {
+          await _scheduleEventReminder(
+            userId: reminderInfo['userId'],
+            eventId: reminderInfo['eventId'],
+            eventTitle: reminderInfo['eventTitle'],
+            eventTime: reminderInfo['eventTime'],
+            minutesBefore: reminderInfo['minutesBefore'],
+          );
+        } catch (e) {
+          debugPrint('⚠️ Failed to schedule reminder for repeat instance: $e');
+        }
+      }
+
+      debugPrint('✅ Created $createdCount repeat instances with reminders');
+
+    } catch (e) {
+      debugPrint('❌ Error creating repeat instances: $e');
+    }
+  }
+
+  Future<void> _scheduleEventReminder({
+    required String userId,
+    required String eventId,
+    required String eventTitle,
+    required DateTime eventTime,
+    required int minutesBefore,
+  }) async {
+    try {
+      final now = DateTime.now();
+      final reminderTime = _calculateReminderTime(eventTime, minutesBefore);
+
+      if (reminderTime.isBefore(now)) {
+        debugPrint('⚠️ Reminder time is in the past, skipping');
+        return;
+      }
+
+      // Generate unique notification ID
+      final notificationId = _generateNotificationId(eventId, minutesBefore);
+
+      // 1. schedule all local notification (notification will be shown in phone)
+      try {
+        await _notificationHelper.scheduleNotification(
+          id: notificationId,
+          title: _getReminderTitle(minutesBefore),
+          body: '$eventTitle - ${_formatTime(eventTime)}',
+          scheduledDate: reminderTime,
+          payload: 'event_reminder:$eventId',
+        );
+
+        debugPrint('✅ Scheduled reminder: $minutesBefore min before at $reminderTime');
+      } catch (e) {
+        debugPrint('❌ Failed to schedule notification: $e');
+        return;
+      }
+
+      await _saveReminderToFirestore(
+        userId: userId,
+        eventId: eventId,
+        eventTitle: eventTitle,
+        eventTime: eventTime,
+        reminderTime: reminderTime,
+        minutesBefore: minutesBefore,
+        notificationId: notificationId,
+      );
+
+    } catch (e) {
+      debugPrint('❌ Error scheduling reminder: $e');
+    }
+  }
+
+  DateTime _calculateReminderTime(DateTime eventTime, int minutes) {
+    if (minutes >= 1440) {
+      final days = minutes ~/ 1440;
+      return eventTime.subtract(Duration(days: days));
+    } else {
+      return eventTime.subtract(Duration(minutes: minutes));
+    }
+  }
+
+  // get reminder title in notification phone
+  String _getReminderTitle(int minutes) {
+    if (minutes >= 1440) {
+      final days = minutes ~/ 1440;
+      return '📅 Event Tomorrow' + (days > 1 ? ' (in $days days)' : '');
+    } else if (minutes >= 60) {
+      final hours = minutes ~/ 60;
+      return '⏰ Event in $hours hour${hours > 1 ? 's' : ''}';
+    } else {
+      return '🔔 Event in $minutes minutes';
+    }
+  }
+
+  // generate id notifikasi unik
+  int _generateNotificationId(String eventId, int minutes) {
+    return (eventId.hashCode + minutes).abs() % 2147483647;
+  }
+
+  Future<void> _saveReminderToFirestore({
+    required String userId,
+    required String eventId,
+    required String eventTitle,
+    required DateTime eventTime,
+    required DateTime reminderTime,
+    required int minutesBefore,
+    required int notificationId,
+  }) async {
+    await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('event_reminders')
+        .doc('${eventId}_${minutesBefore}min')
+        .set({
+      'eventId': eventId,
+      'eventTitle': eventTitle,
+      'eventTime': Timestamp.fromDate(eventTime),
+      'reminderTime': Timestamp.fromDate(reminderTime),
+      'minutesBefore': minutesBefore,
+      'notificationId': notificationId,
+      'createdAt': FieldValue.serverTimestamp(),
+      'isProcessed': false,
+    });
+  }
+
+  // CANCEL ALL REMINDERS untuk event
+  Future<void> _cancelAllEventReminders(String userId, String eventId) async {
+    try {
+      final remindersSnapshot = await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('event_reminders')
+          .where('eventId', isEqualTo: eventId)
+          .get();
+
+      for (var doc in remindersSnapshot.docs) {
+        final notificationId = doc.data()['notificationId'] as int;
+        await _notificationHelper.cancelNotification(notificationId);
+        await doc.reference.delete();
+      }
+
+      debugPrint('Cancelled ${remindersSnapshot.docs.length} reminders for event $eventId');
+    } catch (e) {
+      debugPrint('❌ Error cancelling reminders: $e');
+    }
+  }
+
+  String _formatTime(DateTime time) {
+    final hour = time.hour > 12 ? time.hour - 12 : (time.hour == 0 ? 12 : time.hour);
+    final minute = time.minute.toString().padLeft(2, '0');
+    final period = time.hour >= 12 ? 'PM' : 'AM';
+    return '$hour:$minute $period';
+  }
+
+  // Update event dengan reschedule reminders
   Future<void> updateEvent(String userId, Event event) async {
     try {
       await _getEventsCollection(userId).doc(event.id).update(event.toMap());
+
+      // cancel old reminders
+      await _cancelAllEventReminders(userId, event.id!);
+
+      // Schedule new reminder
+      final reminderMinutes = _reminderToMinutes(event.reminder);
+      if (reminderMinutes > 0) {
+        await _scheduleEventReminder(
+          userId: userId,
+          eventId: event.id!,
+          eventTitle: event.title,
+          eventTime: event.startTime,
+          minutesBefore: reminderMinutes,
+        );
+      }
+
       await _notificationService.createNotification(
         title: '📝 Event Updated',
         description: 'Event "${event.title}" has been updated',
@@ -45,33 +348,74 @@ class EventService {
     }
   }
 
+  // DELETE RECURRING EVENT
+  Future<void> deleteRecurringEvent({
+    required String userId,
+    required Event event,
+    required DeleteMode mode,
+  }) async {
+    final eventsRef = _getEventsCollection(userId);
+    final batch = _firestore.batch();
+
+    try {
+      final String seriesId = event.parentEventId ?? event.id!;
+
+      if (mode == DeleteMode.single) {
+        batch.delete(eventsRef.doc(event.id));
+        await _cancelAllEventReminders(userId, event.id!);
+      }
+      else if (mode == DeleteMode.all) {
+        batch.delete(eventsRef.doc(seriesId));
+        await _cancelAllEventReminders(userId, seriesId);
+
+        final childrenQuery = await eventsRef
+            .where('parentEventId', isEqualTo: seriesId)
+            .get();
+
+        for (var doc in childrenQuery.docs) {
+          batch.delete(doc.reference);
+          await _cancelAllEventReminders(userId, doc.id);
+        }
+      }
+      else if (mode == DeleteMode.following) {
+        batch.delete(eventsRef.doc(event.id));
+        await _cancelAllEventReminders(userId, event.id!);
+
+        final futureEvents = await eventsRef
+            .where('parentEventId', isEqualTo: seriesId)
+            .where('startTime', isGreaterThan: Timestamp.fromDate(event.startTime))
+            .get();
+
+        for (var doc in futureEvents.docs) {
+          batch.delete(doc.reference);
+          await _cancelAllEventReminders(userId, doc.id);
+        }
+      }
+
+      await batch.commit();
+      debugPrint(' Deleted recurring event with all reminders');
+
+    } catch (e) {
+      throw Exception('Failed to delete recurring event: $e');
+    }
+  }
+
+  // DELETE SINGLE EVENT
   Future<void> deleteEvent(String userId, String eventId) async {
     try {
       await _getEventsCollection(userId).doc(eventId).delete();
-      await _cancelScheduledNotification(eventId);
+      await _cancelAllEventReminders(userId, eventId);
+      debugPrint('Deleted event $eventId with reminders');
     } catch (e) {
       throw Exception('Failed to delete event: $e');
     }
   }
 
-  Stream<List<Event>> getEventsForDate(String userId, DateTime date) {
-    DateTime startOfDay = DateTime(date.year, date.month, date.day);
-    DateTime endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59);
-    return _getEventsCollection(userId)
-        .where('startTime', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
-        .where('startTime', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
-        .orderBy('startTime')
-        .snapshots()
-        .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        return Event.fromMap(doc.data() as Map<String, dynamic>, doc.id);
-      }).toList();
-    });
-  }
-
+  // GET EVENTS FOR MONTH
   Stream<List<Event>> getEventsForMonth(String userId, DateTime month) {
     DateTime startOfMonth = DateTime(month.year, month.month, 1);
     DateTime endOfMonth = DateTime(month.year, month.month + 1, 0, 23, 59, 59);
+
     return _getEventsCollection(userId)
         .where('startTime', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfMonth))
         .where('startTime', isLessThanOrEqualTo: Timestamp.fromDate(endOfMonth))
@@ -84,6 +428,24 @@ class EventService {
     });
   }
 
+  // GET EVENTS FOR DATE
+  Stream<List<Event>> getEventsForDate(String userId, DateTime date) {
+    DateTime startOfDay = DateTime(date.year, date.month, date.day);
+    DateTime endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59);
+
+    return _getEventsCollection(userId)
+        .where('startTime', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+        .where('startTime', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
+        .orderBy('startTime')
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) {
+        return Event.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+      }).toList();
+    });
+  }
+
+  // GET ALL EVENTS
   Stream<List<Event>> getAllEvents(String userId) {
     return _getEventsCollection(userId)
         .orderBy('startTime', descending: true)
@@ -95,157 +457,22 @@ class EventService {
     });
   }
 
-  Future<Event?> getEventById(String userId, String eventId) async {
-    try {
-      DocumentSnapshot doc = await _getEventsCollection(userId).doc(eventId).get();
-      if (doc.exists) {
-        return Event.fromMap(doc.data() as Map<String, dynamic>, doc.id);
-      }
-      return null;
-    } catch (e) {
-      throw Exception('Failed to get event: $e');
-    }
+  // GET PENDING NOTIFICATIONS
+  Future<List<PendingNotificationRequest>> getPendingNotifications() async {
+    return await _notificationHelper.getPendingNotifications();
   }
 
-  // schedule notification
-  Future<void> scheduleEventReminder({
-    required String userId,
-    required String eventId,
-    required String eventTitle,
-    required DateTime eventTime,
-    required int minutesBefore,
-  }) async {
-    try {
-      final now = DateTime.now();
-      final reminderTime = eventTime.subtract(Duration(minutes: minutesBefore));
-
-      if (kDebugMode) {
-        print('\n=== 🔔 SCHEDULING REMINDER ===');
-        print('Event: $eventTitle');
-        print('Event Time: $eventTime');
-        print('Reminder Time: $reminderTime');
-        print('Current Time: $now');
-      }
-
-      if (reminderTime.isBefore(now)) {
-        throw Exception('Cannot set reminder for past time');
-      }
-
-      final notificationId = eventId.hashCode;
-      final scheduledDate = tz.TZDateTime.from(reminderTime, tz.local);
-
-      // use NotificationHelper to schedule
-      await _notificationHelper.scheduleNotification(
-        id: notificationId,
-        title: '⏰ Event Reminder',
-        body: '$eventTitle starts at ${_formatTime(eventTime)}',
-        scheduledDate: scheduledDate,
-      );
-
-      if (kDebugMode) {
-        final pending = await _notificationHelper.getPendingNotifications();
-        print('📋 Pending notifications: ${pending.length}');
-        print('=== END ===\n');
-      }
-
-      // Save to Firestore
-      await _saveReminderToFirestore(
-        userId: userId,
-        eventId: eventId,
-        eventTitle: eventTitle,
-        eventTime: eventTime,
-        reminderTime: reminderTime,
-        minutesBefore: minutesBefore,
-        notificationId: notificationId,
-      );
-
-      // create in-app notification
-      final difference = reminderTime.difference(now);
-      String timeMessage;
-      if (difference.inDays > 0) {
-        timeMessage = 'in ${difference.inDays} day${difference.inDays > 1 ? 's' : ''}';
-      } else if (difference.inHours > 0) {
-        timeMessage = 'in ${difference.inHours} hour${difference.inHours > 1 ? 's' : ''}';
-      } else if (difference.inMinutes > 0) {
-        timeMessage = 'in ${difference.inMinutes} minute${difference.inMinutes > 1 ? 's' : ''}';
-      } else {
-        timeMessage = 'now';
-      }
-
-      await _notificationService.createNotification(
-        title: '⏰ Reminder Set',
-        description: 'You will be reminded about "$eventTitle" $timeMessage',
-        type: 'event_reminder',
-        priority: 'high',
-        relatedEventId: eventId,
-      );
-
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ ERROR: $e');
-      }
-      rethrow;
-    }
-  }
-
-  Future<void> _saveReminderToFirestore({
-    required String userId,
-    required String eventId,
-    required String eventTitle,
-    required DateTime eventTime,
-    required DateTime reminderTime,
-    required int minutesBefore,
-    required int notificationId,
-  }) async {
-    await _firestore.collection('users').doc(userId).collection('event_reminders').doc(eventId).set({
-      'eventId': eventId,
-      'eventTitle': eventTitle,
-      'eventTime': Timestamp.fromDate(eventTime),
-      'reminderTime': Timestamp.fromDate(reminderTime),
-      'minutesBefore': minutesBefore,
-      'notificationId': notificationId,
-      'createdAt': FieldValue.serverTimestamp(),
+  //  GET REMINDERS FOR EVENT
+  Stream<List<Map<String, dynamic>>> getEventReminders(String userId, String eventId) {
+    return _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('event_reminders')
+        .where('eventId', isEqualTo: eventId)
+        .orderBy('minutesBefore')
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) => doc.data()).toList();
     });
-  }
-
-  Future<void> _cancelScheduledNotification(String eventId) async {
-    final notificationId = eventId.hashCode;
-    await _notificationHelper.cancelNotification(notificationId);
-  }
-
-  Future<Map<String, dynamic>?> getEventReminder(String userId, String eventId) async {
-    try {
-      final doc = await _firestore.collection('users').doc(userId).collection('event_reminders').doc(eventId).get();
-      if (doc.exists) return doc.data();
-      return null;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  Future<void> cancelEventReminder(String userId, String eventId) async {
-    try {
-      await _cancelScheduledNotification(eventId);
-      await _firestore.collection('users').doc(userId).collection('event_reminders').doc(eventId).delete();
-    } catch (e) {
-      throw Exception('Failed to cancel reminder: $e');
-    }
-  }
-
-  String _formatTime(DateTime time) {
-    final hour = time.hour > 12 ? time.hour - 12 : (time.hour == 0 ? 12 : time.hour);
-    final minute = time.minute.toString().padLeft(2, '0');
-    final period = time.hour >= 12 ? 'PM' : 'AM';
-    return '$hour:$minute $period';
-  }
-
-  String _getReminderLabel(int minutes) {
-    if (minutes < 60) return '$minutes minute${minutes > 1 ? 's' : ''} before';
-    if (minutes < 1440) {
-      final hours = minutes ~/ 60;
-      return '$hours hour${hours > 1 ? 's' : ''} before';
-    }
-    final days = minutes ~/ 1440;
-    return '$days day${days > 1 ? 's' : ''} before';
   }
 }

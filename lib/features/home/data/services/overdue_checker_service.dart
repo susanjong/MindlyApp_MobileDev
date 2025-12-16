@@ -1,40 +1,50 @@
 import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:notesapp/features/home/data/services/notification_service.dart';
-import 'package:notesapp/features/to_do_list/data/services/todo_services.dart';
 
 class OverdueCheckerService {
   static Timer? _timer;
   static final NotificationService _notificationService = NotificationService();
-  static final TodoService _todoService = TodoService();
 
-  // Start periodic check (every 1 hour)
+  // Start periodic check (every 1 minute for better precision for reminders)
   static void startPeriodicCheck() {
-    // Check immediately on start
-    _checkOverdueTasks();
-    // check every hour
-    _timer = Timer.periodic(const Duration(hours: 1), (timer) {
-      _checkOverdueTasks();
+    _checkAll();
+
+    // Cek setiap 1 menit (karena reminder event butuh lebih presisi daripada overdue task)
+    _timer = Timer.periodic(const Duration(minutes: 1), (timer) {
+      _checkAll();
     });
 
-    debugPrint('✅ Overdue checker service started');
+    debugPrint('✅ Reminder & Overdue checker service started');
   }
 
-  // stop periodic check
   static void stopPeriodicCheck() {
     _timer?.cancel();
     _timer = null;
-    debugPrint('⏹️ Overdue checker service stopped');
+    debugPrint('⏹️ Checker service stopped');
   }
 
-  // manual check for overdue tasks
+  static Future<void> _checkAll() async {
+    // 1. Cek Task Overdue
+    await _checkOverdueTasks();
+    // 2. Cek Event Reminder yang jatuh tempo
+    await _checkEventReminders();
+  }
+
   static Future<void> _checkOverdueTasks() async {
     try {
       await _notificationService.checkAndNotifyOverdueTasks();
-      debugPrint('🔍 Checked for overdue tasks at ${DateTime.now()}');
     } catch (e) {
       debugPrint('❌ Error checking overdue tasks: $e');
     }
   }
-}
 
+  // Panggil fungsi baru dari NotificationService
+  static Future<void> _checkEventReminders() async {
+    try {
+      await _notificationService.checkAndNotifyEventReminders();
+    } catch (e) {
+      debugPrint('❌ Error checking event reminders: $e');
+    }
+  }
+}
