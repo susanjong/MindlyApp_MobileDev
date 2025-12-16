@@ -19,6 +19,7 @@ import '../../../to_do_list/data/services/todo_services.dart';
 import '../../../to_do_list/presentation/widgets/task_item.dart';
 import '../../../calendar/data/services/event_service.dart';
 import '../../../calendar/data/services/category_service.dart';
+import '../../data/services/overdue_checker_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -56,10 +57,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     _todoStream = _todoService.getTodosStream();
     _noteStream = _noteService.getNotesStream();
     _eventStream = Stream.value([]);
-
     _scrollController.addListener(_onScroll);
     _loadUserData();
     _initCalendarData();
+    OverdueCheckerService.startPeriodicCheck();
   }
 
   @override
@@ -556,17 +557,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           Text('$completed of $total tasks completed', style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF6B6B6B))),
         ],
       ),
-    );
-  }
-
-  // Build simple section header
-  Widget _buildSectionHeader({required IconData icon, required Color iconColor, required String title}) {
-    return Row(
-      children: [
-        Icon(icon, color: iconColor, size: 20),
-        const SizedBox(width: 8),
-        Text(title, style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: const Color(0xFF1A1A1A))),
-      ],
     );
   }
 
