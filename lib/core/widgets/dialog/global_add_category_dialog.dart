@@ -1,17 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../../../core/widgets/dialog/alert_dialog.dart';
+import 'alert_dialog.dart';
 
-class AddCategoryDialog extends StatefulWidget {
+class GlobalAddCategoryDialog extends StatefulWidget {
   final Function(String name) onAdd;
+  final String title;
+  final String message;
+  final String confirmText;
+  final Color primaryColor;
 
-  const AddCategoryDialog({super.key, required this.onAdd});
+  const GlobalAddCategoryDialog({
+    super.key,
+    required this.onAdd,
+    this.title = 'New Category',
+    this.message = 'Enter a name for this category.',
+    this.confirmText = 'Add',
+    this.primaryColor = const Color(0xFF5784EB), // Default Blue
+  });
 
   @override
-  State<AddCategoryDialog> createState() => _AddCategoryDialogState();
+  State<GlobalAddCategoryDialog> createState() => _GlobalAddCategoryDialogState();
 }
 
-class _AddCategoryDialogState extends State<AddCategoryDialog> {
+class _GlobalAddCategoryDialogState extends State<GlobalAddCategoryDialog> {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   bool _isLoading = false;
@@ -19,7 +30,7 @@ class _AddCategoryDialogState extends State<AddCategoryDialog> {
   @override
   void initState() {
     super.initState();
-    // ✅ FIX: Delay focus untuk smooth keyboard animation
+    // Delay focus untuk animasi keyboard yang smooth
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Future.delayed(const Duration(milliseconds: 100), () {
         if (mounted) {
@@ -40,9 +51,7 @@ class _AddCategoryDialogState extends State<AddCategoryDialog> {
     final name = _controller.text.trim();
     if (name.isEmpty) return;
 
-    // ✅ FIX: Tutup keyboard dulu sebelum loading
     _focusNode.unfocus();
-
     setState(() => _isLoading = true);
 
     try {
@@ -51,18 +60,18 @@ class _AddCategoryDialogState extends State<AddCategoryDialog> {
         Navigator.pop(context);
       }
     } catch (e) {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return IOSDialog(
-      title: 'New Category',
-      message: 'Enter a name for this category.',
-      confirmText: 'Add',
+      title: widget.title,
+      message: widget.message,
+      confirmText: widget.confirmText,
       cancelText: 'Cancel',
-      confirmTextColor: const Color(0xFF007AFF),
+      confirmTextColor: widget.primaryColor,
       isLoading: _isLoading,
       autoDismiss: false,
       onConfirm: _handleAdd,
@@ -74,7 +83,7 @@ class _AddCategoryDialogState extends State<AddCategoryDialog> {
         decoration: BoxDecoration(
           color: Colors.transparent,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: const Color(0xFF007AFF)),
+          border: Border.all(color: widget.primaryColor),
         ),
         child: TextField(
           controller: _controller,
@@ -83,7 +92,7 @@ class _AddCategoryDialogState extends State<AddCategoryDialog> {
           decoration: InputDecoration(
             hintText: 'Category Name',
             hintStyle: GoogleFonts.poppins(
-              color: const Color(0xFF111111),
+              color: const Color(0xFFC7C7CC),
               fontSize: 14,
             ),
             border: InputBorder.none,

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:notesapp/core/widgets/dialog/global_add_category_dialog.dart';
 import '../../data/models/category_model.dart';
-import '../../data/services/note_service.dart'; // ✅ Pastikan import service
+import '../../data/services/note_service.dart';
 import '../../../../core/widgets/dialog/alert_dialog.dart';
-import 'add_category_dialog.dart';
 import 'note_search_bar.dart';
 
-// ✅ Ganti parameter 'categories' (List) menjadi 'noteService'
+// Ganti parameter 'categories' (List) menjadi 'noteService'
 void showMoveToDialog({
   required BuildContext context,
   required NoteService noteService,
@@ -19,7 +19,7 @@ void showMoveToDialog({
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     builder: (context) => MoveToCategoriesDialog(
-      noteService: noteService, // ✅ Pass service
+      noteService: noteService, // Pass service
       selectedNoteIds: selectedNoteIds,
       onMoveConfirmed: onMoveConfirmed,
       onAddCategory: onAddCategory,
@@ -28,7 +28,7 @@ void showMoveToDialog({
 }
 
 class MoveToCategoriesDialog extends StatefulWidget {
-  final NoteService noteService; // ✅ Gunakan Service
+  final NoteService noteService;
   final List<String> selectedNoteIds;
   final Function(String categoryId) onMoveConfirmed;
   final Function(String categoryName) onAddCategory;
@@ -64,7 +64,7 @@ class _MoveToCategoriesDialogState extends State<MoveToCategoriesDialog> {
     super.dispose();
   }
 
-  // ✅ Helper untuk filter list
+  // Helper untuk filter list
   List<CategoryModel> _filterCategories(List<CategoryModel> categories) {
     // Filter 'all' dan 'bookmarks' agar tidak muncul di opsi move
     final validCategories = categories.where((c) => c.id != 'all' && c.id != 'bookmarks').toList();
@@ -78,7 +78,7 @@ class _MoveToCategoriesDialogState extends State<MoveToCategoriesDialog> {
   void _showAddCategoryDialog() {
     showDialog(
       context: context,
-      builder: (ctx) => AddCategoryDialog(
+      builder: (ctx) => GlobalAddCategoryDialog(
         onAdd: (name) async {
           await widget.onAddCategory(name);
           if (mounted) {
@@ -121,7 +121,7 @@ class _MoveToCategoriesDialogState extends State<MoveToCategoriesDialog> {
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      // ✅ Wrap dengan StreamBuilder agar real-time update
+      // Wrap dengan StreamBuilder agar real-time update
       child: StreamBuilder<List<CategoryModel>>(
         stream: widget.noteService.getCategoriesStream(),
         builder: (context, snapshot) {
