@@ -5,7 +5,6 @@ import 'package:notesapp/features/home/data/services/notification_service.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter/foundation.dart';
 import 'package:notesapp/features/home/data/services/notification_helper.dart';
-
 import '../../presentation/widgets/delete_repeated_event.dart';
 
 class EventService {

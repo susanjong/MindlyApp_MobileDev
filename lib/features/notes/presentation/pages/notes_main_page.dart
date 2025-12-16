@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:notesapp/core/widgets/dialog/global_add_category_dialog.dart';
 import '../../../../core/widgets/buttons/global_expandable_fab.dart';
@@ -243,6 +244,8 @@ class _NotesMainPageState extends State<NotesMainPage> {
     _exitCategorySelectionMode();
   }
 
+  void _handleAddNote() => Navigator.pushNamed(context, AppRoutes.noteEditor);
+
   void _showAddCategoryDialog() {
     showDialog(
       context: context,
@@ -256,6 +259,16 @@ class _NotesMainPageState extends State<NotesMainPage> {
       ),
     );
   }
+
+  bool _onScrollNotification(UserScrollNotification notification) {
+    if (notification.direction == ScrollDirection.reverse) {
+      if (_isNavBarVisible) setState(() => _isNavBarVisible = false);
+    } else if (notification.direction == ScrollDirection.forward) {
+      if (!_isNavBarVisible) setState(() => _isNavBarVisible = true);
+    }
+    return true;
+  }
+
   @override
   Widget build(BuildContext context) {
     final isPortrait = MediaQuery.of(context).orientation == Orientation.portrait;
