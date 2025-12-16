@@ -31,7 +31,7 @@ class Category {
   }
 }
 
-class CategoryService {
+class EventCategoryService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   // List warna & Helper _getHexColorForId tetap sama...
@@ -46,31 +46,26 @@ class CategoryService {
     return '#${colorInt.toRadixString(16).substring(2).toUpperCase()}';
   }
 
-  // Collection reference helper
   CollectionReference _getCategoriesCollection(String userId) {
-    return _firestore.collection('users').doc(userId).collection('categories');
+    return _firestore.collection('users').doc(userId).collection('event_categories');
   }
 
-  Future<String> addCategory({
-    required String name,
-    required String userId
-  }) async {
+  Future<String> addCategory({required String name, required String userId}) async {
     try {
       DocumentReference docRef = _getCategoriesCollection(userId).doc();
-
-      // Generate warna otomatis di sini (Internal Service)
       String autoColor = _getHexColorForId(docRef.id);
 
       final categoryToSave = {
         'name': name,
         'color': autoColor,
         'userId': userId,
+        'createdAt': FieldValue.serverTimestamp(), // Optional: tambah timestamp
       };
 
       await docRef.set(categoryToSave);
       return docRef.id;
     } catch (e) {
-      throw Exception('Failed to add category: $e');
+      throw Exception('Failed to add event category: $e');
     }
   }
 

@@ -1,99 +1,13 @@
 import 'package:flutter/material.dart';
 
-/// Widget untuk nampilin popup success dengan animasi keren
-/// Simpan file ini di: lib/widgets/success_dialog.dart
-/// 
-/// Cara pakai:
-/// 1. Import dulu di halaman yang mau pake:
-///    import 'package:nama_project_kamu/widgets/success_dialog.dart';
-/// 
-/// 2. Panggil pas mau nampilin popup:
-///    SuccessDialog.show(
-///      context,
-///      title: 'Berhasil!',
-///      message: 'Data kamu udah tersimpan',
-///    );
-/// 
-/// 3. Kalo mau tambah action setelah popup nutup:
-///    SuccessDialog.show(
-///      context,
-///      title: 'Akun Terhapus',
-///      message: 'Akun kamu berhasil dihapus',
-///      onClose: () {
-///        // misalnya balik ke halaman login
-///        Navigator.pushReplacementNamed(context, '/login');
-///      },
-///    );
-/// 
-/// 4. Mau popup-nya lebih lama nutupnya? tambahin ini:
-///    autoCloseDuration: Duration(seconds: 3),  // 3 detik baru nutup
-/// 
-/// Contoh lengkap di halaman Delete Account:
-/// ```dart
-/// ElevatedButton(
-///   onPressed: () async {
-///     // proses hapus akun dulu...
-///     await deleteAccount();
-///     
-///     // kalo udah berhasil, tampilin popup
-///     SuccessDialog.show(
-///       context,
-///       title: 'Akun Terhapus!',
-///       message: 'Akun kamu udah berhasil\ndihapus dari sistem.',
-///       onClose: () {
-///         Navigator.pushReplacementNamed(context, '/login');
-///       },
-///     );
-///   },
-///   child: Text('Hapus Akun'),
-/// )
-/// ```
-/// 
-/// Contoh di halaman Reset Password:
-/// ```dart
-/// ElevatedButton(
-///   onPressed: () async {
-///     // kirim email reset password
-///     await sendResetEmail();
-///     
-///     // tampilin popup sukses
-///     SuccessDialog.show(
-///       context,
-///       title: 'Email Terkirim!',
-///       message: 'Cek email kamu untuk\nreset password ya.',
-///     );
-///   },
-///   child: Text('Reset Password'),
-/// )
-/// ```
-/// 
-/// Contoh di halaman Update Profile:
-/// ```dart
-/// ElevatedButton(
-///   onPressed: () async {
-///     // update data profile
-///     await updateProfile();
-///     
-///     // kasih tau kalo udah berhasil
-///     SuccessDialog.show(
-///       context,
-///       title: 'Profile Diupdate!',
-///       message: 'Data profile kamu\nudah tersimpan nih.',
-///       autoCloseDuration: Duration(seconds: 3), // lebih lama dikit
-///     );
-///   },
-///   child: Text('Simpan'),
-/// )
-/// ```
-
 class SuccessDialog {
   static Future<void> show(
-    BuildContext context, {
-    required String title,
-    required String message,
-    VoidCallback? onClose,
-    Duration autoCloseDuration = const Duration(seconds: 2),
-  }) {
+      BuildContext context, {
+        required String title,
+        required String message,
+        VoidCallback? onClose,
+        Duration autoCloseDuration = const Duration(seconds: 2),
+      }) {
     return showDialog(
       context: context,
       barrierDismissible: false,

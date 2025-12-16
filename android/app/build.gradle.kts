@@ -9,8 +9,6 @@ android {
     namespace = "com.example.notesapp"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
-
-    // 🔥 FIX: Desugaring (Kotlin DSL)
     compileOptions {
         isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17

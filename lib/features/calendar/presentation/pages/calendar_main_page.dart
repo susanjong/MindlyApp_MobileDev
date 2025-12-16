@@ -29,7 +29,7 @@ class CalendarMainPage extends StatefulWidget {
 
 class _CalendarMainPageState extends State<CalendarMainPage> {
   final EventService _eventService = EventService();
-  final CategoryService _categoryService = CategoryService();
+  final EventCategoryService _categoryService = EventCategoryService();
   final String userId = FirebaseAuth.instance.currentUser!.uid;
 
   CalendarViewMode _currentView = CalendarViewMode.daily;
@@ -188,6 +188,7 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
       },
       child: Scaffold(
         backgroundColor: Colors.white,
+        resizeToAvoidBottomInset: false,
         appBar: CustomTopAppBar(
           isCalendarMode: true,
           isYearView: _currentView == CalendarViewMode.yearly,

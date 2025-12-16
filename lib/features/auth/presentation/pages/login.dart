@@ -115,21 +115,11 @@ class LoginAccountScreenState extends State<LoginAccountScreen> {
 
         await Future.delayed(const Duration(milliseconds: 500));
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Welcome back!'),
-              backgroundColor: Colors.green,
-            ),
+          Navigator.pushNamedAndRemoveUntil(
+              context,
+              AppRoutes.home,
+                  (route) => false
           );
-
-          await Future.delayed(const Duration(milliseconds: 500));
-          if (mounted) {
-            Navigator.pushNamedAndRemoveUntil(
-                context,
-                AppRoutes.home,
-                    (route) => false
-            );
-          }
         }
       }
     } catch (e) {
@@ -155,14 +145,7 @@ class LoginAccountScreenState extends State<LoginAccountScreen> {
   Future<void> _handleLogin() async {
     if (_isLoading) return;
 
-    if (mounted) {
-      Navigator.pushNamedAndRemoveUntil(
-          context,
-          AppRoutes.home,
-              (route) => false
-      );
-    }
-
+    // validate first before navigation
     if (_emailError != null || _passwordError != null) {
       return;
     }
@@ -186,16 +169,20 @@ class LoginAccountScreenState extends State<LoginAccountScreen> {
 
       if (userCredential != null && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+          const SnackBar(
             content: Text('Welcome back!'),
             backgroundColor: Colors.green,
-            duration: const Duration(seconds: 2),
+            duration: Duration(seconds: 2),
           ),
         );
 
         await Future.delayed(const Duration(milliseconds: 500));
         if (mounted) {
-          Navigator.pushReplacementNamed(context, AppRoutes.home);
+          Navigator.pushNamedAndRemoveUntil(
+              context,
+              AppRoutes.home,
+                  (route) => false
+          );
         }
       }
     } catch (e) {
@@ -232,32 +219,33 @@ class LoginAccountScreenState extends State<LoginAccountScreen> {
                   padding: const EdgeInsets.all(16.0),
                   child: Align(
                     alignment: Alignment.centerLeft,
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () {
-                          Navigator.pushReplacementNamed(context, AppRoutes.signUp);
-                        },
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(20),
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.grey.withValues(alpha: 0.2),
-                                spreadRadius: 1,
-                                blurRadius: 3,
-                                offset: const Offset(0, 1),
-                              ),
-                            ],
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withValues(alpha: 0.2),
+                            spreadRadius: 1,
+                            blurRadius: 3,
+                            offset: const Offset(0, 1),
                           ),
-                          child: const Icon(
-                            Icons.arrow_back,
-                            color: Colors.black54,
-                            size: 20,
+                        ],
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () {
+                            Navigator.pushReplacementNamed(context, AppRoutes.signUp);
+                          },
+                          borderRadius: BorderRadius.circular(20),
+                          child: const Padding(
+                            padding: EdgeInsets.all(8.0),
+                            child: Icon(
+                              Icons.arrow_back,
+                              color: Colors.black,
+                              size: 24,
+                            ),
                           ),
                         ),
                       ),
@@ -460,7 +448,7 @@ class LoginAccountScreenState extends State<LoginAccountScreen> {
                                         // login button
                                         Center(
                                           child: PrimaryButton(
-                                            label: ' Sign In Account',
+                                            label: 'Sign In Account',
                                             onPressed: _isLoading ? null : _handleLogin,
                                             enabled: !_isLoading,
                                             width: double.infinity,

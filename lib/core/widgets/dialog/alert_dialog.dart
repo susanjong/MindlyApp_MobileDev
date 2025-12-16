@@ -12,7 +12,7 @@ class IOSDialog extends StatelessWidget {
   final Color? confirmTextColor;
   final bool autoDismiss;
   final bool isLoading;
-  final bool singleButton; // <--- Parameter Baru
+  final bool singleButton;
 
   const IOSDialog({
     super.key,
@@ -26,7 +26,7 @@ class IOSDialog extends StatelessWidget {
     this.confirmTextColor,
     this.autoDismiss = true,
     this.isLoading = false,
-    this.singleButton = false, // <--- Default false
+    this.singleButton = false,
   }) : assert(message != null || content != null, 'Message or content must be provided');
 
   @override
@@ -36,6 +36,8 @@ class IOSDialog extends StatelessWidget {
     return Dialog(
       backgroundColor: Colors.transparent,
       elevation: 0,
+      // Mengatur inset padding agar dialog tidak terlalu mepet saat keyboard muncul
+      insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
       child: Container(
         width: 270,
         decoration: ShapeDecoration(
@@ -47,61 +49,69 @@ class IOSDialog extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Header and Content
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const SizedBox(height: 2),
-                  Text(
-                    title,
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.poppins(
-                      color: Colors.black,
-                      fontSize: 17,
-                      fontWeight: FontWeight.w600,
-                      height: 1.29,
-                      letterSpacing: -0.41,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  if (message != null) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      message!,
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.poppins(
-                        color: Colors.black,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w400,
-                        height: 1.38,
-                        letterSpacing: -0.08,
+            // --- PERBAIKAN DI SINI ---
+            // 1. Bungkus konten dengan Flexible agar bisa menyusut saat keyboard muncul
+            Flexible(
+              child: SingleChildScrollView(
+                // 2. Tambahkan SingleChildScrollView agar bisa di-scroll jika menyusut
+                physics: const ClampingScrollPhysics(),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const SizedBox(height: 2),
+                      Text(
+                        title,
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.poppins(
+                          color: Colors.black,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w600,
+                          height: 1.29,
+                          letterSpacing: -0.41,
+                        ),
                       ),
-                    ),
-                  ],
-                  if (content != null) ...[
-                    const SizedBox(height: 12),
-                    content!,
-                  ],
-                ],
+                      const SizedBox(height: 4),
+                      if (message != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          message!,
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.poppins(
+                            color: Colors.black,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w400,
+                            height: 1.38,
+                            letterSpacing: -0.08,
+                          ),
+                        ),
+                      ],
+                      if (content != null) ...[
+                        const SizedBox(height: 12),
+                        content!,
+                      ],
+                    ],
+                  ),
+                ),
               ),
             ),
+            // --- AKHIR PERBAIKAN ---
 
-            // Horizontal Divider
+            // Horizontal Divider (Tetap diam di tempat)
             Container(
               width: double.infinity,
               height: 0.5,
               color: separatorColor,
             ),
 
-            // Buttons Row
+            // Buttons Row (Tetap diam di tempat, tidak ikut scroll)
             SizedBox(
               height: 44,
               child: Row(
                 children: [
-                  // Cancel Button (Disembunyikan jika singleButton = true)
+                  // Cancel Button
                   if (!singleButton) ...[
                     Expanded(
                       child: Material(
@@ -151,7 +161,6 @@ class IOSDialog extends StatelessWidget {
                         },
                         borderRadius: BorderRadius.only(
                           bottomRight: const Radius.circular(14),
-                          // Jika single button, sudut kiri bawah juga harus rounded
                           bottomLeft: singleButton ? const Radius.circular(14) : Radius.zero,
                         ),
                         child: Center(

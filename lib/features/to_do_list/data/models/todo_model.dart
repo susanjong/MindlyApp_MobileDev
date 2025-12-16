@@ -37,7 +37,6 @@ class TodoModel {
   Map<String, dynamic> toMap() {
     return {
       'title': title,
-      'description': description,
       'category': category,
       'deadline': Timestamp.fromDate(deadline),
       'isCompleted': isCompleted,

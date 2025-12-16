@@ -2,7 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:notesapp/core/widgets/dialog/global_add_category_dialog.dart';
+import 'package:notesapp/core/widgets/dialog/input_category_dialog.dart';
 import 'package:notesapp/features/calendar/data/models/event_model.dart';
 import '../../../../core/widgets/dialog/alert_dialog.dart';
 import '../../../../core/widgets/others/snackbar.dart';
@@ -20,7 +20,7 @@ class AddEventBottomSheet extends StatefulWidget {
 
 class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
   final EventService _eventService = EventService();
-  final CategoryService _categoryService = CategoryService();
+  final EventCategoryService _categoryService = EventCategoryService();
   final String _userId = FirebaseAuth.instance.currentUser!.uid;
 
   // Controllers
@@ -284,13 +284,14 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
                           selectedId: _selectedCategoryId,
                           onCategorySelected: (id) => setState(() => _selectedCategoryId = id),
 
-                          // Logika Add (yang sudah dibuat sebelumnya)
                           onAddCategory: () {
                             showDialog(
                               context: context,
                               barrierDismissible: false,
-                              builder: (context) => GlobalAddCategoryDialog(
-                                onAdd: (name) async {
+                              builder: (context) => InputCategoryDialog(
+                                title: "New Event Category", // Judul Spesifik Calendar
+                                hintText: "Meeting, Birthday, etc.", // Hint optional
+                                onSave: (name) async { // Gunakan onSave
                                   try {
                                     final newId = await _categoryService.addCategory(
                                       name: name,
@@ -298,7 +299,6 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
                                     );
                                     if (mounted) {
                                       setState(() => _selectedCategoryId = newId);
-                                      Navigator.pop(context); // Tutup dialog
                                     }
                                   } catch (e) {
                                     // Handle error
@@ -372,8 +372,6 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
     );
   }
 }
-
-// --- EXTRACTED WIDGETS (MODULAR) ---
 
 class _EventHeader extends StatelessWidget {
   final bool isEditMode;

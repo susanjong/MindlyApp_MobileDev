@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:notesapp/core/widgets/dialog/alert_dialog.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../features/calendar/data/services/category_service.dart';
 import '../../../../features/calendar/data/services/event_service.dart';
 import '../../data/models/event_model.dart';
 import 'add_event.dart';
 import 'delete_repeated_event.dart';
+// Pastikan path import ini sesuai dengan struktur folder Anda
+import '../../../../core/widgets/dialog/alert_dialog.dart';
 
 class EventDetailSheet extends StatelessWidget {
   final Event event;
-  final Category? category; // Pass kategori agar warna/nama sesuai
+  final Category? category;
 
   const EventDetailSheet({
     super.key,
@@ -34,9 +35,14 @@ class EventDetailSheet extends StatelessWidget {
         : const Color(0xFF5683EB);
     final categoryName = category?.name ?? 'General';
 
+    // 1. Ambil tinggi layar untuk membatasi tinggi sheet maksimal
+    final double maxSheetHeight = MediaQuery.of(context).size.height * 0.85;
+
     return Container(
+      // 2. Batasi tinggi container agar tidak memenuhi layar 100%
+      constraints: BoxConstraints(maxHeight: maxSheetHeight),
       decoration: const BoxDecoration(
-        color: Color(0xFFEFEFEF), // Background abu-abu sesuai Figma
+        color: Color(0xFFEFEFEF),
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(32),
           topRight: Radius.circular(32),
@@ -45,7 +51,7 @@ class EventDetailSheet extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // --- 1. Header (White with Title & Action Icons) ---
+          // --- HEADER SECTION (TETAP DIAM/FIXED) ---
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
             decoration: const BoxDecoration(
@@ -58,9 +64,7 @@ class EventDetailSheet extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Placeholder left icon agar title di tengah (opsional)
-                const SizedBox(width: 48),
-
+                const SizedBox(width: 48), // Placeholder agar title center
                 Text(
                   'Event Detail',
                   style: GoogleFonts.poppins(
@@ -69,14 +73,13 @@ class EventDetailSheet extends StatelessWidget {
                     color: const Color(0xFF222B45),
                   ),
                 ),
-
-                // Action Icons (Edit & Delete)
+                // Action Icons
                 Row(
                   children: [
                     // EDIT BUTTON
                     GestureDetector(
                       onTap: () {
-                        Navigator.pop(context); // Tutup detail dulu
+                        Navigator.pop(context); // Tutup detail sheet dulu
                         showModalBottomSheet(
                           context: context,
                           isScrollControlled: true,
@@ -102,57 +105,120 @@ class EventDetailSheet extends StatelessWidget {
 
           const SizedBox(height: 10),
 
-          // --- 2. Content Section ---
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: Column(
-              children: [
-                // A. Title & Badge Card
-                _buildInfoCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        event.title,
-                        style: GoogleFonts.poppins(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.black,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(15),
-                          border: Border.all(color: categoryColor),
-                        ),
-                        child: Text(
-                          categoryName,
-                          style: GoogleFonts.poppins(
-                            color: categoryColor,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 10),
-
-                // B. Date & Time Card
-                _buildInfoCard(
-                  child: Column(
-                    children: [
-                      // Date Row
-                      Row(
+          // --- CONTENT SECTION (SCROLLABLE) ---
+          // 3. Gunakan Flexible + SingleChildScrollView
+          Flexible(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                child: Column(
+                  children: [
+                    // A. Title & Badge Card
+                    _buildInfoCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildIconBox(Icons.calendar_today_outlined),
+                          Text(
+                            event.title,
+                            style: GoogleFonts.poppins(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.black,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(15),
+                              border: Border.all(color: categoryColor),
+                            ),
+                            child: Text(
+                              categoryName,
+                              style: GoogleFonts.poppins(
+                                color: categoryColor,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    // B. Date & Time Card
+                    _buildInfoCard(
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              _buildIconBox(Icons.calendar_today_outlined),
+                              const SizedBox(width: 10),
+                              Text(
+                                DateFormat('EEEE, MMM d, yyyy').format(event.startTime),
+                                style: GoogleFonts.poppins(
+                                  color: const Color(0xFF444444),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              _buildIconBox(Icons.access_time),
+                              const SizedBox(width: 10),
+                              Text(
+                                '${DateFormat('HH:mm').format(event.startTime)} - ${DateFormat('HH:mm').format(event.endTime)}',
+                                style: GoogleFonts.poppins(
+                                  color: const Color(0xFF444444),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    // C. Location Card
+                    _buildInfoCard(
+                      child: Row(
+                        children: [
+                          _buildIconBox(Icons.location_on_outlined),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              event.location.isNotEmpty ? event.location : 'No location set',
+                              style: GoogleFonts.poppins(
+                                color: const Color(0xFF444444),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    // D. Reminder Card
+                    _buildInfoCard(
+                      child: Row(
+                        children: [
+                          _buildIconBox(Icons.notifications_none_outlined),
                           const SizedBox(width: 10),
                           Text(
-                            DateFormat('EEEE, MMM d, yyyy').format(event.startTime),
+                            event.reminder,
                             style: GoogleFonts.poppins(
                               color: const Color(0xFF444444),
                               fontSize: 12,
@@ -161,103 +227,46 @@ class EventDetailSheet extends StatelessWidget {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 10),
-                      // Time Row
-                      Row(
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    // E. Notes Card
+                    _buildInfoCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildIconBox(Icons.access_time),
-                          const SizedBox(width: 10),
+                          Row(
+                            children: [
+                              Text('Notes', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600)),
+                            ],
+                          ),
+                          const SizedBox(height: 5),
                           Text(
-                            '${DateFormat('HH:mm').format(event.startTime)} - ${DateFormat('HH:mm').format(event.endTime)}',
+                            event.description.isNotEmpty ? event.description : 'No notes',
                             style: GoogleFonts.poppins(
                               color: const Color(0xFF444444),
                               fontSize: 12,
-                              fontWeight: FontWeight.w500,
+                              fontWeight: FontWeight.w400,
                             ),
                           ),
                         ],
                       ),
-                    ],
-                  ),
+                    ),
+
+                    // Padding bawah tambahan agar scroll tidak mentok
+                    const SizedBox(height: 30),
+                  ],
                 ),
-
-                const SizedBox(height: 10),
-
-                // C. Location Card
-                _buildInfoCard(
-                  child: Row(
-                    children: [
-                      _buildIconBox(Icons.location_on_outlined),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          // Gunakan description sbg lokasi sementara, atau tambah field location di model
-                          event.description.isNotEmpty ? 'Location details...' : 'No location set',
-                          style: GoogleFonts.poppins(
-                            color: const Color(0xFF444444),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 10),
-
-                // D. Reminder Card
-                _buildInfoCard(
-                  child: Row(
-                    children: [
-                      _buildIconBox(Icons.notifications_none_outlined),
-                      const SizedBox(width: 10),
-                      Text(
-                        '15 minutes before', // Hardcoded for now, adjust if model has reminder
-                        style: GoogleFonts.poppins(
-                          color: const Color(0xFF444444),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 10),
-
-                // E. Notes Card
-                _buildInfoCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          // Icon note kecil? atau text label "Notes"
-                          Text('Notes', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600)),
-                        ],
-                      ),
-                      const SizedBox(height: 5),
-                      Text(
-                        event.description.isNotEmpty ? event.description : 'No notes',
-                        style: GoogleFonts.poppins(
-                          color: const Color(0xFF444444),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
-          const SizedBox(height: 30),
         ],
       ),
     );
   }
+
+  // --- HELPER WIDGETS ---
 
   Widget _buildInfoCard({required Widget child}) {
     return Container(
@@ -281,12 +290,13 @@ class EventDetailSheet extends StatelessWidget {
       child: Icon(icon, size: 16, color: Colors.white),
     );
   }
+
+  // --- LOGIC DELETE ---
+
   void _confirmDelete(BuildContext context) {
-    // Cek apakah event ini berulang
     final isRecurring = event.repeat != 'Does not repeat';
 
     if (isRecurring) {
-      // Tampilkan Dialog Khusus Recurring
       showDeleteRepeatDialog(
         context: context,
         onConfirm: (DeleteMode mode) async {
@@ -294,7 +304,6 @@ class EventDetailSheet extends StatelessWidget {
         },
       );
     } else {
-      // Tampilkan Dialog Hapus Biasa (Single Button Logic)
       showIOSDialog(
         context: context,
         title: "Delete Event",
@@ -310,20 +319,16 @@ class EventDetailSheet extends StatelessWidget {
 
   Future<void> _handleDeleteProcess(BuildContext context, DeleteMode mode) async {
     final userId = FirebaseAuth.instance.currentUser!.uid;
-    final scaffoldMessenger = ScaffoldMessenger.of(context); // Simpan referensi messenger
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
 
     try {
-      // Tutup dialog/sheet loading jika perlu, atau biarkan loading indicator di handle dialog
-
       if (event.repeat != 'Does not repeat') {
-        // Panggil fungsi hapus berulang
         await EventService().deleteRecurringEvent(
           userId: userId,
           event: event,
           mode: mode,
         );
       } else {
-        // Panggil fungsi hapus biasa
         await EventService().deleteEvent(userId, event.id!);
       }
 
