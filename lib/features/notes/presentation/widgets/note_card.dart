@@ -45,12 +45,11 @@ class NoteCard extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          // Gray background when selected, original color when not
           color: isSelected ? const Color(0xFFBABABA) : color,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha:0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -71,18 +70,16 @@ class NoteCard extends StatelessWidget {
                       fontWeight: FontWeight.w600,
                       color: const Color(0xFF131313),
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1, // Batasi judul 1 baris
+                    overflow: TextOverflow.ellipsis, // Potong jika kepanjangan
                   ),
                 ),
-                // Heart Icon
                 GestureDetector(
                   onTap: onFavoriteTap,
                   child: Padding(
                     padding: const EdgeInsets.only(left: 8, bottom: 4),
                     child: Icon(
                       isFavorite ? Icons.favorite : Icons.favorite_border,
-                      // Red filled if favorite, Gray outline if not
                       color: isFavorite ? const Color(0xFFFF6B6B) : const Color(0xFF777777),
                       size: 20,
                     ),
@@ -91,7 +88,9 @@ class NoteCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            // Content Preview
+
+            // Content Preview dengan Expanded
+            // Expanded memastikan teks mengambil sisa ruang yang ada, tidak lebih.
             Expanded(
               child: Text(
                 content.isEmpty ? 'No content' : content,
@@ -101,10 +100,11 @@ class NoteCard extends StatelessWidget {
                   color: const Color(0xFF4A4A4A),
                   height: 1.4,
                 ),
-                maxLines: 5,
+                maxLines: 6, // Pastikan jumlah baris dibatasi (misal 5 atau 6)
                 overflow: TextOverflow.ellipsis,
               ),
             ),
+
             const SizedBox(height: 8),
             // Date
             Text(
@@ -114,6 +114,8 @@ class NoteCard extends StatelessWidget {
                 fontWeight: FontWeight.w400,
                 color: const Color(0xFF7C7B7B),
               ),
+              maxLines: 1, // Batasi tanggal juga
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),

@@ -1,22 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-
-// ✅ Import Services & Models (Pastikan path sesuai)
 import '../../data/models/todo_model.dart';
 import '../../data/services/todo_services.dart';
-
-// Import Core & Config
 import '../../../../core/services/auth_service.dart';
 import '../../../../config/routes/routes.dart';
-import '../../../../core/widgets/navigation/custom_top_app_bar.dart';
-import '../../../../core/widgets/navigation/custom_navbar_widget.dart';
-
-// Import Widgets
+import '../../../../core/widgets/navigation/custom_top_app_bar.dart' as AppBarWidget;
+import '../../../../core/widgets/navigation/custom_navbar_widget.dart'; // ✅ Import ini
 import '../widgets/task_item.dart';
 import '../widgets/add_task_bottom_sheet.dart';
-
-// Import Pages
 import 'all_category_screen.dart';
 import 'overdue_screen.dart';
 import 'urgent_screen.dart';
@@ -33,7 +25,6 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
   DateTime _selectedDate = DateTime.now();
   String _username = 'User';
 
-  // Panggil Service
   final TodoService _todoService = TodoService();
 
   @override
@@ -49,8 +40,15 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
   }
 
   void _handleNavigation(int index) {
-    final routes = ['/home', '/notes', '/todo', '/calendar'];
-    if (index != 2) Navigator.pushReplacementNamed(context, routes[index]);
+    final routes = [
+      AppRoutes.home,      // ✅ Gunakan AppRoutes
+      AppRoutes.notes,
+      AppRoutes.todo,
+      AppRoutes.calendar,
+    ];
+    if (index != 2) {
+      Navigator.pushReplacementNamed(context, routes[index]);
+    }
   }
 
   Map<String, dynamic> _mapModelToTaskItem(TodoModel todo) {
@@ -76,31 +74,22 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: CustomTopAppBar(
+      appBar: AppBarWidget.CustomTopAppBar(
         onProfileTap: () => Navigator.pushNamed(context, AppRoutes.profile),
-        onNotificationTap: () {
-          Navigator.pushNamed(context, AppRoutes.notification);
-        },
+        onNotificationTap: () => Navigator.pushNamed(context, AppRoutes.notification),
       ),
-      // Gunakan StreamBuilder untuk Realtime Update
       body: StreamBuilder<List<TodoModel>>(
         stream: _todoService.getTodosStream(),
         builder: (context, snapshot) {
-          // 1. Loading State
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
           final allTodos = snapshot.data ?? [];
-
-          // ✅ 2. Logic Hitung Statistik (Urgent, Overdue, All)
           final now = DateTime.now();
           final incompleteTodos = allTodos.where((t) => !t.isCompleted).toList();
 
-          // Hitung Overdue
           final overdueCount = incompleteTodos.where((t) => t.deadline.isBefore(now)).length;
-
-          // Hitung Urgent (<= 12 jam)
           final urgentCount = incompleteTodos.where((t) {
             final diff = t.deadline.difference(now);
             return diff.inHours <= 12 && !diff.isNegative;
@@ -126,7 +115,7 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
                         children: [
                           const TextSpan(text: 'You have '),
                           TextSpan(
-                            text: '$allCount things to do', // ✅ Data Realtime
+                            text: '$allCount things to do',
                             style: const TextStyle(color: Color(0xFFFFB74D)),
                           ),
                           const TextSpan(text: ' for today'),
@@ -135,7 +124,6 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Status Cards (Data Realtime)
                     SizedBox(
                       height: 130,
                       child: Row(
@@ -150,32 +138,23 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Add Task Button
                     _buildAddTaskButton(),
                     const SizedBox(height: 20),
 
-                    // Week Days (Static Visual Only)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: List.generate(7, (index) {
-                        // Generate tanggal untuk minggu ini (Senin - Minggu)
                         final now = DateTime.now();
-                        // Anggap minggu dimulai dari Senin (weekday 1)
                         final firstDayOfWeek = now.subtract(Duration(days: now.weekday - 1));
                         final date = firstDayOfWeek.add(Duration(days: index));
-
                         final isSelected = _isSameDate(date, _selectedDate);
 
                         return GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _selectedDate = date;
-                            });
-                          },
+                          onTap: () => setState(() => _selectedDate = date),
                           child: _buildDayItem(
-                              DateFormat('E').format(date),
-                              date.day,
-                              isSelected
+                            DateFormat('E').format(date),
+                            date.day,
+                            isSelected,
                           ),
                         );
                       }),
@@ -185,7 +164,6 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
                 ),
               ),
 
-              // ✅ Task List Realtime (Firebase)
               Expanded(
                 child: displayList.isEmpty
                     ? const Center(child: Text("No tasks yet!"))
@@ -197,7 +175,6 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
                     final todo = displayList[index];
                     return TaskItem(
                       task: _mapModelToTaskItem(todo),
-
                       onToggle: () => _todoService.toggleTodoStatus(todo.id, todo.isCompleted),
                       onDelete: () => _todoService.deleteTodo(todo.id),
                     );
@@ -208,13 +185,12 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
           );
         },
       ),
-      bottomNavigationBar: SafeArea(
-        child: CustomNavBar(selectedIndex: 2, onItemTapped: _handleNavigation),
+      bottomNavigationBar: CustomNavBar(  // ✅ Gunakan langsung
+        selectedIndex: 2,
+        onItemTapped: _handleNavigation,
       ),
     );
   }
-
-  // --- Widget Helpers ---
 
   Widget _buildGreetingStream() {
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
@@ -237,7 +213,11 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
 
   Widget _buildAddTaskButton() {
     return Container(
-      decoration: BoxDecoration(color: const Color(0xFFFFD8E4), borderRadius: BorderRadius.circular(30), border: Border.all(color: Colors.black, width: 1.5)),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFD8E4),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: Colors.black, width: 1.5),
+      ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
@@ -262,25 +242,26 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
     );
   }
 
-  // Logic Simpan ke Firebase saat Add Task
   void _showAddTaskDialog() {
     AddTaskBottomSheet.show(
       context,
       onSave: (taskData) async {
         DateTime deadline = taskData['deadline'] ?? DateTime.now();
-
         String category = taskData['category'] ?? 'Uncategorized';
 
         await _todoService.addTodo(
-            taskData['title'],
-            category,
-            deadline,
-            taskData['description'] ?? ''
+          taskData['title'],
+          category,
+          deadline,
+          taskData['description'] ?? '',
         );
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Task added successfully!'), backgroundColor: Colors.green),
+            const SnackBar(
+              content: Text('Task added successfully!'),
+              backgroundColor: Colors.green,
+            ),
           );
         }
       },
@@ -291,31 +272,48 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
     return GestureDetector(
       onTap: () {
         if (label == 'All') {
-          Navigator.push(context, MaterialPageRoute(builder: (context) => const AllCategoryScreen()));
-        }
-        else if (label == 'Urgent') {
-          Navigator.push(context, MaterialPageRoute(builder: (context) => const UrgentTaskScreen()));
-        }
-        else if (label == 'Overdue') {
-          Navigator.push(context, MaterialPageRoute(builder: (context) => const OverdueTaskScreen()));
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const AllCategoryScreen()));
+        } else if (label == 'Urgent') {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const UrgentTaskScreen()));
+        } else if (label == 'Overdue') {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const OverdueTaskScreen()));
         }
       },
       child: Container(
         height: 120,
         decoration: BoxDecoration(
-          gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [topColor, bottomColor]),
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [topColor, bottomColor],
+          ),
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 12, offset: const Offset(0, 4))],
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Align(alignment: Alignment.topRight, child: Icon(Icons.arrow_forward_ios, size: 12, color: Colors.black54)),
+              const Align(
+                alignment: Alignment.topRight,
+                child: Icon(Icons.arrow_forward_ios, size: 12, color: Colors.black54),
+              ),
               const Spacer(),
-              Text(count, style: const TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: Colors.black)),
-              Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+              Text(
+                count,
+                style: const TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: Colors.black),
+              ),
+              Text(
+                label,
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              ),
             ],
           ),
         ),
@@ -324,6 +322,25 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
   }
 
   Widget _buildDayItem(String day, int date, bool isSelected) {
-    return Column(children: [Text(day, style: TextStyle(color: isSelected ? Colors.blue : Colors.grey)), Text("$date", style: TextStyle(fontWeight: FontWeight.bold, color: isSelected ? Colors.blue : Colors.grey))]);
+    return Column(
+      children: [
+        Text(
+          day,
+          style: TextStyle(
+            color: isSelected ? Colors.blue : Colors.grey,
+            fontSize: 12,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          "$date",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: isSelected ? Colors.blue : Colors.grey,
+            fontSize: 14,
+          ),
+        ),
+      ],
+    );
   }
 }
