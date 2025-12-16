@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../../../core/widgets/others/snackbar.dart';
 import '../../../../features/calendar/data/services/category_service.dart';
 import '../../../../features/calendar/data/services/event_service.dart';
 import '../../data/models/event_model.dart';
 import 'add_event.dart';
 import 'delete_repeated_event.dart';
-// Pastikan path import ini sesuai dengan struktur folder Anda
 import '../../../../core/widgets/dialog/alert_dialog.dart';
 
 class EventDetailSheet extends StatelessWidget {
@@ -35,11 +35,9 @@ class EventDetailSheet extends StatelessWidget {
         : const Color(0xFF5683EB);
     final categoryName = category?.name ?? 'General';
 
-    // 1. Ambil tinggi layar untuk membatasi tinggi sheet maksimal
     final double maxSheetHeight = MediaQuery.of(context).size.height * 0.85;
 
     return Container(
-      // 2. Batasi tinggi container agar tidak memenuhi layar 100%
       constraints: BoxConstraints(maxHeight: maxSheetHeight),
       decoration: const BoxDecoration(
         color: Color(0xFFEFEFEF),
@@ -51,7 +49,6 @@ class EventDetailSheet extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // --- HEADER SECTION (TETAP DIAM/FIXED) ---
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
             decoration: const BoxDecoration(
@@ -64,7 +61,7 @@ class EventDetailSheet extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const SizedBox(width: 48), // Placeholder agar title center
+                const SizedBox(width: 48),
                 Text(
                   'Event Detail',
                   style: GoogleFonts.poppins(
@@ -76,10 +73,9 @@ class EventDetailSheet extends StatelessWidget {
                 // Action Icons
                 Row(
                   children: [
-                    // EDIT BUTTON
                     GestureDetector(
                       onTap: () {
-                        Navigator.pop(context); // Tutup detail sheet dulu
+                        Navigator.pop(context);
                         showModalBottomSheet(
                           context: context,
                           isScrollControlled: true,
@@ -90,7 +86,6 @@ class EventDetailSheet extends StatelessWidget {
                       child: const Icon(Icons.edit_outlined, size: 24, color: Color(0xFF222B45)),
                     ),
                     const SizedBox(width: 16),
-                    // DELETE BUTTON
                     GestureDetector(
                       onTap: () {
                         _confirmDelete(context);
@@ -104,9 +99,6 @@ class EventDetailSheet extends StatelessWidget {
           ),
 
           const SizedBox(height: 10),
-
-          // --- CONTENT SECTION (SCROLLABLE) ---
-          // 3. Gunakan Flexible + SingleChildScrollView
           Flexible(
             child: SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
@@ -114,7 +106,6 @@ class EventDetailSheet extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 child: Column(
                   children: [
-                    // A. Title & Badge Card
                     _buildInfoCard(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -148,8 +139,6 @@ class EventDetailSheet extends StatelessWidget {
                     ),
 
                     const SizedBox(height: 10),
-
-                    // B. Date & Time Card
                     _buildInfoCard(
                       child: Column(
                         children: [
@@ -187,8 +176,6 @@ class EventDetailSheet extends StatelessWidget {
                     ),
 
                     const SizedBox(height: 10),
-
-                    // C. Location Card
                     _buildInfoCard(
                       child: Row(
                         children: [
@@ -210,8 +197,6 @@ class EventDetailSheet extends StatelessWidget {
                     ),
 
                     const SizedBox(height: 10),
-
-                    // D. Reminder Card
                     _buildInfoCard(
                       child: Row(
                         children: [
@@ -230,8 +215,6 @@ class EventDetailSheet extends StatelessWidget {
                     ),
 
                     const SizedBox(height: 10),
-
-                    // E. Notes Card
                     _buildInfoCard(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -253,8 +236,6 @@ class EventDetailSheet extends StatelessWidget {
                         ],
                       ),
                     ),
-
-                    // Padding bawah tambahan agar scroll tidak mentok
                     const SizedBox(height: 30),
                   ],
                 ),
@@ -265,8 +246,6 @@ class EventDetailSheet extends StatelessWidget {
       ),
     );
   }
-
-  // --- HELPER WIDGETS ---
 
   Widget _buildInfoCard({required Widget child}) {
     return Container(
@@ -291,16 +270,14 @@ class EventDetailSheet extends StatelessWidget {
     );
   }
 
-  // --- LOGIC DELETE ---
-
   void _confirmDelete(BuildContext context) {
-    final isRecurring = event.repeat != 'Does not repeat';
+    final isRecurring = event.repeat != 'Does not repeat' || event.parentEventId != null;
 
     if (isRecurring) {
       showDeleteRepeatDialog(
         context: context,
-        onConfirm: (DeleteMode mode) async {
-          await _handleDeleteProcess(context, mode);
+        onConfirm: (DeleteMode mode){
+          _handleDeleteProcess(context, mode);
         },
       );
     } else {
@@ -319,37 +296,41 @@ class EventDetailSheet extends StatelessWidget {
 
   Future<void> _handleDeleteProcess(BuildContext context, DeleteMode mode) async {
     final userId = FirebaseAuth.instance.currentUser!.uid;
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final eventService = EventService();
+
+    // Kita tidak perlu instance ScaffoldMessenger lokal jika menggunakan custom Snackbar static method,
+    // karena Snackbar.success/error sudah menghandlenya di dalamnya.
 
     try {
-      if (event.repeat != 'Does not repeat') {
-        await EventService().deleteRecurringEvent(
+      if (mode == DeleteMode.single && (event.repeat == 'Does not repeat' && event.parentEventId == null)) {
+        await eventService.deleteEvent(userId, event.id!);
+      } else {
+        await eventService.deleteRecurringEvent(
           userId: userId,
           event: event,
           mode: mode,
         );
-      } else {
-        await EventService().deleteEvent(userId, event.id!);
       }
 
       if (context.mounted) {
-        Navigator.pop(context); // Tutup Detail Sheet
-        scaffoldMessenger.showSnackBar(
-          const SnackBar(
-            content: Text('Event deleted successfully'),
-            backgroundColor: Color(0xFF4CAF50),
-          ),
-        );
+        Navigator.pop(context);
+        Snackbar.success(context, _getSuccessMessage(mode));
       }
     } catch (e) {
       if (context.mounted) {
-        scaffoldMessenger.showSnackBar(
-          SnackBar(
-            content: Text('Error deleting event: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        Snackbar.error(context, 'Error: $e');
       }
+    }
+  }
+
+  String _getSuccessMessage(DeleteMode mode) {
+    switch (mode) {
+      case DeleteMode.single:
+        return 'Event deleted successfully.';
+      case DeleteMode.following:
+        return 'This & following events deleted.';
+      case DeleteMode.all:
+        return 'All events in series deleted.';
     }
   }
 }

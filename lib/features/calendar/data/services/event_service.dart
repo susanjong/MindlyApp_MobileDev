@@ -16,12 +16,10 @@ class EventService {
     return _firestore.collection('users').doc(userId).collection('events');
   }
 
-  // ✅ PERBAIKAN: Tambahkan logic untuk repeat events
   Future<String> addEvent(Event event) async {
     try {
       DocumentReference docRef = await _getEventsCollection(event.userId).add(event.toMap());
 
-      // ✅ Handle repeat events dengan BATASAN
       if (event.repeat != 'Does not repeat') {
         await _createRepeatInstances(event, docRef.id);
       }
@@ -40,25 +38,23 @@ class EventService {
     }
   }
 
-  // ✅ PERBAIKAN: Batasi repeat instances
   Future<void> _createRepeatInstances(Event event, String parentEventId) async {
     try {
       int maxInstances;
       DateTime nextEventDate = event.startTime;
 
-      // ✅ Batasi jumlah repeat berdasarkan tipe
       switch (event.repeat) {
         case 'Every day':
-          maxInstances = 30; // 1 bulan
+          maxInstances = 30;
           break;
         case 'Every week':
-          maxInstances = 12; // 3 bulan
+          maxInstances = 12;
           break;
         case 'Every month':
-          maxInstances = 12; // 1 tahun
+          maxInstances = 12;
           break;
         case 'Every year':
-          maxInstances = 5; // 5 tahun
+          maxInstances = 5;
           break;
         default:
           return;
@@ -68,7 +64,6 @@ class EventService {
       int createdCount = 0;
 
       for (int i = 1; i <= maxInstances; i++) {
-        // ✅ Hitung tanggal berikutnya
         switch (event.repeat) {
           case 'Every day':
             nextEventDate = nextEventDate.add(const Duration(days: 1));
@@ -134,7 +129,6 @@ class EventService {
   }) async {
     try {
       final now = DateTime.now();
-      // Hitung waktu mundur (misal 15 menit sebelum event)
       final reminderTime = eventTime.subtract(Duration(minutes: minutesBefore));
 
       if (kDebugMode) {
@@ -159,7 +153,6 @@ class EventService {
         scheduledDate: scheduledDate,
       );
 
-      // 2. SIMPAN KE FIRESTORE (Untuk dicek nanti agar masuk ke Notification Page)
       await _saveReminderToFirestore(
         userId: userId,
         eventId: eventId,
@@ -200,7 +193,7 @@ class EventService {
       'minutesBefore': minutesBefore,
       'notificationId': notificationId,
       'createdAt': FieldValue.serverTimestamp(),
-      'isProcessed': false, // ✅ Flag penting: belum masuk ke list notifikasi home
+      'isProcessed': false,
     });
   }
 
@@ -216,7 +209,6 @@ class EventService {
     return '$hour:$minute $period';
   }
 
-  // ✅ Method lainnya tetap sama
   Future<void> updateEvent(String userId, Event event) async {
     try {
       await _getEventsCollection(userId).doc(event.id).update(event.toMap());
@@ -241,33 +233,14 @@ class EventService {
     final batch = _firestore.batch();
 
     try {
-      // Logic ID: Jika parentEventId null, maka event ini adalah Parent-nya
       final String seriesId = event.parentEventId ?? event.id!;
 
       if (mode == DeleteMode.single) {
-        // 1. Hapus event ini saja (Single instance)
         batch.delete(eventsRef.doc(event.id));
-      }
-      else if (mode == DeleteMode.all) {
-        // 2. Hapus Parent (Master)
-        batch.delete(eventsRef.doc(seriesId));
-
-        // 3. Hapus semua Anak (Children)
-        final childrenQuery = await eventsRef
-            .where('parentEventId', isEqualTo: seriesId)
-            .get();
-
-        for (var doc in childrenQuery.docs) {
-          batch.delete(doc.reference);
-        }
       }
       else if (mode == DeleteMode.following) {
-        // 4. Hapus event ini
         batch.delete(eventsRef.doc(event.id));
 
-        // 5. Hapus semua event yang parent-nya sama DAN waktunya setelah event ini
-        // NOTE: Firestore membutuhkan Composite Index untuk query ini
-        // (parentEventId == X AND startTime > Y)
         final futureEvents = await eventsRef
             .where('parentEventId', isEqualTo: seriesId)
             .where('startTime', isGreaterThan: Timestamp.fromDate(event.startTime))
@@ -277,23 +250,26 @@ class EventService {
           batch.delete(doc.reference);
         }
 
-        // Edge Case: Jika kita menghapus "Following" dari Parent-nya langsung
         if (event.id == seriesId) {
-          // Logic tambahan mungkin diperlukan jika parent dihapus tapi child sebelumnya ingin disimpan
-          // Tapi untuk simplifikasi, biasanya hapus parent = hapus akses ke series.
+          batch.delete(eventsRef.doc(seriesId));
         }
       }
+      else if (mode == DeleteMode.all) {
+        batch.delete(eventsRef.doc(seriesId));
 
-      await batch.commit();
+        final childrenQuery = await eventsRef
+            .where('parentEventId', isEqualTo: seriesId)
+            .get();
 
-      // Cancel notifikasi terkait
-      if (mode == DeleteMode.single) {
-        await _cancelScheduledNotification(event.id!);
-      } else {
-        // TODO: Logic cancel notifikasi batch (opsional, butuh iterasi ID)
+        for (var doc in childrenQuery.docs) {
+          batch.delete(doc.reference);
+        }
       }
+      await batch.commit();
+      await _cancelScheduledNotification(event.id!);
 
     } catch (e) {
+      debugPrint("Error deleting recurring event: $e");
       throw Exception('Failed to delete recurring event: $e');
     }
   }
