@@ -244,8 +244,6 @@ class _NotesMainPageState extends State<NotesMainPage> {
     _exitCategorySelectionMode();
   }
 
-  void _handleAddNote() => Navigator.pushNamed(context, AppRoutes.noteEditor);
-
   void _showAddCategoryDialog() {
     showDialog(
       context: context,
@@ -258,15 +256,6 @@ class _NotesMainPageState extends State<NotesMainPage> {
         },
       ),
     );
-  }
-
-  bool _onScrollNotification(UserScrollNotification notification) {
-    if (notification.direction == ScrollDirection.reverse) {
-      if (_isNavBarVisible) setState(() => _isNavBarVisible = false);
-    } else if (notification.direction == ScrollDirection.forward) {
-      if (!_isNavBarVisible) setState(() => _isNavBarVisible = true);
-    }
-    return true;
   }
 
   @override
