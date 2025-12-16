@@ -7,6 +7,7 @@ import 'firebase_options.dart';
 import 'features/home/data/services/notification_service.dart';
 import 'features/home/data/services/overdue_checker_service.dart';
 import 'package:notesapp/features/home/data/services/notification_helper.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 

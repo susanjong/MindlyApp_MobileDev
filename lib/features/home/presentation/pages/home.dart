@@ -10,10 +10,10 @@ import '../../../../config/routes/routes.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../../core/widgets/navigation/custom_navbar_widget.dart';
 import '../../../../core/widgets/navigation/custom_top_app_bar.dart';
+import 'package:notesapp/features/calendar/data/model/event_model.dart';
 import '../../../notes/presentation/pages/note_editor_page.dart';
 import '../../../notes/data/models/note_model.dart';
 import '../../../notes/data/services/note_service.dart';
-import '../../../calendar/data/model/event_model.dart';
 import '../../../to_do_list/data/models/todo_model.dart';
 import '../../../to_do_list/data/services/todo_services.dart';
 import '../../../to_do_list/presentation/widgets/task_item.dart';
@@ -366,7 +366,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Color(note.color ?? 0xFFE6C4DE),
+          color: Color(note.color),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
