@@ -5,22 +5,20 @@ MindlyApp is a productivity application designed to help users manage **daily ac
 
 This habit of switching applications often leads to **loss of focus**, **duplicated information**, **unsynchronized data**, and **low efficiency** in managing time and tasks. MindlyApp provides a solution by integrating **To-Do List, Calendar, and Notes** into one intuitive, adaptive, and contextual interface to **optimize time management** and **improve consistency**.
 
----
-
 ## 👤 Owner Information
 - **Project Name**: MindlyApp
 - **Owner / Maintainer**:
-    1. Susan Jong (231401014)
-    2. Parulian Dwi Reslia Simbolon (231401032)
-    3. Charissa Haya Qanita (231401113)
+    1. Susan Jong (231401014) Lab 3 move to lab 1
+    2. Parulian Dwi Reslia Simbolon (231401032) Lab 3
+    3. Charissa Haya Qanita (231401113) Lab 3
 - **Group Name**: Soyu Team
+- **Class** : B (2023)
+- Mobile Programming 
 
----
 
 ## 📚 Documentation
 - **Software Requirement Specification (SRS)**: [**View SRS Document**](https://docs.google.com/document/d/1gceSWC0wfhcvUrp6caHxGd70OgIt0XDV/edit?usp=sharing&ouid=113965595944164190356&rtpof=true&sd=true)
 
----
 
 ## 🚀 Getting Started
 
@@ -57,7 +55,6 @@ Make sure you have Flutter installed on your machine. If not, follow the officia
 
 That's it! You should now have MindlyApp running on your device.
 
----
 
 ## 📦 Download MindlyApp (APK)
 
@@ -71,7 +68,6 @@ Ready to boost your productivity? Experience MindlyApp firsthand by installing t
 
 *Just click, download, and install to get started!* 
 
----
 
 ## ✨ Features
 
@@ -103,7 +99,6 @@ Ready to boost your productivity? Experience MindlyApp firsthand by installing t
 - Reset Password & Delete Account
 - Secure Logout
 
----
 
 ## ⚙️ Tech Stack
 - **IDE**: Android Studio
@@ -111,7 +106,6 @@ Ready to boost your productivity? Experience MindlyApp firsthand by installing t
 - **Language**: Dart
 - **Backend & Auth**: Firebase
 
----
 
 ## 🛠️ Firebase Configuration Fix
 
