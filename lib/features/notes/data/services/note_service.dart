@@ -170,7 +170,7 @@ class NoteService {
     await _firestore
         .collection('users')
         .doc(_uid)
-        .collection('categories')
+        .collection('note_categories')
         .doc(category.id)
         .update(category.toMap());
   }
@@ -181,7 +181,7 @@ class NoteService {
     await _firestore
         .collection('users')
         .doc(_uid)
-        .collection('categories')
+        .collection('note_categories')
         .doc(categoryId)
         .delete();
 
@@ -205,7 +205,7 @@ class NoteService {
     await _firestore
         .collection('users')
         .doc(_uid)
-        .collection('categories')
+        .collection('note_categories')
         .doc(categoryId)
         .update({'isFavorite': !currentStatus});
   }

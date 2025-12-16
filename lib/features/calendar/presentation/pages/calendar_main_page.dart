@@ -188,6 +188,7 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
       },
       child: Scaffold(
         backgroundColor: Colors.white,
+        resizeToAvoidBottomInset: false,
         appBar: CustomTopAppBar(
           isCalendarMode: true,
           isYearView: _currentView == CalendarViewMode.yearly,

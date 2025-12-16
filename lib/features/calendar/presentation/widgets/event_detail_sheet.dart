@@ -7,6 +7,7 @@ import '../../../../features/calendar/data/services/event_service.dart';
 import '../../data/models/event_model.dart';
 import 'add_event.dart';
 import 'delete_repeated_event.dart';
+// Pastikan path import ini sesuai dengan struktur folder Anda
 import '../../../../core/widgets/dialog/alert_dialog.dart';
 
 class EventDetailSheet extends StatelessWidget {
@@ -34,11 +35,12 @@ class EventDetailSheet extends StatelessWidget {
         : const Color(0xFF5683EB);
     final categoryName = category?.name ?? 'General';
 
-    // Hitung tinggi maksimal agar tidak menutupi seluruh layar (opsional, tapi bagus untuk UX)
+    // 1. Ambil tinggi layar untuk membatasi tinggi sheet maksimal
     final double maxSheetHeight = MediaQuery.of(context).size.height * 0.85;
 
     return Container(
-      constraints: BoxConstraints(maxHeight: maxSheetHeight), // Batasi tinggi maksimal
+      // 2. Batasi tinggi container agar tidak memenuhi layar 100%
+      constraints: BoxConstraints(maxHeight: maxSheetHeight),
       decoration: const BoxDecoration(
         color: Color(0xFFEFEFEF),
         borderRadius: BorderRadius.only(
@@ -49,7 +51,7 @@ class EventDetailSheet extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // --- 1. Header (Tetap Diam/Fixed) ---
+          // --- HEADER SECTION (TETAP DIAM/FIXED) ---
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
             decoration: const BoxDecoration(
@@ -62,7 +64,7 @@ class EventDetailSheet extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const SizedBox(width: 48), // Placeholder untuk balancing
+                const SizedBox(width: 48), // Placeholder agar title center
                 Text(
                   'Event Detail',
                   style: GoogleFonts.poppins(
@@ -77,7 +79,7 @@ class EventDetailSheet extends StatelessWidget {
                     // EDIT BUTTON
                     GestureDetector(
                       onTap: () {
-                        Navigator.pop(context);
+                        Navigator.pop(context); // Tutup detail sheet dulu
                         showModalBottomSheet(
                           context: context,
                           isScrollControlled: true,
@@ -103,8 +105,8 @@ class EventDetailSheet extends StatelessWidget {
 
           const SizedBox(height: 10),
 
-          // --- 2. Content Section (SCROLLABLE) ---
-          // Gunakan Flexible + SingleChildScrollView agar bisa discroll jika konten panjang
+          // --- CONTENT SECTION (SCROLLABLE) ---
+          // 3. Gunakan Flexible + SingleChildScrollView
           Flexible(
             child: SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
@@ -252,7 +254,7 @@ class EventDetailSheet extends StatelessWidget {
                       ),
                     ),
 
-                    // Padding tambahan di bawah agar tidak terlalu mepet saat discroll mentok
+                    // Padding bawah tambahan agar scroll tidak mentok
                     const SizedBox(height: 30),
                   ],
                 ),
@@ -264,7 +266,7 @@ class EventDetailSheet extends StatelessWidget {
     );
   }
 
-  // ... (Sisa method helper _buildInfoCard, _buildIconBox, _confirmDelete, dll TETAP SAMA)
+  // --- HELPER WIDGETS ---
 
   Widget _buildInfoCard({required Widget child}) {
     return Container(
@@ -288,6 +290,8 @@ class EventDetailSheet extends StatelessWidget {
       child: Icon(icon, size: 16, color: Colors.white),
     );
   }
+
+  // --- LOGIC DELETE ---
 
   void _confirmDelete(BuildContext context) {
     final isRecurring = event.repeat != 'Does not repeat';
@@ -329,7 +333,7 @@ class EventDetailSheet extends StatelessWidget {
       }
 
       if (context.mounted) {
-        Navigator.pop(context);
+        Navigator.pop(context); // Tutup Detail Sheet
         scaffoldMessenger.showSnackBar(
           const SnackBar(
             content: Text('Event deleted successfully'),
