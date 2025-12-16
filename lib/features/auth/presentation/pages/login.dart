@@ -156,8 +156,6 @@ class LoginAccountScreenState extends State<LoginAccountScreen> {
     if (_isLoading) return;
 
     if (mounted) {
-      // GUNAKAN INI: Menghapus semua route di belakang (Welcome, Login)
-      // dan menjadikan Home sebagai halaman pertama
       Navigator.pushNamedAndRemoveUntil(
           context,
           AppRoutes.home,

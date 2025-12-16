@@ -186,7 +186,10 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
       elevation: 0,
       leading: IconButton(
         icon: const Icon(Icons.arrow_back, color: Color(0xFF1A1A1A)),
-        onPressed: () => Navigator.pop(context),
+        onPressed: () {
+          Navigator.pushReplacementNamed(context, '/home');
+        },
+
       ),
       title: Text(
         'Account Profile',
@@ -319,7 +322,7 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
     );
   }
 
-  // ✅ FIXED: Save navigator before async operation
+  // Save navigator before async operation
   void _navigateToEditProfile() async {
     final navigator = Navigator.of(context);
 
@@ -335,7 +338,7 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
     }
   }
 
-  // ✅ FIXED: Async gap in reset dialog
+  // Async gap in reset dialog
   void _showResetDialog() {
     if (!mounted) return;
     final dialogContext = context;
@@ -353,7 +356,7 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
         navigator.pop();
         _showSuccessAndNavigate(
           title: 'Success !',
-          message: 'Your password has been\nsuccessfully reset.',
+          message: 'You will be redirected to\n the password reset page.',
           routeName: AppRoutes.resetPassword,
           useReplacement: false,
         );
@@ -361,7 +364,7 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
     );
   }
 
-  // ✅ FIXED: Async gap in logout dialog
+  // Async gap in logout dialog
   void _showLogoutDialog() {
     if (!mounted) return;
     final dialogContext = context;
@@ -405,7 +408,7 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
     );
   }
 
-  // ✅ FIXED: Async gap in delete account dialog
+  // Async gap in delete account dialog
   void _showDeleteAccountDialog() {
     if (!mounted) return;
     final dialogContext = context;
@@ -436,7 +439,7 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
     );
   }
 
-  // ✅ FIXED: Complete rewrite of success dialog to avoid async gaps
+  // Complete rewrite of success dialog to avoid async gaps
   void _showSuccessAndNavigate({
     required String title,
     required String message,
@@ -452,7 +455,7 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
       context: parentContext,
       barrierDismissible: false,
       builder: (BuildContext dialogContext) {
-        // ✅ Save dialog navigator before async operation
+        // Save dialog navigator before async operation
         final dialogNavigator = Navigator.of(dialogContext);
 
         Future.delayed(const Duration(seconds: 2), () {
@@ -544,7 +547,7 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
   }
 }
 
-// ✅ FIXED: profileCard with async gap fix
+// profileCard with async gap fix
 class _ProfileCard extends StatelessWidget {
   final UserProfile profile;
   final bool isLoading;
@@ -648,7 +651,7 @@ class _ProfileCard extends StatelessWidget {
             icon: const Icon(Icons.edit_outlined),
             splashRadius: 20,
             onPressed: () async {
-              // ✅ Save navigator before async operation
+              // Save navigator before async operation
               final navigator = Navigator.of(context);
 
               final result = await navigator.push(
@@ -657,7 +660,7 @@ class _ProfileCard extends StatelessWidget {
                 ),
               );
 
-              // ✅ Check mounted before using context
+              // Check mounted before using context
               if (result == true && context.mounted) {
                 onRefresh();
               }

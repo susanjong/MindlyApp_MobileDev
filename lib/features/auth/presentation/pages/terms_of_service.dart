@@ -16,7 +16,7 @@ class TermsOfServiceScreen extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            // top app bar
+            // top navigation bar
             Padding(
               padding: EdgeInsets.symmetric(
                 horizontal: 8.0,
@@ -24,7 +24,7 @@ class TermsOfServiceScreen extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  // back button
+                  // back button icon
                   IconButton(
                     onPressed: () => Navigator.pop(context),
                     icon: const Icon(
@@ -38,7 +38,7 @@ class TermsOfServiceScreen extends StatelessWidget {
                   ),
                   const SizedBox(width: 12),
 
-                  // title
+                  // page title text
                   Expanded(
                     child: Text(
                       'Terms of Service',
@@ -55,20 +55,20 @@ class TermsOfServiceScreen extends StatelessWidget {
               ),
             ),
 
-            // divider
+            // horizontal divider line
             Container(
               height: 1,
               color: const Color(0x9B999191),
             ),
 
-            // content
+            // scrollable content area
             Expanded(
               child: SingleChildScrollView(
                 padding: EdgeInsets.all(horizontalPadding),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // app name & logo
+                    // application name and logo section
                     Center(
                       child: Column(
                         children: [
@@ -79,7 +79,7 @@ class TermsOfServiceScreen extends StatelessWidget {
                               mainAxisAlignment: MainAxisAlignment.center,
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                // Logo SVG
+                                // application logo svg
                                 SizedBox(
                                   width: 32.36,
                                   height: 30,
@@ -103,7 +103,7 @@ class TermsOfServiceScreen extends StatelessWidget {
                                 ),
                                 const SizedBox(width: 14),
 
-                                //logo mindly
+                                // application name text
                                 Flexible(
                                   child: Text.rich(
                                     TextSpan(
@@ -130,7 +130,7 @@ class TermsOfServiceScreen extends StatelessWidget {
 
                           const SizedBox(height: 16),
 
-                          //tagline
+                          // application tagline text
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 16),
                             child: Text(
@@ -151,7 +151,7 @@ class TermsOfServiceScreen extends StatelessWidget {
 
                     const SizedBox(height: 32),
 
-                    // last updated
+                    // last updated date badge
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(12),
@@ -173,20 +173,20 @@ class TermsOfServiceScreen extends StatelessWidget {
 
                     const SizedBox(height: 32),
 
-                    // Sections
+                    // terms sections list
                     _buildSection(
                       number: '1',
-                      title: 'Introduction',
+                      title: 'Agreement',
                       content:
-                      'Welcome to Mindly! These Terms of Service govern your use of our note-taking application. By accessing or using Mindly, you agree to be bound by these terms.',
+                      'By using Mindly, you agree to these terms and our Privacy Policy.',
                       isSmallScreen: isSmallScreen,
                     ),
 
                     _buildSection(
                       number: '2',
-                      title: 'Account Registration',
+                      title: 'Your Account',
                       content:
-                      'To use Mindly, you must create an account. You are responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account.',
+                      'You are responsible for keeping your account secure and all activities under it.',
                       isSmallScreen: isSmallScreen,
                     ),
 
@@ -194,106 +194,29 @@ class TermsOfServiceScreen extends StatelessWidget {
                       number: '3',
                       title: 'Your Content',
                       content:
-                      'You retain all rights to the notes and content you create in Mindly. We do not claim ownership of your content. However, by using our service, you grant us the right to store and process your content to provide our services.',
+                      'You own all notes you create. We only store and process them to provide our service.',
                       isSmallScreen: isSmallScreen,
                     ),
 
                     _buildSection(
                       number: '4',
-                      title: 'Privacy & Data Protection',
+                      title: 'Service Usage',
                       content:
-                      'We take your privacy seriously. Your notes are encrypted and stored securely. We will never sell your personal information to third parties. Please refer to our Privacy Policy for detailed information.',
+                      'Use Mindly legally and responsibly. Do not abuse or harm our service.',
                       isSmallScreen: isSmallScreen,
                     ),
 
                     _buildSection(
                       number: '5',
-                      title: 'Acceptable Use',
+                      title: 'Termination',
                       content:
-                      'You agree not to use Mindly for any unlawful purpose or in any way that could damage, disable, or impair our service. You must not attempt to gain unauthorized access to any part of our service.',
-                      isSmallScreen: isSmallScreen,
-                    ),
-
-                    _buildSection(
-                      number: '6',
-                      title: 'Service Availability',
-                      content:
-                      'We strive to keep Mindly available 24/7, but we cannot guarantee uninterrupted access. We reserve the right to modify or discontinue our service at any time with or without notice.',
-                      isSmallScreen: isSmallScreen,
-                    ),
-
-                    _buildSection(
-                      number: '7',
-                      title: 'Account Termination',
-                      content:
-                      'You may delete your account at any time. We reserve the right to suspend or terminate your account if you violate these terms or engage in any activity that harms our service or other users.',
-                      isSmallScreen: isSmallScreen,
-                    ),
-
-                    _buildSection(
-                      number: '8',
-                      title: 'Limitation of Liability',
-                      content:
-                      'Mindly is provided "as is" without warranties of any kind. We are not liable for any damages arising from your use of our service, including but not limited to data loss or service interruptions.',
-                      isSmallScreen: isSmallScreen,
-                    ),
-
-                    _buildSection(
-                      number: '9',
-                      title: 'Changes to Terms',
-                      content:
-                      'We may update these Terms of Service from time to time. We will notify you of any material changes by posting the new terms in the app. Your continued use of Mindly after changes constitutes acceptance of the new terms.',
-                      isSmallScreen: isSmallScreen,
-                    ),
-
-                    _buildSection(
-                      number: '10',
-                      title: 'Contact Us',
-                      content:
-                      'If you have any questions about these Terms of Service, please contact us at support@mindly.com',
+                      'You can delete your account anytime. We may suspend accounts that violate these terms.',
                       isLast: true,
                       isSmallScreen: isSmallScreen,
                     ),
 
                     const SizedBox(height: 44),
 
-                    // footer
-                    Center(
-                      child: Column(
-                        children: [
-                          Container(
-                            height: 2,
-                            width: 100,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF004455),
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            '@mindly 2025',
-                            style: GoogleFonts.poppins(
-                              fontSize: isSmallScreen ? 11 : 12,
-                              fontWeight: FontWeight.w400,
-                              color: Colors.black54,
-                              letterSpacing: -0.24,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'All Rights Reserved',
-                            style: GoogleFonts.poppins(
-                              fontSize: isSmallScreen ? 9 : 10,
-                              fontWeight: FontWeight.w300,
-                              color: Colors.black38,
-                              letterSpacing: -0.20,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 52),
                   ],
                 ),
               ),
@@ -304,6 +227,7 @@ class TermsOfServiceScreen extends StatelessWidget {
     );
   }
 
+  // build numbered terms section with badge
   Widget _buildSection({
     required String number,
     required String title,
@@ -319,7 +243,7 @@ class TermsOfServiceScreen extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // number badge
+              // circular number badge container
               Container(
                 width: 32,
                 height: 32,
@@ -340,7 +264,7 @@ class TermsOfServiceScreen extends StatelessWidget {
               ),
               const SizedBox(width: 12),
 
-              // title
+              // section title heading
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.only(top: 4),
@@ -361,7 +285,7 @@ class TermsOfServiceScreen extends StatelessWidget {
 
           const SizedBox(height: 12),
 
-          //content
+          // section content paragraph with left padding
           Padding(
             padding: const EdgeInsets.only(left: 44),
             child: Text(
@@ -373,7 +297,6 @@ class TermsOfServiceScreen extends StatelessWidget {
                 height: 1.5,
                 letterSpacing: -0.28,
               ),
-              textAlign: TextAlign.justify,
               overflow: TextOverflow.visible,
             ),
           ),

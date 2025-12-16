@@ -164,7 +164,7 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
     );
   }
 
-  // ✅ Dialog konfirmasi Delete All
+  // dialog konfirmasi Delete All
   void _showDeleteAllDialog() {
     showDialog(
       context: context,
@@ -255,7 +255,7 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
                   ),
                   child: const Icon(
                     Icons.arrow_back,
-                    size: 20,
+                    size: 24,
                     color: Colors.black,
                   ),
                 ),
@@ -371,12 +371,12 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
           const SizedBox(height: 12),
           Container(
             height: 1,
-            decoration: const ShapeDecoration(
+            decoration: ShapeDecoration(
               shape: RoundedRectangleBorder(
                 side: BorderSide(
                   width: 1,
                   strokeAlign: BorderSide.strokeAlignCenter,
-                  color: Color(0x9B999191),
+                  color: Color(0xFF999191).withValues(alpha: 0.6),
                 ),
               ),
             ),

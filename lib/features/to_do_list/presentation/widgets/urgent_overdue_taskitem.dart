@@ -9,12 +9,12 @@ class UrgentOverdueTaskItem extends StatelessWidget {
   final VoidCallback onTapArrow; // Aksi saat panah diklik
 
   const UrgentOverdueTaskItem({
-    Key? key,
+    super.key,
     required this.task,
     required this.themeColor,
     required this.timeText,
     required this.onTapArrow,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
