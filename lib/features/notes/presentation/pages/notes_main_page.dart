@@ -57,15 +57,6 @@ class _NotesMainPageState extends State<NotesMainPage> {
     super.dispose();
   }
 
-  bool _onScrollNotification(UserScrollNotification notification) {
-    if (notification.direction == ScrollDirection.reverse) {
-      if (_isNavBarVisible) setState(() => _isNavBarVisible = false);
-    } else if (notification.direction == ScrollDirection.forward) {
-      if (!_isNavBarVisible) setState(() => _isNavBarVisible = true);
-    }
-    return true;
-  }
-
   void _handleNavigation(int index) {
     final routes = [AppRoutes.home, AppRoutes.notes, AppRoutes.todo, AppRoutes.calendar];
     if (index != 1) Navigator.pushReplacementNamed(context, routes[index]);
