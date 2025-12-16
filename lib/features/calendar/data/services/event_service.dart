@@ -211,7 +211,29 @@ class EventService {
 
   Future<void> updateEvent(String userId, Event event) async {
     try {
-      await _getEventsCollection(userId).doc(event.id).update(event.toMap());
+      final docRef = _getEventsCollection(userId).doc(event.id);
+      final oldDocSnapshot = await docRef.get();
+      if (!oldDocSnapshot.exists) throw Exception("Event not found");
+
+      final oldData = oldDocSnapshot.data() as Map<String, dynamic>;
+      final String oldRepeat = oldData['repeat'] ?? 'Does not repeat';
+      await docRef.update(event.toMap());
+      if (oldRepeat == 'Does not repeat' && event.repeat != 'Does not repeat') {
+        await _createRepeatInstances(event, event.id!);
+      }
+
+      else if (oldRepeat != 'Does not repeat' && event.repeat != oldRepeat) {
+        await _deleteChildEvents(userId, event.id!);
+
+        if (event.repeat != 'Does not repeat') {
+          await _createRepeatInstances(event, event.id!);
+        }
+      }
+      else if (oldRepeat != 'Does not repeat' && event.repeat == 'Does not repeat') {
+        // Hapus semua anak, sisakan event ini saja
+        await _deleteChildEvents(userId, event.id!);
+      }
+
       await _notificationService.createNotification(
         title: '📝 Event Updated',
         description: 'Event "${event.title}" has been updated',
@@ -222,6 +244,21 @@ class EventService {
     } catch (e) {
       throw Exception('Failed to update event: $e');
     }
+  }
+
+  Future<void> _deleteChildEvents(String userId, String parentEventId) async {
+    final eventsRef = _getEventsCollection(userId);
+    final batch = _firestore.batch();
+
+    final childrenQuery = await eventsRef
+        .where('parentEventId', isEqualTo: parentEventId)
+        .get();
+
+    for (var doc in childrenQuery.docs) {
+      batch.delete(doc.reference);
+    }
+
+    await batch.commit();
   }
 
   Future<void> deleteRecurringEvent({

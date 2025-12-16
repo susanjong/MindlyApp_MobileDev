@@ -298,9 +298,6 @@ class EventDetailSheet extends StatelessWidget {
     final userId = FirebaseAuth.instance.currentUser!.uid;
     final eventService = EventService();
 
-    // Kita tidak perlu instance ScaffoldMessenger lokal jika menggunakan custom Snackbar static method,
-    // karena Snackbar.success/error sudah menghandlenya di dalamnya.
-
     try {
       if (mode == DeleteMode.single && (event.repeat == 'Does not repeat' && event.parentEventId == null)) {
         await eventService.deleteEvent(userId, event.id!);
