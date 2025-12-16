@@ -7,7 +7,7 @@ import '../widgets/urgent_overdue_taskItem.dart';
 import 'folder_screen.dart';
 
 class UrgentTaskScreen extends StatefulWidget {
-  const UrgentTaskScreen({super.key});
+  const UrgentTaskScreen({Key? key}) : super(key: key);
 
   @override
   State<UrgentTaskScreen> createState() => _UrgentTaskScreenState();
@@ -87,105 +87,107 @@ class _UrgentTaskScreenState extends State<UrgentTaskScreen> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
+      body: SafeArea(
+        child: StreamBuilder<List<TodoModel>>(
+          stream: _todoService.getTodosStream(),
+          builder: (context, snapshot) {
+            // Loading State
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-      body: StreamBuilder<List<TodoModel>>(
-        stream: _todoService.getTodosStream(),
-        builder: (context, snapshot) {
-          // Loading State
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+            final allTodos = snapshot.data ?? [];
+            final now = DateTime.now();
 
-          final allTodos = snapshot.data ?? [];
-          final now = DateTime.now();
+            final urgentTasks = allTodos.where((task) {
+              final diff = task.deadline.difference(now);
+              return !task.isCompleted &&
+                  !diff.isNegative && // Tidak boleh lewat deadline (overdue)
+                  diff.inHours <= 12; // Kurang dari atau sama dengan 12 jam
+            }).toList();
 
-          final urgentTasks = allTodos.where((task) {
-            final diff = task.deadline.difference(now);
-            return !task.isCompleted &&
-                !diff.isNegative && // Tidak boleh lewat deadline (overdue)
-                diff.inHours <= 12; // Kurang dari atau sama dengan 12 jam
-          }).toList();
-
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.notifications_active_outlined,
-                      color: Color(0xFFE08E00),
-                      size: 40,
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Urgent',
-                      style: GoogleFonts.poppins(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-
-                // Subtitle Count
-                RichText(
-                  text: TextSpan(
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      color: const Color(0xFF535353),
-                    ),
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      const TextSpan(text: 'You have '),
-                      TextSpan(
-                        text: '${urgentTasks.length}',
-                        style: const TextStyle(
-                          color: Color(0xFFE08E00),
-                          fontWeight: FontWeight.bold,
+                      const Icon(
+                        Icons.notifications_active_outlined,
+                        color: Color(0xFFE08E00),
+                        size: 40,
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Urgent',
+                        style: GoogleFonts.poppins(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.black,
                         ),
                       ),
-                      const TextSpan(text: ' urgent task'),
                     ],
                   ),
-                ),
+                  const SizedBox(height: 8),
 
-                const SizedBox(height: 32),
-
-                // List Urgent Tasks
-                Expanded(
-                  child: urgentTasks.isEmpty
-                      ? Center(
-                    child: Text(
-                      "No urgent tasks!",
-                      style: GoogleFonts.poppins(color: Colors.grey),
+                  // Subtitle Count
+                  RichText(
+                    text: TextSpan(
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        color: const Color(0xFF535353),
+                      ),
+                      children: [
+                        const TextSpan(text: 'You have '),
+                        TextSpan(
+                          text: '${urgentTasks.length}',
+                          style: const TextStyle(
+                            color: Color(0xFFE08E00),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const TextSpan(text: ' urgent task'),
+                      ],
                     ),
-                  )
-                      : ListView.builder(
-                    itemCount: urgentTasks.length,
-                    itemBuilder: (context, index) {
-                      final taskModel = urgentTasks[index];
-
-                      // Konversi Model ke Map agar widget shared bisa baca
-                      final taskMap = _mapModelToItem(taskModel);
-
-                      return UrgentOverdueTaskItem(
-                        task: taskMap,
-                        themeColor: const Color(0xFFE08E00), // Orange
-                        timeText: _getTimeLeft(taskModel.deadline),
-                        onTapArrow: () => _navigateToFolder(taskModel.category, allTodos),
-                      );
-                    },
                   ),
-                ),
-              ],
-            ),
-          );
-        },
+
+                  const SizedBox(height: 32),
+
+                  // List Urgent Tasks
+                  Expanded(
+                    child: urgentTasks.isEmpty
+                        ? Center(
+                      child: Text(
+                        "No urgent tasks!",
+                        style: GoogleFonts.poppins(color: Colors.grey),
+                      ),
+                    )
+                        : ListView.builder(
+                      physics: const BouncingScrollPhysics(),
+                      itemCount: urgentTasks.length,
+                      itemBuilder: (context, index) {
+                        final taskModel = urgentTasks[index];
+
+                        // Konversi Model ke Map agar widget shared bisa baca
+                        final taskMap = _mapModelToItem(taskModel);
+
+                        return UrgentOverdueTaskItem(
+                          task: taskMap,
+                          themeColor: const Color(0xFFE08E00), // Orange
+                          timeText: _getTimeLeft(taskModel.deadline),
+                          onTapArrow: () => _navigateToFolder(taskModel.category, allTodos),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
