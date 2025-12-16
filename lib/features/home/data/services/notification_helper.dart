@@ -1,6 +1,7 @@
+// features/home/data/services/notification_helper.dart
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 
 class NotificationHelper {
   static final NotificationHelper _instance = NotificationHelper._internal();
@@ -11,7 +12,7 @@ class NotificationHelper {
 
   FlutterLocalNotificationsPlugin get plugin => _notifications;
 
-  // Initialize notification plugin (WITHOUT exact alarm permission)
+  // Initialize notification plugin
   Future<void> initialize() async {
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosSettings = DarwinInitializationSettings(
@@ -28,102 +29,113 @@ class NotificationHelper {
     await _notifications.initialize(
       initSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
-        if (kDebugMode) {
-          print('Notification tapped: ${response.payload}');
-        }
+        debugPrint('📱 Notification tapped: ${response.payload}');
+        _handleNotificationTap(response.payload);
       },
     );
 
     // Request permissions
     await _requestPermissions();
 
-    if (kDebugMode) {
-      print('✅ NotificationHelper initialized (without exact alarms)');
-    }
+    debugPrint('✅ NotificationHelper initialized');
   }
 
-  Future<void> _requestPermissions() async {
-    final android = _notifications.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+  // Handle notification tap
+  void _handleNotificationTap(String? payload) {
+    if (payload == null) return;
 
-    // Request notification permission (basic)
+    debugPrint('🎯 Handling notification payload: $payload');
+
+    // TODO: Parse payload dan navigate
+    // Format: "event_reminder:eventId"
+    // Implementasi navigation ke event detail atau notification page
+  }
+
+  // Request permissions
+  Future<void> _requestPermissions() async {
+    final android = _notifications.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+
+    // Request notification permission (Android 13+)
     await android?.requestNotificationsPermission();
 
-    final ios = _notifications.resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
-    await ios?.requestPermissions(alert: true, badge: true, sound: true);
+    // iOS permissions
+    final ios = _notifications.resolvePlatformSpecificImplementation<
+        IOSFlutterLocalNotificationsPlugin>();
+    await ios?.requestPermissions(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+
+    debugPrint('✅ Notification permissions requested');
   }
 
-  // Schedule notification (menggunakan inexact scheduling)
+  // Schedule notification - COMPLETELY FIXED!
   Future<void> scheduleNotification({
     required int id,
     required String title,
     required String body,
     required DateTime scheduledDate,
+    String? payload,
   }) async {
-    final tzDateTime = tz.TZDateTime.from(scheduledDate, tz.local);
+    try {
+      final tzDateTime = tz.TZDateTime.from(scheduledDate, tz.local);
 
-    const androidDetails = AndroidNotificationDetails(
-      'event_reminders',
-      'Event Reminders',
-      channelDescription: 'Reminders for upcoming events',
-      importance: Importance.max,
-      priority: Priority.high,
-      enableVibration: true,
-      playSound: true,
-      ticker: 'Event Reminder',
-    );
+      // AndroidNotificationDetails - FIXED color issue
+      final androidDetails = AndroidNotificationDetails(
+        'event_reminders',
+        'Event Reminders',
+        channelDescription: 'Reminders for upcoming events',
+        importance: Importance.max,
+        priority: Priority.high,
+        enableVibration: true,
+        playSound: true,
+        ticker: 'Event Reminder',
+        styleInformation: const BigTextStyleInformation(''),
+        enableLights: true,
+        color: const Color(0xFF5683EB),
+        ledColor: const Color(0xFF5683EB),
+        ledOnMs: 1000,
+        ledOffMs: 500,
+      );
 
-    const iosDetails = DarwinNotificationDetails(
-      presentAlert: true,
-      presentBadge: true,
-      presentSound: true,
-    );
+      const iosDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+        sound: 'default',
+      );
 
-    const notificationDetails = NotificationDetails(
-      android: androidDetails,
-      iOS: iosDetails,
-    );
+      final notificationDetails = NotificationDetails(
+        android: androidDetails,
+        iOS: iosDetails,
+      );
 
-    // Gunakan inexact scheduling (tidak butuh exact alarm permission)
-    await _notifications.zonedSchedule(
-      id,
-      title,
-      body,
-      tzDateTime,
-      notificationDetails,
-      androidScheduleMode: AndroidScheduleMode.inexact,
-    );
+      // Removed the problematic parameter!
+      await _notifications.zonedSchedule(
+        id,
+        title,
+        body,
+        tzDateTime,
+        notificationDetails,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        payload: payload,
+      );
 
-    if (kDebugMode) {
-      print('✅ Notification scheduled (inexact): ID=$id, Time=$scheduledDate');
+      debugPrint('✅ Notification scheduled: ID=$id, Time=$scheduledDate');
+    } catch (e) {
+      debugPrint('❌ Error scheduling notification: $e');
+      rethrow;
     }
   }
 
-  // Cancel notification
-  Future<void> cancelNotification(int id) async {
-    await _notifications.cancel(id);
-    if (kDebugMode) {
-      print('🗑️ Notification cancelled: ID=$id');
-    }
-  }
-
-  // Cancel all notifications
-  Future<void> cancelAllNotifications() async {
-    await _notifications.cancelAll();
-    if (kDebugMode) {
-      print('🗑️ All notifications cancelled');
-    }
-  }
-
-  // Get pending notifications
-  Future<List<PendingNotificationRequest>> getPendingNotifications() async {
-    return await _notifications.pendingNotificationRequests();
-  }
-
-  // Show instant notification (for testing)
+  //  Show instant notification (for testing or immediate alerts)
   Future<void> showInstantNotification({
     required int id,
     required String title,
     required String body,
+    String? payload,
   }) async {
     const androidDetails = AndroidNotificationDetails(
       'instant_notifications',
@@ -131,6 +143,8 @@ class NotificationHelper {
       channelDescription: 'Instant test notifications',
       importance: Importance.high,
       priority: Priority.high,
+      enableVibration: true,
+      playSound: true,
     );
 
     const iosDetails = DarwinNotificationDetails(
@@ -144,6 +158,52 @@ class NotificationHelper {
       iOS: iosDetails,
     );
 
-    await _notifications.show(id, title, body, notificationDetails);
+    await _notifications.show(
+      id,
+      title,
+      body,
+      notificationDetails,
+      payload: payload,
+    );
+
+    debugPrint('✅ Instant notification shown: $title');
+  }
+
+  // Cancel single notification
+  Future<void> cancelNotification(int id) async {
+    await _notifications.cancel(id);
+    debugPrint('🗑️ Notification cancelled: ID=$id');
+  }
+
+  // Cancel all notifications
+  Future<void> cancelAllNotifications() async {
+    await _notifications.cancelAll();
+    debugPrint('🗑️ All notifications cancelled');
+  }
+
+  // Get pending notifications (for debugging)
+  Future<List<PendingNotificationRequest>> getPendingNotifications() async {
+    final pending = await _notifications.pendingNotificationRequests();
+
+    debugPrint('📋 Pending notifications: ${pending.length}');
+    for (var notif in pending) {
+      debugPrint('  - ID: ${notif.id}, Title: ${notif.title}');
+    }
+
+    return pending;
+  }
+
+  // Get active notifications (Android only, API 23+)
+  Future<List<ActiveNotification>> getActiveNotifications() async {
+    final android = _notifications.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+
+    if (android != null) {
+      final active = await android.getActiveNotifications();
+      debugPrint('📱 Active notifications: ${active.length}');
+      return active;
+    }
+
+    return [];
   }
 }
