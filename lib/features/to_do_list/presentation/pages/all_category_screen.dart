@@ -565,7 +565,7 @@ class _AllCategoryScreenState extends State<AllCategoryScreen> {
 }
 
 class _IOSAddCategoryDialogContent extends StatefulWidget {
-  const _IOSAddCategoryDialogContent({super.key});
+  const _IOSAddCategoryDialogContent();
   @override
   State<_IOSAddCategoryDialogContent> createState() => _IOSAddCategoryDialogContentState();
 }

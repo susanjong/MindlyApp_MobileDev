@@ -67,7 +67,7 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
   Widget build(BuildContext context) {
     // Get safe area padding
     final mediaQuery = MediaQuery.of(context);
-    final screenHeight = mediaQuery.size.height;
+    //final screenHeight = mediaQuery.size.height;
     final bottomPadding = mediaQuery.padding.bottom;
 
     return Scaffold(
