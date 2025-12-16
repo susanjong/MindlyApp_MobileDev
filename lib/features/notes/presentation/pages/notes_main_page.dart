@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:notesapp/core/widgets/dialog/global_add_category_dialog.dart';
+import 'package:notesapp/core/widgets/dialog/input_category_dialog.dart';
 import '../../../../core/widgets/buttons/global_expandable_fab.dart';
 import '../../../../config/routes/routes.dart';
 import '../../../../core/widgets/dialog/alert_dialog.dart';
@@ -247,11 +247,18 @@ class _NotesMainPageState extends State<NotesMainPage> {
   void _showAddCategoryDialog() {
     showDialog(
       context: context,
-      builder: (ctx) => GlobalAddCategoryDialog(
-        onAdd: (name) async {
-          await _noteService.addCategory(CategoryModel(id: '', name: name));
+      builder: (ctx) => InputCategoryDialog(
+        title: "New Note Folder", // Judul spesifik agar user tau bedanya
+        onSave: (name) async {
+          // LOGIC KHUSUS NOTES
+          await _noteService.addCategory(
+            CategoryModel(id: '', name: name), // ID kosong karena auto-gen di service
+          );
+
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Category "$name" added')));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Folder "$name" added')),
+            );
           }
         },
       ),

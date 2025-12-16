@@ -1,28 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'alert_dialog.dart';
+import '../../../../core/widgets/dialog/alert_dialog.dart';
 
-class GlobalAddCategoryDialog extends StatefulWidget {
-  final Function(String name) onAdd;
+class InputCategoryDialog extends StatefulWidget {
+  // Callback ini yang akan membedakan logicnya nanti
+  final Future<void> Function(String name) onSave;
   final String title;
-  final String message;
-  final String confirmText;
-  final Color primaryColor;
+  final String hintText;
 
-  const GlobalAddCategoryDialog({
+  const InputCategoryDialog({
     super.key,
-    required this.onAdd,
+    required this.onSave,
     this.title = 'New Category',
-    this.message = 'Enter a name for this category.',
-    this.confirmText = 'Add',
-    this.primaryColor = const Color(0xFF5784EB), // Default Blue
+    this.hintText = 'Category Name',
   });
 
   @override
-  State<GlobalAddCategoryDialog> createState() => _GlobalAddCategoryDialogState();
+  State<InputCategoryDialog> createState() => _InputCategoryDialogState();
 }
 
-class _GlobalAddCategoryDialogState extends State<GlobalAddCategoryDialog> {
+class _InputCategoryDialogState extends State<InputCategoryDialog> {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   bool _isLoading = false;
@@ -30,13 +27,8 @@ class _GlobalAddCategoryDialogState extends State<GlobalAddCategoryDialog> {
   @override
   void initState() {
     super.initState();
-    // Delay focus untuk animasi keyboard yang smooth
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Future.delayed(const Duration(milliseconds: 100), () {
-        if (mounted) {
-          _focusNode.requestFocus();
-        }
-      });
+      if (mounted) _focusNode.requestFocus();
     });
   }
 
@@ -47,7 +39,7 @@ class _GlobalAddCategoryDialogState extends State<GlobalAddCategoryDialog> {
     super.dispose();
   }
 
-  Future<void> _handleAdd() async {
+  Future<void> _handleSubmit() async {
     final name = _controller.text.trim();
     if (name.isEmpty) return;
 
@@ -55,12 +47,17 @@ class _GlobalAddCategoryDialogState extends State<GlobalAddCategoryDialog> {
     setState(() => _isLoading = true);
 
     try {
-      await widget.onAdd(name);
+      // Panggil fungsi yang dilempar dari parent (Calendar atau Notes)
+      await widget.onSave(name);
+
       if (mounted) {
-        Navigator.pop(context);
+        Navigator.pop(context); // Tutup dialog setelah sukses
       }
     } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+        // Bisa tambah snackbar error disini
+      }
     }
   }
 
@@ -68,29 +65,27 @@ class _GlobalAddCategoryDialogState extends State<GlobalAddCategoryDialog> {
   Widget build(BuildContext context) {
     return IOSDialog(
       title: widget.title,
-      message: widget.message,
-      confirmText: widget.confirmText,
+      message: 'Enter a name for this category.',
+      confirmText: 'Add',
       cancelText: 'Cancel',
-      confirmTextColor: widget.primaryColor,
+      confirmTextColor: const Color(0xFF5784EB),
       isLoading: _isLoading,
-      autoDismiss: false,
-      onConfirm: _handleAdd,
-      onCancel: () {
-        _focusNode.unfocus();
-      },
+      autoDismiss: false, // Kita handle dismiss manual saat sukses
+      onConfirm: _handleSubmit,
+      onCancel: () => _focusNode.unfocus(),
       content: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
           color: Colors.transparent,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: widget.primaryColor),
+          border: Border.all(color: const Color(0xFF5784EB)),
         ),
         child: TextField(
           controller: _controller,
           focusNode: _focusNode,
           style: GoogleFonts.poppins(fontSize: 14, color: Colors.black),
           decoration: InputDecoration(
-            hintText: 'Category Name',
+            hintText: widget.hintText,
             hintStyle: GoogleFonts.poppins(
               color: const Color(0xFFC7C7CC),
               fontSize: 14,
@@ -100,7 +95,7 @@ class _GlobalAddCategoryDialogState extends State<GlobalAddCategoryDialog> {
             contentPadding: const EdgeInsets.symmetric(vertical: 10),
           ),
           textCapitalization: TextCapitalization.sentences,
-          onSubmitted: (_) => _handleAdd(),
+          onSubmitted: (_) => _handleSubmit(),
         ),
       ),
     );

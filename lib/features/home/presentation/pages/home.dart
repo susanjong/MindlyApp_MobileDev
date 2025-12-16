@@ -35,7 +35,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   final TodoService _todoService = TodoService();
   final NoteService _noteService = NoteService();
   final EventService _eventService = EventService();
-  final CategoryService _categoryService = CategoryService();
+  final EventCategoryService _categoryService = EventCategoryService();
 
   // Data and state management
   Map<String, Category> _categories = {};
