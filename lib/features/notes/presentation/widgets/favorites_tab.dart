@@ -9,7 +9,6 @@ import 'package:flutter_quill/flutter_quill.dart' as quill;
 class FavoritesTab extends StatefulWidget {
   final List<NoteModel> notes;
   final List<CategoryModel> favoriteCategories;
-  final ScrollController? scrollController;
   final Function(String) onNoteSelected;
   final Function(String) onCategoryToggleFavorite;
   final String searchQuery;
@@ -31,7 +30,6 @@ class FavoritesTab extends StatefulWidget {
     super.key,
     required this.notes,
     required this.favoriteCategories,
-    this.scrollController,
     required this.onNoteSelected,
     required this.onCategoryToggleFavorite,
     this.searchQuery = '',
@@ -85,6 +83,17 @@ class _FavoritesTabState extends State<FavoritesTab> {
     });
   }
 
+  int _getCrossAxisCount(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    return width < 600 ? 2 : (width < 900 ? 3 : 4);
+  }
+
+  double _getChildAspectRatio(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    // Portrait: 0.85, Landscape: 1.25
+    return width < 600 ? 0.85 : 1.25;
+  }
+
   @override
   Widget build(BuildContext context) {
     if (widget.notes.isEmpty && widget.favoriteCategories.isEmpty) {
@@ -92,7 +101,6 @@ class _FavoritesTabState extends State<FavoritesTab> {
     }
 
     return ListView(
-      controller: widget.scrollController,
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.only(bottom: 120),
       children: [
@@ -171,11 +179,11 @@ class _FavoritesTabState extends State<FavoritesTab> {
               child: GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: _getCrossAxisCount(context),
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
-                  childAspectRatio: 0.85,
+                  childAspectRatio: _getChildAspectRatio(context),
                 ),
                 itemCount: widget.notes.length,
                 itemBuilder: (context, index) {
@@ -296,6 +304,10 @@ class _FavoriteCategoryItem extends StatelessWidget {
     const Color selectedGrey = Color(0xFFBABABA);
     const Color checkCircleColor = Color(0xFF777777);
 
+    final width = MediaQuery.of(context).size.width;
+    final int crossAxisCount = width < 600 ? 2 : (width < 900 ? 3 : 4);
+    final double childAspectRatio = width < 600 ? 0.85 : 1.25;
+
     return Column(
       children: [
         // Header Kategori
@@ -373,11 +385,11 @@ class _FavoriteCategoryItem extends StatelessWidget {
               child: GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
-                  childAspectRatio: 0.85,
+                  childAspectRatio: childAspectRatio,
                 ),
                 itemCount: notes.length,
                 itemBuilder: (context, index) {

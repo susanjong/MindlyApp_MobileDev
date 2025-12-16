@@ -222,6 +222,9 @@ class _CategoryItemState extends State<_CategoryItem> {
     const Color selectedGrey = Color(0xFFBABABA);
     const Color checkCircleColor = Color(0xFF777777);
     const Color outlineGrey = Color(0xFF777777);
+    final width = MediaQuery.of(context).size.width;
+    final int crossAxisCount = width < 600 ? 2 : (width < 900 ? 3 : 4);
+    final double childAspectRatio = width < 600 ? 0.85 : 1.25;
 
     return Column(
       children: [
@@ -308,11 +311,11 @@ class _CategoryItemState extends State<_CategoryItem> {
               child: GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
-                  childAspectRatio: 0.85,
+                  childAspectRatio: childAspectRatio,
                 ),
                 itemCount: widget.notes.length,
                 itemBuilder: (context, index) {

@@ -11,7 +11,7 @@ class NotificationHelper {
 
   FlutterLocalNotificationsPlugin get plugin => _notifications;
 
-  // ✅ Initialize notification plugin (WITHOUT exact alarm permission)
+  // Initialize notification plugin (WITHOUT exact alarm permission)
   Future<void> initialize() async {
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosSettings = DarwinInitializationSettings(
@@ -34,7 +34,7 @@ class NotificationHelper {
       },
     );
 
-    // Request permissions (WITHOUT exact alarms)
+    // Request permissions
     await _requestPermissions();
 
     if (kDebugMode) {
@@ -45,17 +45,14 @@ class NotificationHelper {
   Future<void> _requestPermissions() async {
     final android = _notifications.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
 
-    // ✅ Request notification permission (basic)
+    // Request notification permission (basic)
     await android?.requestNotificationsPermission();
-
-    // ❌ HAPUS BARIS INI - Tidak perlu exact alarms permission
-    // await android?.requestExactAlarmsPermission();
 
     final ios = _notifications.resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
     await ios?.requestPermissions(alert: true, badge: true, sound: true);
   }
 
-  // ✅ Schedule notification (menggunakan inexact scheduling)
+  // Schedule notification (menggunakan inexact scheduling)
   Future<void> scheduleNotification({
     required int id,
     required String title,
@@ -86,7 +83,7 @@ class NotificationHelper {
       iOS: iosDetails,
     );
 
-    // ✅ Gunakan inexact scheduling (tidak butuh exact alarm permission)
+    // Gunakan inexact scheduling (tidak butuh exact alarm permission)
     await _notifications.zonedSchedule(
       id,
       title,
@@ -101,7 +98,7 @@ class NotificationHelper {
     }
   }
 
-  // ✅ Cancel notification
+  // Cancel notification
   Future<void> cancelNotification(int id) async {
     await _notifications.cancel(id);
     if (kDebugMode) {
@@ -109,7 +106,7 @@ class NotificationHelper {
     }
   }
 
-  // ✅ Cancel all notifications
+  // Cancel all notifications
   Future<void> cancelAllNotifications() async {
     await _notifications.cancelAll();
     if (kDebugMode) {
@@ -117,12 +114,12 @@ class NotificationHelper {
     }
   }
 
-  // ✅ Get pending notifications
+  // Get pending notifications
   Future<List<PendingNotificationRequest>> getPendingNotifications() async {
     return await _notifications.pendingNotificationRequests();
   }
 
-  // ✅ Show instant notification (for testing)
+  // Show instant notification (for testing)
   Future<void> showInstantNotification({
     required int id,
     required String title,

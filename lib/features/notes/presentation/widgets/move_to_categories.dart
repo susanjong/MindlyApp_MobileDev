@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:notesapp/core/widgets/dialog/global_add_category_dialog.dart';
 import '../../data/models/category_model.dart';
 import '../../data/services/note_service.dart'; // ✅ Pastikan import service
 import '../../../../core/widgets/dialog/alert_dialog.dart';
-import 'add_category_dialog.dart';
 import 'note_search_bar.dart';
 
 // ✅ Ganti parameter 'categories' (List) menjadi 'noteService'
@@ -78,7 +78,7 @@ class _MoveToCategoriesDialogState extends State<MoveToCategoriesDialog> {
   void _showAddCategoryDialog() {
     showDialog(
       context: context,
-      builder: (ctx) => AddCategoryDialog(
+      builder: (ctx) => GlobalAddCategoryDialog(
         onAdd: (name) async {
           await widget.onAddCategory(name);
           if (mounted) {

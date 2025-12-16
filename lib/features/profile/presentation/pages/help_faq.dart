@@ -39,7 +39,7 @@ class HelpFaqScreen extends StatelessWidget {
                 child: Row(
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.black54),
+                      icon: const Icon(Icons.arrow_back, color: Colors.black),
                       onPressed: () => Navigator.pushNamed(context, AppRoutes.profile),
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
@@ -50,7 +50,7 @@ class HelpFaqScreen extends StatelessWidget {
                       style: GoogleFonts.poppins(
                         color: Colors.black,
                         fontSize: titleFontSize,
-                        fontWeight: FontWeight.w400,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
@@ -77,74 +77,74 @@ class HelpFaqScreen extends StatelessWidget {
                     ),
 
                     FaqSection(
-                      title: 'account & security',
+                      title: 'ACCOUNT & SECURITY',
                       children: [
                         FaqItem(
-                          question: 'how to reset my password?',
-                          answer: 'to reset your password:\n'
-                              '1. tap the profile icon at the top, next to the notification bell icon \n'
-                              '2. select the "security" section \n'
-                              '3. choose "reset password" \n'
-                              '4. when the confirmation alert appears, tap "yes" to proceed \n'
-                              '5. enter your new password and save the changes',
+                          question: 'How to reset my password?',
+                          answer: 'To reset your password:\n'
+                              '1. Tap the profile icon at the top, next to the notification bell icon \n'
+                              '2. Select the "security" section \n'
+                              '3. Choose "reset password" \n'
+                              '4. When the confirmation alert appears, tap "yes" to proceed \n'
+                              '5. Enter your new password and save the changes',
                         ),
                         FaqItem(
-                          question: 'how to delete my account?',
-                          answer: 'to delete your account:\n'
-                              '1. tap the profile icon at the top, next to the notification bell icon \n'
-                              '2. select the "danger zone" section\n'
-                              '3. click "delete account"\n'
-                              '4. confirm your decision\n'
-                              '5. enter your new password and save the changes \n'
+                          question: 'How to delete my account?',
+                          answer: 'To delete your account:\n'
+                              '1. Tap the profile icon at the top, next to the notification bell icon \n'
+                              '2. Select the "danger zone" section\n'
+                              '3. Click "delete account"\n'
+                              '4. Confirm your decision\n'
+                              '5. Enter your new password and save the changes \n'
                               'note: this action cannot be undone and all your data will be permanently deleted.',
                         ),
                         FaqItem(
-                          question: "why can't i log in?",
-                          answer: 'common reasons for login issues:\n'
-                              '• incorrect email or password\n'
-                              '• account has been deactivated\n'
-                              '• network connection problems\n'
-                              '• app needs to be updated\n'
-                              'try resetting your password or contact support if the issue persists.',
+                          question: "Why can't i log in?",
+                          answer: 'Common reasons for login issues:\n'
+                              '• Incorrect email or password\n'
+                              '• Account has been deactivated\n'
+                              '• Network connection problems\n'
+                              '• App needs to be updated\n'
+                              'Try resetting your password or contact support if the issue persists.',
                         ),
                       ],
                     ),
 
                     FaqSection(
-                      title: 'app feature',
+                      title: 'APP FEATURE',
                       children: [
                         FaqItem(
-                          question: 'how to add new tasks?',
-                          answer: 'to add a new task:\n'
-                              '1. open the to-do list section\n'
-                              '2. click the "+" button at the bottom\n'
-                              '3. enter task title and description\n'
-                              '4. set due date and priority optional\n'
-                              '5. click "save" to create the task',
+                          question: 'How to add new tasks?',
+                          answer: 'To add a new task:\n'
+                              '1. Open the to-do list section\n'
+                              '2. Click the "+" button at the bottom\n'
+                              '3. Enter task title and description\n'
+                              '4. Set due date and priority optional\n'
+                              '5. Click "save" to create the task',
                         ),
                       ],
                     ),
 
                     FaqSection(
-                      title: 'technical support',
+                      title: 'TECHNICAL SUPPORT',
                       children: [
                         FaqItem(
-                          question: 'app is running slowly, what should i do?',
-                          answer: 'try these solutions:\n'
-                              '• close other apps running in the background\n'
-                              '• clear app cache in settings\n'
-                              '• check your internet connection\n'
-                              '• restart your device\n'
-                              '• update the app to the latest version\n'
-                              '• free up storage space on your device',
+                          question: 'App is running slowly, what should i do?',
+                          answer: 'Try these solutions:\n'
+                              '• Close other apps running in the background\n'
+                              '• Clear app cache in settings\n'
+                              '• Check your internet connection\n'
+                              '• Restart your device\n'
+                              '• Update the app to the latest version\n'
+                              '• Free up storage space on your device',
                         ),
                         FaqItem(
-                          question: 'how to contact customer service?',
-                          answer: 'you can reach our customer service through:\n'
-                              '• email: mindlyapp@gmail.com\n'
-                              '• phone: +1-800-123-4567 mon-fri, 9am-6pm\n'
-                              '• social media: @mindlyapp on twitter and facebook\n\n'
-                              'we typically respond within 24 hours.',
+                          question: 'How to contact customer service?',
+                          answer: 'You can reach our customer service through:\n'
+                              '• Email: mindlyapp@gmail.com\n'
+                              '• Phone: +1-800-123-4567 mon-fri, 9am-6pm\n'
+                              '• Social media: @mindlyapp on twitter and facebook\n\n'
+                              'We typically respond within 24 hours.',
                         ),
                       ],
                     ),

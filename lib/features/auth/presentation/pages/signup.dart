@@ -334,7 +334,7 @@ class SignUpScreenState extends State<SignUpScreen> {
                           child: Padding(
                             padding: const EdgeInsets.only(bottom: 50),
                             child: Text(
-                              'Create New Account',
+                              'Sign Up Account',
                               textAlign: TextAlign.center,
                               style: GoogleFonts.poppins(
                                 fontSize: 20,
@@ -588,7 +588,7 @@ class SignUpScreenState extends State<SignUpScreen> {
                                   // create Account button
                                   Center(
                                     child: PrimaryButton(
-                                      label: 'Create Account',
+                                      label: 'Sign Up Account',
                                       onPressed: _createAccountWithEmail,
                                       enabled: _agreeToTerms && !_isLoading,
                                       width: double.infinity,

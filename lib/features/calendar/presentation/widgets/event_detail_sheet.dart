@@ -3,10 +3,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:notesapp/core/widgets/dialog/alert_dialog.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:notesapp/features/calendar/data/model/event_model.dart';
 import '../../../../features/calendar/data/services/category_service.dart';
 import '../../../../features/calendar/data/services/event_service.dart';
+import '../../data/models/event_model.dart';
 import 'add_event.dart';
+import 'delete_repeated_event.dart';
 
 class EventDetailSheet extends StatelessWidget {
   final Event event;
@@ -280,27 +281,70 @@ class EventDetailSheet extends StatelessWidget {
       child: Icon(icon, size: 16, color: Colors.white),
     );
   }
-
   void _confirmDelete(BuildContext context) {
-    // Menggunakan IOSDialog yang sudah ada di project Anda
-    showIOSDialog(
-      context: context,
-      title: "Delete Event",
-      message: "Are you sure you want to\ndelete this event?",
-      cancelText: "Cancel",
-      confirmText: "Delete",
-      confirmTextColor: const Color(0xFFFF453A), // Warna Merah
-      onCancel: () {},
-      onConfirm: () async {
-        final userId = FirebaseAuth.instance.currentUser!.uid;
+    // Cek apakah event ini berulang
+    final isRecurring = event.repeat != 'Does not repeat';
+
+    if (isRecurring) {
+      // Tampilkan Dialog Khusus Recurring
+      showDeleteRepeatDialog(
+        context: context,
+        onConfirm: (DeleteMode mode) async {
+          await _handleDeleteProcess(context, mode);
+        },
+      );
+    } else {
+      // Tampilkan Dialog Hapus Biasa (Single Button Logic)
+      showIOSDialog(
+        context: context,
+        title: "Delete Event",
+        message: "Are you sure you want to\ndelete this event?",
+        confirmText: "Delete",
+        confirmTextColor: const Color(0xFFFF453A),
+        onConfirm: () async {
+          await _handleDeleteProcess(context, DeleteMode.single);
+        },
+      );
+    }
+  }
+
+  Future<void> _handleDeleteProcess(BuildContext context, DeleteMode mode) async {
+    final userId = FirebaseAuth.instance.currentUser!.uid;
+    final scaffoldMessenger = ScaffoldMessenger.of(context); // Simpan referensi messenger
+
+    try {
+      // Tutup dialog/sheet loading jika perlu, atau biarkan loading indicator di handle dialog
+
+      if (event.repeat != 'Does not repeat') {
+        // Panggil fungsi hapus berulang
+        await EventService().deleteRecurringEvent(
+          userId: userId,
+          event: event,
+          mode: mode,
+        );
+      } else {
+        // Panggil fungsi hapus biasa
         await EventService().deleteEvent(userId, event.id!);
-        if (context.mounted) {
-          Navigator.pop(context); // Tutup Detail Sheet
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Event deleted successfully')),
-          );
-        }
-      },
-    );
+      }
+
+      if (context.mounted) {
+        Navigator.pop(context); // Tutup Detail Sheet
+        scaffoldMessenger.showSnackBar(
+          const SnackBar(
+            content: Text('Event deleted successfully'),
+            backgroundColor: Color(0xFF4CAF50),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text('Error deleting event: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }

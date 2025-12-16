@@ -9,6 +9,10 @@ class Event {
   final String categoryId;
   final String userId;
   final DateTime createdAt;
+  final String location;
+  final String reminder;
+  final String repeat;
+  final String? parentEventId;
 
   Event({
     this.id,
@@ -19,9 +23,13 @@ class Event {
     required this.categoryId,
     required this.userId,
     required this.createdAt,
+    this.location = '',
+    this.reminder = '15 minutes before',
+    this.repeat = 'Does not repeat',
+    this.parentEventId,
   });
 
-  // Convert Event to Map for Firestore
+  // Convert to Map for Firestore
   Map<String, dynamic> toMap() {
     return {
       'title': title,
@@ -31,6 +39,10 @@ class Event {
       'categoryId': categoryId,
       'userId': userId,
       'createdAt': Timestamp.fromDate(createdAt),
+      'location': location,
+      'reminder': reminder,
+      'repeat': repeat,
+      if (parentEventId != null) 'parentEventId': parentEventId,
     };
   }
 
@@ -45,6 +57,10 @@ class Event {
       categoryId: map['categoryId'] ?? '',
       userId: map['userId'] ?? '',
       createdAt: (map['createdAt'] as Timestamp).toDate(),
+      location: map['location'] ?? '',
+      reminder: map['reminder'] ?? '15 minutes before',
+      repeat: map['repeat'] ?? 'Does not repeat',
+      parentEventId: map['parentEventId'],
     );
   }
 
@@ -57,6 +73,10 @@ class Event {
     String? categoryId,
     String? userId,
     DateTime? createdAt,
+    String? location,
+    String? reminder,
+    String? repeat,
+    String? parentEventId,
   }) {
     return Event(
       id: id ?? this.id,
@@ -67,6 +87,10 @@ class Event {
       categoryId: categoryId ?? this.categoryId,
       userId: userId ?? this.userId,
       createdAt: createdAt ?? this.createdAt,
+      location: location ?? this.location,
+      reminder: reminder ?? this.reminder,
+      repeat: repeat ?? this.repeat,
+      parentEventId: parentEventId ?? this.parentEventId,
     );
   }
 }
