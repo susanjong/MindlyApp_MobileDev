@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:notesapp/core/widgets/dialog/input_category_dialog.dart';
 import 'package:notesapp/features/calendar/data/models/event_model.dart';
+import 'package:notesapp/features/calendar/presentation/widgets/update_repeated_dialog.dart';
 import '../../../../core/widgets/dialog/alert_dialog.dart';
 import '../../../../core/widgets/others/snackbar.dart';
 import '../../../../features/calendar/data/services/category_service.dart';
@@ -138,7 +139,6 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
   }
 
   Future<void> _validateAndSave() async {
-    // Basic validation
     if (_eventNameController.text.isEmpty || _selectedDateObj == null ||
         _startTimeObj == null || _endTimeObj == null || _selectedCategoryId == null) {
       _showErrorDialog('Incomplete Fields', 'Please fill in all required fields.');
@@ -158,39 +158,74 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
       _showErrorDialog('Invalid Time', 'End time must be after start time.');
       return;
     }
+    final newEventData = Event(
+      id: _isEditMode ? widget.eventToEdit!.id : null,
+      title: _eventNameController.text,
+      description: _noteController.text,
+      startTime: startDateTime,
+      endTime: endDateTime,
+      categoryId: _selectedCategoryId!,
+      userId: _userId,
+      createdAt: _isEditMode ? widget.eventToEdit!.createdAt : DateTime.now(),
+      location: _locationController.text,
+      reminder: _reminder,
+      repeat: _repeat,
+      parentEventId: _isEditMode ? widget.eventToEdit!.parentEventId : null,
+    );
 
     setState(() => _isLoading = true);
 
     try {
-      final eventToSave = Event(
-        id: _isEditMode ? widget.eventToEdit!.id : null,
-        title: _eventNameController.text,
-        description: _noteController.text,
-        startTime: startDateTime,
-        endTime: endDateTime,
-        categoryId: _selectedCategoryId!,
-        userId: _userId,
-        createdAt: _isEditMode ? widget.eventToEdit!.createdAt : DateTime.now(),
-        location: _locationController.text,
-        reminder: _reminder,
-        repeat: _repeat,
-        parentEventId: _isEditMode ? widget.eventToEdit!.parentEventId : null,
-      );
-
       if (_isEditMode) {
-        await _eventService.updateEvent(_userId, eventToSave);
+        final originalEvent = widget.eventToEdit!;
+        final isRecurring = originalEvent.repeat != 'Does not repeat' || originalEvent.parentEventId != null;
+
+        if (isRecurring) {
+          FocusScope.of(context).unfocus();
+          setState(() => _isLoading = false);
+
+          showUpdateRepeatDialog(
+            context: context,
+            onConfirm: (UpdateMode mode) async {
+              // Mulai loading lagi
+              setState(() => _isLoading = true);
+              try {
+                await _eventService.updateRecurringEvent(
+                  userId: _userId,
+                  originalEvent: originalEvent,
+                  newEvent: newEventData,
+                  mode: mode,
+                );
+                if (mounted) {
+                  Navigator.pop(context); // Tutup BottomSheet
+                  Snackbar.success(context, 'Recurring event updated');
+                }
+              } catch (e) {
+                if (mounted) {
+                  setState(() => _isLoading = false);
+                  Snackbar.error(context, 'Failed: $e');
+                }
+              }
+            },
+          );
+          return;
+        } else {
+          await _eventService.updateEvent(_userId, newEventData);
+          if (mounted) Snackbar.success(context, 'Event updated');
+        }
       } else {
-        await _eventService.addEvent(eventToSave);
+        // Create New Event
+        await _eventService.addEvent(newEventData);
+        if (mounted) Snackbar.success(context, 'Event created');
       }
 
-      if (mounted) {
+      if (mounted && _isLoading) { // Cek _isLoading agar tidak double pop jika masuk if recurring
         Navigator.pop(context);
-        Snackbar.success(context, _isEditMode ? 'Event updated' : 'Event created');
       }
     } catch (e) {
       if (mounted) Snackbar.error(context, 'Failed to save: $e');
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted && _isLoading) setState(() => _isLoading = false);
     }
   }
 

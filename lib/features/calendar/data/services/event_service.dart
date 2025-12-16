@@ -6,6 +6,7 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter/foundation.dart';
 import 'package:notesapp/features/home/data/services/notification_helper.dart';
 import '../../presentation/widgets/delete_repeated_event.dart';
+import '../../presentation/widgets/update_repeated_dialog.dart';
 
 class EventService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -243,6 +244,95 @@ class EventService {
       );
     } catch (e) {
       throw Exception('Failed to update event: $e');
+    }
+  }
+
+  Future<void> updateRecurringEvent({
+    required String userId,
+    required Event originalEvent,
+    required Event newEvent,
+    required UpdateMode mode,
+  }) async {
+    final batch = _firestore.batch();
+    final eventsRef = _getEventsCollection(userId);
+    final String seriesId = originalEvent.parentEventId ?? originalEvent.id!;
+
+    try {
+      if (mode == UpdateMode.single) {
+        final updatedSingleEvent = newEvent.copyWith(
+          id: originalEvent.id,
+          parentEventId: null,
+          repeat: 'Does not repeat',
+        );
+
+        batch.update(eventsRef.doc(originalEvent.id), updatedSingleEvent.toMap());
+
+        batch.update(eventsRef.doc(originalEvent.id), {'parentEventId': FieldValue.delete()});
+      }
+
+      else if (mode == UpdateMode.following) {
+        final futureEventsQuery = await eventsRef
+            .where('parentEventId', isEqualTo: seriesId)
+            .where('startTime', isGreaterThan: Timestamp.fromDate(originalEvent.startTime))
+            .get();
+
+        for (var doc in futureEventsQuery.docs) {
+          batch.delete(doc.reference);
+        }
+
+        final newParentEvent = newEvent.copyWith(
+          id: originalEvent.id,
+          parentEventId: null,
+        );
+
+        batch.set(eventsRef.doc(originalEvent.id), newParentEvent.toMap());
+        if (originalEvent.parentEventId != null) {
+          batch.update(eventsRef.doc(originalEvent.id), {'parentEventId': FieldValue.delete()});
+        }
+
+        await batch.commit();
+
+        if (newParentEvent.repeat != 'Does not repeat') {
+          await _createRepeatInstances(newParentEvent, newParentEvent.id!);
+        }
+        return;
+      }
+
+      else if (mode == UpdateMode.all) {
+        batch.delete(eventsRef.doc(seriesId));
+
+        final allChildrenQuery = await eventsRef
+            .where('parentEventId', isEqualTo: seriesId)
+            .get();
+
+        for (var doc in allChildrenQuery.docs) {
+          batch.delete(doc.reference);
+        }
+
+        await batch.commit();
+
+        final freshEvent = newEvent.copyWith(
+            id: null,
+            parentEventId: null
+        );
+
+        await addEvent(freshEvent);
+
+        return;
+      }
+
+      await batch.commit();
+
+      await _notificationService.createNotification(
+        title: '📝 Event Series Updated',
+        description: 'Recurring event "${newEvent.title}" updated',
+        type: 'event_updated',
+        priority: 'low',
+        relatedEventId: originalEvent.id,
+      );
+
+    } catch (e) {
+      throw Exception('Failed to update recurring event: $e');
     }
   }
 
