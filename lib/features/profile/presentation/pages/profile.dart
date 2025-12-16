@@ -89,13 +89,15 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
             final email = userData['email'] ?? AuthService.getCurrentUserEmail() ?? 'user@example.com';
             final bio = userData['bio'] ?? 'Update your bio here.';
 
-            // set priority photoURL dari Firestore (support Base64 and removal)
+            // ✅ Priority photoURL dari Firestore (support Base64 and removal)
             String imageUrl;
             final photoURL = userData['photoURL'];
             if (photoURL != null && photoURL.toString().isNotEmpty) {
               imageUrl = photoURL;
+              debugPrint('✅ Photo loaded from Firestore: ${photoURL.toString().substring(0, 50)}...');
             } else {
               imageUrl = 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(displayName)}&size=150&background=4CAF50&color=fff';
+              debugPrint('⚠️ No photo in Firestore, using default avatar');
             }
 
             _userProfile = UserProfile(
@@ -189,7 +191,6 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
         onPressed: () {
           Navigator.pushReplacementNamed(context, '/home');
         },
-
       ),
       title: Text(
         'Account Profile',
@@ -322,7 +323,7 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
     );
   }
 
-  // Save navigator before async operation
+  // ✅ Navigate to edit profile and refresh data when back
   void _navigateToEditProfile() async {
     final navigator = Navigator.of(context);
 
@@ -332,13 +333,13 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
       ),
     );
 
-    // refresh data after back again from edit
+    // ✅ Refresh data after back from edit
     if (result == true && mounted) {
+      debugPrint('🔄 Refreshing profile data after edit...');
       await _loadUserDataFromFirestore();
     }
   }
 
-  // Async gap in reset dialog
   void _showResetDialog() {
     if (!mounted) return;
     final dialogContext = context;
@@ -364,7 +365,6 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
     );
   }
 
-  // Async gap in logout dialog
   void _showLogoutDialog() {
     if (!mounted) return;
     final dialogContext = context;
@@ -408,7 +408,6 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
     );
   }
 
-  // Async gap in delete account dialog
   void _showDeleteAccountDialog() {
     if (!mounted) return;
     final dialogContext = context;
@@ -439,7 +438,6 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
     );
   }
 
-  // Complete rewrite of success dialog to avoid async gaps
   void _showSuccessAndNavigate({
     required String title,
     required String message,
@@ -455,7 +453,6 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
       context: parentContext,
       barrierDismissible: false,
       builder: (BuildContext dialogContext) {
-        // Save dialog navigator before async operation
         final dialogNavigator = Navigator.of(dialogContext);
 
         Future.delayed(const Duration(seconds: 2), () {
@@ -547,7 +544,7 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
   }
 }
 
-// profileCard with async gap fix
+// ✅ ProfileCard dengan Real-time Sync
 class _ProfileCard extends StatelessWidget {
   final UserProfile profile;
   final bool isLoading;
@@ -579,7 +576,7 @@ class _ProfileCard extends StatelessWidget {
                 Positioned.fill(
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.3),
+                      color: Colors.black.withOpacity(0.3),
                       shape: BoxShape.circle,
                     ),
                     child: const Center(
@@ -651,7 +648,6 @@ class _ProfileCard extends StatelessWidget {
             icon: const Icon(Icons.edit_outlined),
             splashRadius: 20,
             onPressed: () async {
-              // Save navigator before async operation
               final navigator = Navigator.of(context);
 
               final result = await navigator.push(
@@ -660,8 +656,9 @@ class _ProfileCard extends StatelessWidget {
                 ),
               );
 
-              // Check mounted before using context
+              // ✅ Refresh after edit
               if (result == true && context.mounted) {
+                debugPrint('🔄 Refreshing profile after edit from card...');
                 onRefresh();
               }
             },
@@ -671,7 +668,7 @@ class _ProfileCard extends StatelessWidget {
     );
   }
 
-  // build profile image with Base64 support
+  // ✅ Build profile image with Base64 support
   Widget _buildProfileImage() {
     // Check if it's Base64 data
     if (profile.imageUrl.startsWith('data:image')) {
@@ -688,23 +685,25 @@ class _ProfileCard extends StatelessWidget {
               width: 64,
               height: 64,
               errorBuilder: (context, error, stackTrace) {
+                debugPrint('❌ Error displaying base64 image: $error');
                 return _buildDefaultAvatar();
               },
             ),
           ),
         );
       } catch (e) {
-        debugPrint('Error decoding base64 image: $e');
+        debugPrint('❌ Error decoding base64 image: $e');
         return _buildDefaultAvatar();
       }
     }
 
+    // Network image
     return CircleAvatar(
       radius: 32,
       backgroundImage: NetworkImage(profile.imageUrl),
       backgroundColor: const Color(0xFFE0E0E0),
       onBackgroundImageError: (exception, stackTrace) {
-        debugPrint('Error loading profile image: $exception');
+        debugPrint('❌ Error loading network image: $exception');
       },
     );
   }

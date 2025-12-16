@@ -2,9 +2,10 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-//import 'package:image_picker/image_picker.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../../core/widgets/buttons/primary_button.dart';
+import 'package:notesapp/core/utils/permission_helper.dart';
 
 class EditAccountInformationScreen extends StatefulWidget {
   const EditAccountInformationScreen({super.key});
@@ -17,7 +18,7 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
   final _formKey = GlobalKey<FormState>();
   final _fullNameController = TextEditingController();
   final _bioController = TextEditingController();
-  // final ImagePicker _picker = ImagePicker();
+  final ImagePicker _picker = ImagePicker();
 
   bool _isLoading = false;
   bool _isLoadingData = true;
@@ -44,8 +45,12 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
           _userEmail = userData['email'] ?? '';
           _isLoadingData = false;
         });
+
+        debugPrint('📥 User data loaded:');
+        debugPrint('  - Name: ${_fullNameController.text}');
+        debugPrint('  - Bio: ${_bioController.text}');
+        debugPrint('  - Photo: ${_currentImageUrl != null ? "Has photo" : "No photo"}');
       } else {
-        // Fallback to Firebase Auth
         final displayName = AuthService.getUserDisplayName();
         final email = AuthService.getCurrentUserEmail();
         final photoURL = AuthService.getUserPhotoURL();
@@ -62,36 +67,80 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
       setState(() {
         _isLoadingData = false;
       });
-      debugPrint('Error loading user data: $e');
+      debugPrint('❌ Error loading user data: $e');
     }
   }
 
-  // Future<void> _pickImage(ImageSource source) async {
-  //   try {
-  //     final XFile? pickedFile = await _picker.pickImage(
-  //       source: source,
-  //       maxWidth: 400,
-  //       maxHeight: 400,
-  //       imageQuality: 70,
-  //     );
-  //
-  //     if (pickedFile != null) {
-  //       setState(() {
-  //         _imageFile = File(pickedFile.path);
-  //         _photoChanged = true;
-  //       });
-  //     }
-  //   } catch (e) {
-  //     if (mounted) {
-  //       ScaffoldMessenger.of(context).showSnackBar(
-  //         SnackBar(
-  //           content: Text('Failed to pick image: ${e.toString()}'),
-  //           backgroundColor: Colors.red,
-  //         ),
-  //       );
-  //     }
-  //   }
-  //}
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      bool hasPermission = false;
+
+      if (source == ImageSource.camera) {
+        hasPermission = await PermissionHelper.requestCameraPermission(context);
+      } else {
+        hasPermission = await PermissionHelper.requestGalleryPermission(context);
+      }
+
+      if (!hasPermission) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Permission denied. Please enable it in settings.',
+                style: GoogleFonts.poppins(),
+              ),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
+      final XFile? pickedFile = await _picker.pickImage(
+        source: source,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 70,
+      );
+
+      if (pickedFile != null) {
+        setState(() {
+          _imageFile = File(pickedFile.path);
+          _photoChanged = true;
+        });
+
+        debugPrint('✅ Image selected: ${pickedFile.path}');
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                source == ImageSource.camera
+                    ? 'Photo captured successfully!'
+                    : 'Image selected successfully!',
+                style: GoogleFonts.poppins(),
+              ),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Failed to pick image: ${e.toString()}',
+              style: GoogleFonts.poppins(),
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      debugPrint('❌ Error picking image: $e');
+    }
+  }
 
   void _showImageSourceDialog() {
     showModalBottomSheet(
@@ -133,7 +182,7 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
                   leading: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF5784EB).withValues(alpha:0.1),
+                      color: const Color(0xFF5784EB).withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
@@ -150,14 +199,14 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
                   ),
                   onTap: () {
                     Navigator.pop(context);
-                    //_pickImage(ImageSource.gallery);
+                    _pickImage(ImageSource.gallery);
                   },
                 ),
                 ListTile(
                   leading: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF4CAF50).withValues(alpha:0.1),
+                      color: const Color(0xFF4CAF50).withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
@@ -174,7 +223,7 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
                   ),
                   onTap: () {
                     Navigator.pop(context);
-                    //_pickImage(ImageSource.camera);
+                    _pickImage(ImageSource.camera);
                   },
                 ),
                 if (_currentImageUrl != null || _imageFile != null)
@@ -182,7 +231,7 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
                     leading: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.red.withValues(alpha:0.1),
+                        color: Colors.red.withOpacity(0.1),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
@@ -205,6 +254,19 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
                         _currentImageUrl = null;
                         _photoChanged = true;
                       });
+
+                      debugPrint('🗑️ Photo removed');
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Photo removed. Click Save to apply changes.',
+                            style: GoogleFonts.poppins(),
+                          ),
+                          backgroundColor: Colors.orange,
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
                     },
                   ),
                 const SizedBox(height: 16),
@@ -216,34 +278,32 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
     );
   }
 
-  /// Convert image to Base64 string with compression
-  /// Uses ImagePicker's built-in compression (maxWidth, maxHeight, imageQuality)
+  /// ✅ Convert image to Base64 string with compression
   Future<String?> _convertImageToBase64() async {
     if (_imageFile == null) return null;
 
     try {
-      // Read compressed image bytes (already compressed by ImagePicker)
+      debugPrint('📸 Converting image to Base64...');
       final bytes = await _imageFile!.readAsBytes();
-
-      // Convert to base64
       final base64String = base64Encode(bytes);
       final fullBase64 = 'data:image/jpeg;base64,$base64String';
 
-      // Check size (Firestore has 1MB limit per field)
       final sizeInKB = (fullBase64.length * 0.75) / 1024;
-      debugPrint('Image size: ${sizeInKB.toStringAsFixed(2)} KB');
+      debugPrint('📏 Image size: ${sizeInKB.toStringAsFixed(2)} KB');
 
-      if (sizeInKB > 1000) {
-        throw Exception('Image too large. Please choose a smaller image or take a new photo.');
+      if (sizeInKB > 900) {
+        throw Exception('Image too large (${sizeInKB.toStringAsFixed(0)} KB). Please choose a smaller image.');
       }
 
+      debugPrint('✅ Image converted successfully');
       return fullBase64;
     } catch (e) {
-      debugPrint('Error converting image to base64: $e');
+      debugPrint('❌ Error converting image to base64: $e');
       rethrow;
     }
   }
 
+  /// ✅ Save profile with proper Firebase sync
   Future<void> _saveProfile() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -267,59 +327,76 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
     });
 
     try {
-      String? photoData = _currentImageUrl;
+      debugPrint('💾 Starting profile save...');
+      debugPrint('  - Name: ${_fullNameController.text.trim()}');
+      debugPrint('  - Bio: ${_bioController.text.trim()}');
+      debugPrint('  - Photo changed: $_photoChanged');
 
-      // Convert new image to Base64 if user selected one
-      if (_photoChanged && _imageFile != null) {
-        // Show processing message
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+      String? photoData;
+
+      // ✅ Handle photo changes
+      if (_photoChanged) {
+        if (_imageFile != null) {
+          // User selected a new image
+          debugPrint('🖼️ Processing new image...');
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  Text(
-                    'Processing image...',
-                    style: GoogleFonts.poppins(),
-                  ),
-                ],
+                    const SizedBox(width: 16),
+                    Text(
+                      'Processing image...',
+                      style: GoogleFonts.poppins(),
+                    ),
+                  ],
+                ),
+                duration: const Duration(seconds: 30),
+                backgroundColor: const Color(0xFF5784EB),
               ),
-              duration: const Duration(seconds: 30),
-              backgroundColor: const Color(0xFF5784EB),
-            ),
-          );
-        }
+            );
+          }
 
-        photoData = await _convertImageToBase64();
-        if (photoData == null) {
-          throw Exception('Failed to process image');
+          photoData = await _convertImageToBase64();
+          if (photoData == null) {
+            throw Exception('Failed to process image');
+          }
+          debugPrint('✅ New image processed');
+        } else {
+          // User removed photo - set to empty string untuk dihapus
+          photoData = '';
+          debugPrint('🗑️ Photo will be removed');
         }
-      } else if (_photoChanged && _imageFile == null) {
-        // User removed photo
-        photoData = null;
+      } else {
+        // Photo not changed - keep existing
+        photoData = _currentImageUrl;
+        debugPrint('📌 Photo not changed, keeping existing');
       }
 
-      // Update profile in Firebase Auth and Firestore
+      // ✅ Update profile in Firebase
+      debugPrint('📤 Updating Firebase...');
       await AuthService.updateUserProfile(
         displayName: _fullNameController.text.trim(),
         bio: _bioController.text.trim(),
-        photoURL: photoData,
+        photoURL: photoData?.isEmpty == true ? '' : photoData,
       );
+
+      debugPrint('✅ Firebase updated successfully');
 
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
 
-        // Clear any previous snackbars
         ScaffoldMessenger.of(context).clearSnackBars();
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -333,24 +410,27 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
           ),
         );
 
-        // Wait a bit then return
         await Future.delayed(const Duration(milliseconds: 500));
-        if (!mounted) return;
-        Navigator.pop(context, true);
 
+        if (!mounted) return;
+
+        // ✅ Return true to trigger refresh in profile page
+        Navigator.pop(context, true);
+        debugPrint('🔙 Returned to profile page with refresh trigger');
       }
     } catch (e) {
+      debugPrint('❌ Error saving profile: $e');
+
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
 
-        // clear any previous snackbars
         ScaffoldMessenger.of(context).clearSnackBars();
 
         String errorMessage = 'Failed to update profile: ${e.toString()}';
         if (e.toString().contains('too large')) {
-          errorMessage = 'Image is too large. Please choose a smaller image.';
+          errorMessage = 'Image is too large. Please choose a smaller image or reduce quality.';
         }
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -485,8 +565,7 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
                     decoration: ShapeDecoration(
                       color: const Color(0xFFFFFCFC),
                       shape: RoundedRectangleBorder(
-                        side: const BorderSide(
-                            width: 1, color: Colors.black),
+                        side: const BorderSide(width: 1, color: Colors.black),
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
@@ -533,8 +612,7 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
                     decoration: ShapeDecoration(
                       color: const Color(0xFFFFFCFC),
                       shape: RoundedRectangleBorder(
-                        side: const BorderSide(
-                            width: 1, color: Colors.black),
+                        side: const BorderSide(width: 1, color: Colors.black),
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
@@ -602,10 +680,11 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
     );
   }
 
-  // Build profile image widget
+  /// ✅ Build profile image with proper preview
   Widget _buildProfileImage() {
     // Priority: Local file > Current Base64/URL > Default avatar
     if (_imageFile != null) {
+      debugPrint('🖼️ Displaying local file');
       return Image.file(
         _imageFile!,
         fit: BoxFit.cover,
@@ -613,8 +692,8 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
     }
 
     if (_currentImageUrl != null && _currentImageUrl!.isNotEmpty) {
-      // Check if it's Base64 data
       if (_currentImageUrl!.startsWith('data:image')) {
+        debugPrint('🖼️ Displaying Base64 image');
         try {
           final base64String = _currentImageUrl!.split(',')[1];
           final bytes = base64Decode(base64String);
@@ -622,16 +701,17 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
             bytes,
             fit: BoxFit.cover,
             errorBuilder: (context, error, stackTrace) {
+              debugPrint('❌ Error displaying Base64: $error');
               return _buildDefaultAvatar();
             },
           );
         } catch (e) {
-          debugPrint('Error decoding base64 image: $e');
+          debugPrint('❌ Error decoding base64 image: $e');
           return _buildDefaultAvatar();
         }
       }
 
-      // If it's a regular URL
+      debugPrint('🖼️ Displaying network image');
       return Image.network(
         _currentImageUrl!,
         fit: BoxFit.cover,
@@ -647,11 +727,13 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
           );
         },
         errorBuilder: (context, error, stackTrace) {
+          debugPrint('❌ Error loading network image: $error');
           return _buildDefaultAvatar();
         },
       );
     }
 
+    debugPrint('🖼️ Displaying default avatar');
     return _buildDefaultAvatar();
   }
 
