@@ -90,7 +90,8 @@ class _FavoritesTabState extends State<FavoritesTab> {
 
   double _getChildAspectRatio(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
-    return width < 600 ? 0.85 : 1.0;
+    // Portrait: 0.85, Landscape: 1.25
+    return width < 600 ? 0.85 : 1.25;
   }
 
   @override
@@ -303,6 +304,10 @@ class _FavoriteCategoryItem extends StatelessWidget {
     const Color selectedGrey = Color(0xFFBABABA);
     const Color checkCircleColor = Color(0xFF777777);
 
+    final width = MediaQuery.of(context).size.width;
+    final int crossAxisCount = width < 600 ? 2 : (width < 900 ? 3 : 4);
+    final double childAspectRatio = width < 600 ? 0.85 : 1.25;
+
     return Column(
       children: [
         // Header Kategori
@@ -380,11 +385,11 @@ class _FavoriteCategoryItem extends StatelessWidget {
               child: GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
-                  childAspectRatio: 0.85,
+                  childAspectRatio: childAspectRatio,
                 ),
                 itemCount: notes.length,
                 itemBuilder: (context, index) {

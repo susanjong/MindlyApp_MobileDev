@@ -6,6 +6,7 @@ import 'note_card.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 
 class AllNotesTab extends StatelessWidget {
+  // ... (parameter tetap sama)
   final List<NoteModel> notes;
   final bool isSelectionMode;
   final Set<String> selectedNoteIds;
@@ -25,7 +26,6 @@ class AllNotesTab extends StatelessWidget {
     this.searchQuery = '',
   });
 
-  // Fungsi helper ini sudah benar
   String _getPlainText(String jsonContent) {
     try {
       final doc = quill.Document.fromJson(jsonDecode(jsonContent));
@@ -41,8 +41,11 @@ class AllNotesTab extends StatelessWidget {
       return _buildEmptyState();
     }
 
-    final width = MediaQuery.of(context).size.width;
+    // ✅ FIX: Responsive Logic
+    final mediaQuery = MediaQuery.of(context);
+    final double width = mediaQuery.size.width;
     final int crossAxisCount = width < 600 ? 2 : (width < 900 ? 3 : 4);
+    final double childAspectRatio = width < 600 ? 0.85 : 1.25;
 
     return GridView.builder(
       physics: const BouncingScrollPhysics(),
@@ -51,7 +54,7 @@ class AllNotesTab extends StatelessWidget {
         crossAxisCount: crossAxisCount,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
-        childAspectRatio: width < 600 ? 0.85 : 1.0,
+        childAspectRatio: childAspectRatio, 
       ),
       itemCount: notes.length,
       itemBuilder: (context, index) {
@@ -74,36 +77,16 @@ class AllNotesTab extends StatelessWidget {
   }
 
   Widget _buildEmptyState() {
+    // ... (kode tetap sama)
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.note_add_outlined,
-            size: 80,
-            color: Colors.grey.shade300,
-          ),
+          Icon(Icons.note_add_outlined, size: 80, color: Colors.grey.shade300),
           const SizedBox(height: 16),
-          Text(
-            searchQuery.isEmpty
-                ? 'No notes yet'
-                : 'No notes found',
-            style: GoogleFonts.poppins(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey.shade600,
-            ),
-          ),
+          Text(searchQuery.isEmpty ? 'No notes yet' : 'No notes found', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.grey.shade600)),
           const SizedBox(height: 8),
-          Text(
-            searchQuery.isEmpty
-                ? 'Tap + to create your first note'
-                : 'Try a different search',
-            style: GoogleFonts.poppins(
-              fontSize: 14,
-              color: Colors.grey.shade500,
-            ),
-          ),
+          Text(searchQuery.isEmpty ? 'Tap + to create your first note' : 'Try a different search', style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey.shade500)),
         ],
       ),
     );

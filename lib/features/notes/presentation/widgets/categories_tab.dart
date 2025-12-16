@@ -224,8 +224,7 @@ class _CategoryItemState extends State<_CategoryItem> {
     const Color outlineGrey = Color(0xFF777777);
     final width = MediaQuery.of(context).size.width;
     final int crossAxisCount = width < 600 ? 2 : (width < 900 ? 3 : 4);
-    final double childAspectRatio = width < 600 ? 0.85 : 1.0;
-
+    final double childAspectRatio = width < 600 ? 0.85 : 1.25;
 
     return Column(
       children: [

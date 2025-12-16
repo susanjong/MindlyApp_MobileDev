@@ -254,6 +254,15 @@ class _NotesMainPageState extends State<NotesMainPage> {
     );
   }
 
+  bool _onScrollNotification(UserScrollNotification notification) {
+    if (notification.direction == ScrollDirection.reverse) {
+      if (_isNavBarVisible) setState(() => _isNavBarVisible = false);
+    } else if (notification.direction == ScrollDirection.forward) {
+      if (!_isNavBarVisible) setState(() => _isNavBarVisible = true);
+    }
+    return true;
+  }
+
   @override
   Widget build(BuildContext context) {
     // ✅ IMPLEMENTASI POPSCOPE YANG DITINGKATKAN
@@ -313,33 +322,46 @@ class _NotesMainPageState extends State<NotesMainPage> {
 
               return Scaffold(
                 backgroundColor: Colors.white,
-                // ✅ FIX: Allow resizing to show keyboard, but handle overflow in body with ScrollView/Expanded
-                resizeToAvoidBottomInset: false,
+                resizeToAvoidBottomInset: false, // Mencegah UI terdorong otomatis, keyboard menutup konten
                 appBar: CustomTopAppBar(
                   isSelectionMode: _isSelectionMode || _isCategorySelectionMode,
                   onSelectAllTap: _selectAll,
                   onProfileTap: () => Navigator.pushNamed(context, AppRoutes.profile),
                   onNotificationTap: () => Navigator.pushNamed(context, AppRoutes.notification),
                 ),
-                // ✅ FIX: Wrap body in SafeArea to avoid bottom notch issues
-                body: SafeArea(
-                  bottom: false, // Bottom handled by NavBar
-                  child: Column(
-                    children: [
-                      NoteSearchBar(
-                        controller: _searchController,
-                        onClear: () => setState(() => _searchController.clear()),
-                      ),
-                      NoteTabBar(
-                        selectedIndex: _selectedTabIndex,
-                        onTabSelected: (index) {
-                          if (_isSelectionMode) _exitNoteSelectionMode();
-                          if (_isCategorySelectionMode) _exitCategorySelectionMode();
-                          setState(() => _selectedTabIndex = index);
+                // ✅ FIX: GestureDetector untuk menutup keyboard saat tap area kosong
+                body: GestureDetector(
+                  onTap: () => FocusScope.of(context).unfocus(),
+                  child: SafeArea(
+                    bottom: false,
+                    // ✅ FIX: Gunakan NestedScrollView agar SearchBar ikut ter-scroll
+                    child: NotificationListener<UserScrollNotification>(
+                      onNotification: _onScrollNotification,
+                      child: NestedScrollView(
+                        headerSliverBuilder: (context, innerBoxIsScrolled) {
+                          return [
+                            SliverToBoxAdapter(
+                              child: Column(
+                                children: [
+                                  NoteSearchBar(
+                                    controller: _searchController,
+                                    onClear: () => setState(() => _searchController.clear()),
+                                  ),
+                                  NoteTabBar(
+                                    selectedIndex: _selectedTabIndex,
+                                    onTabSelected: (index) {
+                                      if (_isSelectionMode) _exitNoteSelectionMode();
+                                      if (_isCategorySelectionMode) _exitCategorySelectionMode();
+                                      setState(() => _selectedTabIndex = index);
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ];
                         },
-                      ),
-                      Expanded(
-                        child: IndexedStack(
+                        // Body berisi Tab Content
+                        body: IndexedStack(
                           index: _selectedTabIndex,
                           children: [
                             AllNotesTab(
@@ -355,7 +377,6 @@ class _NotesMainPageState extends State<NotesMainPage> {
                               searchQuery: _searchQuery,
                             ),
                             CategoriesTab(
-                              // key: _categoriesTabKey, // Opsional
                               noteService: _noteService,
                               categories: allCategories,
                               allNotes: allNotes,
@@ -394,23 +415,15 @@ class _NotesMainPageState extends State<NotesMainPage> {
                           ],
                         ),
                       ),
-                    ],
+                    ),
                   ),
                 ),
                 floatingActionButton: (_isSelectionMode || _isCategorySelectionMode)
                     ? null
                     : GlobalExpandableFab(
                   actions: [
-                    FabActionModel(
-                      icon: Icons.edit_outlined,
-                      tooltip: 'Add Note',
-                      onTap: _handleAddNote,
-                    ),
-                    FabActionModel(
-                      icon: Icons.folder,
-                      tooltip: 'Add Category',
-                      onTap: _showAddCategoryDialog,
-                    ),
+                    FabActionModel(icon: Icons.edit_outlined, tooltip: 'Add Note', onTap: _handleAddNote),
+                    FabActionModel(icon: Icons.folder, tooltip: 'Add Category', onTap: _showAddCategoryDialog),
                   ],
                 ),
                 floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
