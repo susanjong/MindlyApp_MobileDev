@@ -251,7 +251,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                 alignment: Alignment.centerLeft,
                                 child: IconButton(
                                   onPressed: _isLoading ? null : () {
-                                    Navigator.pushReplacementNamed(context, AppRoutes.introApp);
+                                    Navigator.pushReplacementNamed(context, AppRoutes.signIn);
                                   },
                                   icon: const Icon(
                                     Icons.arrow_back,
@@ -477,7 +477,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
             if (_isLoading)
               Positioned.fill(
                 child: Container(
-                  color: Colors.black.withOpacity(0.4),
+                  color: Colors.black.withValues(alpha: 0.4),
                   child: Center(
                     child: Container(
                       padding: const EdgeInsets.all(24),
@@ -488,7 +488,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
+                            color: Colors.black.withValues(alpha: 0.2),
                             blurRadius: 10,
                             spreadRadius: 2,
                           ),

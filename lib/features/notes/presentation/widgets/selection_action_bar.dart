@@ -83,9 +83,9 @@ class _ActionItem extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
       child: Padding(
-        // ✅ FIX 1: Kurangi padding vertikal dari 4 jadi 2
+        // Kurangi padding vertikal dari 4 jadi 2
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-        // ✅ FIX 2: Bungkus dengan FittedBox agar auto-resize jika ruang sempit
+        // Bungkus dengan FittedBox agar auto-resize jika ruang sempit
         child: FittedBox(
           fit: BoxFit.scaleDown,
           child: Column(

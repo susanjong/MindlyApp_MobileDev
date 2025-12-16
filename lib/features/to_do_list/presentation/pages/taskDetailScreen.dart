@@ -13,12 +13,12 @@ class TaskDetailScreen extends StatefulWidget {
   final Function(String newDescription)? onDescriptionChanged;
 
   const TaskDetailScreen({
-    Key? key,
+    super.key,
     required this.task,
     required this.onDelete,
     this.onTitleChanged,
     this.onDescriptionChanged,
-  }) : super(key: key);
+  });
 
   @override
   State<TaskDetailScreen> createState() => _TaskDetailScreenState();

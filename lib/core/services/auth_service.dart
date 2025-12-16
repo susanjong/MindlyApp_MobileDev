@@ -204,7 +204,7 @@ class AuthService {
         debugPrint('✓ Verification email sent to ${credential.user!.email}');
       }
 
-      // ✅ BUAT USER DI FIRESTORE TAPI TANDAI BELUM VERIFIED
+      // BUAT USER DI FIRESTORE TAPI TANDAI BELUM VERIFIED
       if (credential.user != null) {
         await _createOrUpdateUserInFirestore(
           credential.user!,
@@ -410,6 +410,9 @@ class AuthService {
   }
 
   //  update profile with support base64 and remove photo
+  // Add this updated method to your AuthService class
+
+  /// ✅ Update user profile with proper photo removal support
   static Future<void> updateUserProfile({
     String? displayName,
     String? photoURL,
@@ -420,27 +423,35 @@ class AuthService {
       if (user == null) throw Exception('No user signed in');
 
       debugPrint('=== Starting profile update ===');
+      debugPrint('  - Display name: ${displayName ?? "not changing"}');
+      debugPrint('  - Bio: ${bio ?? "not changing"}');
+      debugPrint('  - Photo URL: ${photoURL == null ? "not changing" : (photoURL.isEmpty ? "REMOVING" : "updating")}');
 
+      // Update Firebase Auth
       if (displayName != null) {
         await user.updateDisplayName(displayName);
-        debugPrint('Display name updated in Firebase Auth');
+        debugPrint('✅ Display name updated in Firebase Auth');
       }
 
       if (photoURL != null) {
         if (photoURL.isEmpty) {
+          // User wants to remove photo
           await user.updatePhotoURL(null);
-          debugPrint('Photo REMOVED from Firebase Auth (set to null)');
+          debugPrint('✅ Photo REMOVED from Firebase Auth (set to null)');
         } else if (!photoURL.startsWith('data:image')) {
+          // Regular URL (not Base64)
           await user.updatePhotoURL(photoURL);
-          debugPrint('Photo URL updated in Firebase Auth');
+          debugPrint('✅ Photo URL updated in Firebase Auth');
         } else {
-          debugPrint('⏭ Skipping Firebase Auth for Base64 image');
+          // Base64 - skip Firebase Auth, only update Firestore
+          debugPrint('⏭️ Skipping Firebase Auth for Base64 image');
         }
       }
 
       await user.reload();
-      debugPrint('✓ Firebase Auth user reloaded');
+      debugPrint('✅ Firebase Auth user reloaded');
 
+      // Update Firestore
       final userRef = _firestore.collection('users').doc(user.uid);
 
       final updateData = <String, dynamic>{
@@ -456,14 +467,23 @@ class AuthService {
       }
 
       if (photoURL != null) {
-        updateData['photoURL'] = photoURL;
+        if (photoURL.isEmpty) {
+          // Remove photo from Firestore
+          updateData['photoURL'] = '';
+          debugPrint('✅ Photo will be REMOVED from Firestore');
+        } else {
+          // Update photo in Firestore (can be URL or Base64)
+          updateData['photoURL'] = photoURL;
+          debugPrint('✅ Photo will be UPDATED in Firestore');
+        }
       }
 
       await userRef.update(updateData);
-      debugPrint('Firestore updated successfully');
+      debugPrint('✅ Firestore updated successfully');
       debugPrint('=== Profile update completed ===');
 
     } catch (e) {
+      debugPrint('❌ Error updating profile: $e');
       throw Exception('Failed to update profile: ${e.toString()}');
     }
   }

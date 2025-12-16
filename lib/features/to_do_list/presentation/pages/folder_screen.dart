@@ -146,7 +146,7 @@ class _FolderScreenState extends State<FolderScreen> {
 
           // 4. TAMPILKAN SNACKBAR ERROR (Supaya kita tahu salahnya dimana)
           if (mounted) {
-            print("Error saving task: $e"); // Cek console debug
+            debugPrint("Error saving task: $e"); // Cek console debug
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('Failed to add task: $e'),
