@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:notesapp/features/home/data/models/notification_model.dart';
 import 'package:notesapp/features/home/data/services/notification_service.dart';
 import '../../../../config/routes/routes.dart';
+import '../../../../core/widgets/dialog/alert_dialog.dart';
 
 class NotificationPage extends StatefulWidget {
   const NotificationPage({super.key});
@@ -95,7 +96,7 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
 
                       return Column(
                         children: [
-                          // ✅ Delete All Button
+                          // Delete All Button
                           if (notifications.isNotEmpty)
                             Padding(
                               padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
@@ -164,75 +165,49 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
     );
   }
 
-  // dialog konfirmasi Delete All
   void _showDeleteAllDialog() {
-    showDialog(
+    if (!mounted) return;
+
+    showIOSDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFFFCFCFC),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          'Delete All Notifications?',
-          style: GoogleFonts.poppins(
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFF1A1A1A),
-          ),
-        ),
-        content: Text(
-          'This action cannot be undone. All notifications will be permanently deleted.',
-          style: GoogleFonts.poppins(fontSize: 14, color: const Color(0xFF6B6B6B)),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Cancel',
-              style: GoogleFonts.poppins(color: const Color(0xFF6B6B6B)),
-            ),
-          ),
-          TextButton(
-            onPressed: () async {
-              final navigator = Navigator.of(context);
-              final messenger = ScaffoldMessenger.of(context);
+      title: 'Delete All Notifications?',
+      message: 'This action cannot be undone. All notifications will be permanently deleted.',
+      cancelText: 'Cancel',
+      confirmText: 'Delete All',
+      confirmTextColor: const Color(0xFFFF453A),  // iOS Red
+      onConfirm: () async {
+        final navigator = Navigator.of(context);
+        final messenger = ScaffoldMessenger.of(context);
 
-              try {
-                await _notificationService.deleteAllNotifications();
+        try {
+          await _notificationService.deleteAllNotifications();
 
-                navigator.pop(); // Close dialog
-
-                messenger.showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'All notifications deleted',
-                      style: GoogleFonts.poppins(fontSize: 13),
-                    ),
-                    duration: const Duration(seconds: 2),
-                    backgroundColor: const Color(0xFF10B981),
-                  ),
-                );
-              } catch (e) {
-                navigator.pop();
-                messenger.showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'Failed to delete notifications',
-                      style: GoogleFonts.poppins(fontSize: 13),
-                    ),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            },
-            child: Text(
-              'Delete All',
-              style: GoogleFonts.poppins(
-                color: const Color(0xFFFF6B6B),
-                fontWeight: FontWeight.w600,
+          if (mounted) {
+            messenger.showSnackBar(
+              SnackBar(
+                content: Text(
+                  'All notifications deleted',
+                  style: GoogleFonts.poppins(fontSize: 13),
+                ),
+                duration: const Duration(seconds: 2),
+                backgroundColor: const Color(0xFF10B981),
               ),
-            ),
-          ),
-        ],
-      ),
+            );
+          }
+        } catch (e) {
+          if (mounted) {
+            messenger.showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Failed to delete notifications',
+                  style: GoogleFonts.poppins(fontSize: 13),
+                ),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+      },
     );
   }
 
@@ -598,7 +573,6 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
         notification.priority == 'high' &&
         notification.title.contains('Overdue');
 
-    // ✅ Handle event notifications
     if (notification.type == 'event_reminder' || notification.type == 'event_created') {
       backgroundColor = const Color(0xFFF3E5F5);
       borderColor = const Color(0xFFD732A8);
