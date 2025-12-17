@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+// Enum untuk menentukan cakupan penghapusan pada event berulang
 enum DeleteMode {
-  single,
-  following,
-  all
+  single,    // Hanya event ini saja
+  following, // Event ini dan kejadian selanjutnya
+  all        // Semua event dalam rangkaian (masa lalu & depan)
 }
 
+// Widget dialog konfirmasi khusus untuk menghapus event berulang (Recurring Event)
 class DeleteRepeatDialog extends StatelessWidget {
   final VoidCallback onCancel;
   final Function(DeleteMode) onConfirm;
@@ -20,22 +22,23 @@ class DeleteRepeatDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: Colors.transparent,
+      backgroundColor: Colors.transparent, // Background transparan, styling ada di child container
       elevation: 0,
       insetPadding: const EdgeInsets.all(20),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 320),
+        constraints: const BoxConstraints(maxWidth: 320), // Batasi lebar agar proporsional
         child: Container(
           decoration: ShapeDecoration(
-            color: const Color(0xFFF2F2F2),
+            color: const Color(0xFFF2F2F2), // Warna abu-abu terang khas dialog iOS
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
             ),
           ),
           child: SingleChildScrollView(
             child: Column(
-              mainAxisSize: MainAxisSize.min,
+              mainAxisSize: MainAxisSize.min, // Tinggi menyesuaikan konten
               children: [
+                // Bagian Header: Judul & Deskripsi
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 16.0),
                   child: Column(
@@ -61,18 +64,24 @@ class DeleteRepeatDialog extends StatelessWidget {
                     ],
                   ),
                 ),
+
+                // Opsi 1: Hapus hanya event ini
                 _buildDivider(),
                 _buildButton(
                   context,
                   label: 'Delete This Event Only',
                   onTap: () => onConfirm(DeleteMode.single),
                 ),
+
+                // Opsi 2: Hapus event ini dan ke depan
                 _buildDivider(),
                 _buildButton(
                   context,
                   label: 'Delete This & Following Events',
                   onTap: () => onConfirm(DeleteMode.following),
                 ),
+
+                // Opsi 3: Hapus semua (Destructive action - Merah)
                 _buildDivider(),
                 _buildButton(
                   context,
@@ -80,6 +89,8 @@ class DeleteRepeatDialog extends StatelessWidget {
                   textColor: const Color(0xFFFF3B30),
                   onTap: () => onConfirm(DeleteMode.all),
                 ),
+
+                // Tombol Batal
                 _buildDivider(),
                 _buildButton(
                   context,
@@ -95,6 +106,7 @@ class DeleteRepeatDialog extends StatelessWidget {
     );
   }
 
+  // Helper widget untuk membuat tombol aksi yang konsisten
   Widget _buildButton(BuildContext context, {
     required String label,
     required VoidCallback onTap,
@@ -103,7 +115,7 @@ class DeleteRepeatDialog extends StatelessWidget {
   }) {
     return InkWell(
       onTap: () {
-        Navigator.pop(context);
+        Navigator.pop(context); // Tutup dialog sebelum menjalankan aksi
         onTap();
       },
       child: Container(
@@ -123,6 +135,7 @@ class DeleteRepeatDialog extends StatelessWidget {
     );
   }
 
+  // Helper widget untuk garis pemisah antar tombol
   Widget _buildDivider() {
     return Container(
       height: 0.5,
@@ -131,13 +144,14 @@ class DeleteRepeatDialog extends StatelessWidget {
   }
 }
 
+// Fungsi global untuk memunculkan dialog hapus repeat
 void showDeleteRepeatDialog({
   required BuildContext context,
   required Function(DeleteMode) onConfirm,
 }) {
   showDialog(
     context: context,
-    barrierDismissible: true,
+    barrierDismissible: true, // Bisa ditutup dengan klik area luar
     builder: (context) => DeleteRepeatDialog(
       onCancel: () => Navigator.pop(context),
       onConfirm: onConfirm,

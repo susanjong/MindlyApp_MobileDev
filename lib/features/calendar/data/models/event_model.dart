@@ -12,7 +12,7 @@ class Event {
   final String location;
   final String reminder;
   final String repeat;
-  final String? parentEventId;
+  final String? parentEventId; // ID induk jika event ini adalah hasil perulangan
 
   Event({
     this.id,
@@ -29,12 +29,12 @@ class Event {
     this.parentEventId,
   });
 
-  // Convert to Map for Firestore
+  // Mengubah object menjadi Map untuk disimpan ke Firestore
   Map<String, dynamic> toMap() {
     return {
       'title': title,
       'description': description,
-      'startTime': Timestamp.fromDate(startTime),
+      'startTime': Timestamp.fromDate(startTime), // Konversi DateTime ke Timestamp Firestore
       'endTime': Timestamp.fromDate(endTime),
       'categoryId': categoryId,
       'userId': userId,
@@ -42,16 +42,18 @@ class Event {
       'location': location,
       'reminder': reminder,
       'repeat': repeat,
+      // Hanya simpan field ini jika nilainya tidak null
       if (parentEventId != null) 'parentEventId': parentEventId,
     };
   }
 
-  // Create Event from Firestore document
+  // Factory untuk membuat object dari dokumen Firestore (Map)
   factory Event.fromMap(Map<String, dynamic> map, String id) {
     return Event(
       id: id,
       title: map['title'] ?? '',
       description: map['description'] ?? '',
+      // Konversi Timestamp Firestore kembali ke DateTime Dart
       startTime: (map['startTime'] as Timestamp).toDate(),
       endTime: (map['endTime'] as Timestamp).toDate(),
       categoryId: map['categoryId'] ?? '',
@@ -64,6 +66,7 @@ class Event {
     );
   }
 
+  // Method copyWith untuk membuat salinan object dengan pembaruan data (Immutable pattern)
   Event copyWith({
     String? id,
     String? title,

@@ -27,23 +27,26 @@ class NoteCard extends StatelessWidget {
     this.onFavoriteTap,
   });
 
+  // Helper untuk mengubah format JSON (Flutter Quill) menjadi teks biasa untuk preview
   String get plainTextContent {
     try {
       final doc = quill.Document.fromJson(jsonDecode(content));
       return doc.toPlainText().trim();
     } catch (e) {
-      return content; // Fallback jika masih format lama
+      return content; // Fallback jika format bukan JSON/Quill
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      // Menangani interaksi pengguna (buka detail atau pilih item)
       onTap: onTap,
       onLongPress: onLongPress,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(16),
+        // Ubah warna latar belakang secara halus jika item dipilih
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFFBABABA) : color,
           borderRadius: BorderRadius.circular(16),
@@ -58,7 +61,7 @@ class NoteCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header: Title & Heart Icon
+            // Header: Judul Catatan & Ikon Favorit
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -70,8 +73,8 @@ class NoteCard extends StatelessWidget {
                       fontWeight: FontWeight.w600,
                       color: const Color(0xFF131313),
                     ),
-                    maxLines: 1, // ✅ Batasi judul 1 baris
-                    overflow: TextOverflow.ellipsis, // ✅ Potong jika kepanjangan
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis, // Potong teks dengan '...' jika kepanjangan
                   ),
                 ),
                 GestureDetector(
@@ -89,8 +92,8 @@ class NoteCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
 
-            // ✅ Content Preview dengan Expanded
-            // Expanded memastikan teks mengambil sisa ruang yang ada, tidak lebih.
+            // Body: Preview Konten
+            // Expanded memastikan teks mengisi sisa ruang vertikal yang tersedia
             Expanded(
               child: Text(
                 content.isEmpty ? 'No content' : content,
@@ -100,13 +103,14 @@ class NoteCard extends StatelessWidget {
                   color: const Color(0xFF4A4A4A),
                   height: 1.4,
                 ),
-                maxLines: 6, // ✅ Pastikan jumlah baris dibatasi (misal 5 atau 6)
-                overflow: TextOverflow.ellipsis, // ✅ Wajib ada
+                maxLines: 6, // Membatasi preview maksimal 6 baris
+                overflow: TextOverflow.ellipsis,
               ),
             ),
 
             const SizedBox(height: 8),
-            // Date
+
+            // Footer: Tanggal Catatan
             Text(
               date,
               style: GoogleFonts.poppins(
@@ -114,7 +118,7 @@ class NoteCard extends StatelessWidget {
                 fontWeight: FontWeight.w400,
                 color: const Color(0xFF7C7B7B),
               ),
-              maxLines: 1, // ✅ Batasi tanggal juga
+              maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
           ],

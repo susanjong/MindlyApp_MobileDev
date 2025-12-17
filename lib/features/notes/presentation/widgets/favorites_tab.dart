@@ -6,6 +6,7 @@ import '../../data/models/note_model.dart';
 import 'note_card.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 
+// Widget Tab untuk menampilkan Kategori dan Catatan yang ditandai sebagai favorit
 class FavoritesTab extends StatefulWidget {
   final List<NoteModel> notes;
   final List<CategoryModel> favoriteCategories;
@@ -13,14 +14,14 @@ class FavoritesTab extends StatefulWidget {
   final Function(String) onCategoryToggleFavorite;
   final String searchQuery;
 
-  // Note Selection Props
+  // Properti Seleksi Note
   final bool isSelectionMode;
   final Set<String> selectedNoteIds;
   final Function(String) onNoteTap;
   final Function(String) onNoteLongPress;
   final Function(String) onToggleFavorite;
 
-  // Category Selection Props
+  // Properti Seleksi Kategori
   final bool isCategorySelectionMode;
   final Set<String> selectedCategoryIds;
   final Function(String) onCategoryTap;
@@ -53,6 +54,7 @@ class _FavoritesTabState extends State<FavoritesTab> {
   bool _isAllNotesExpanded = true;
   final Set<String> _expandedCategories = {};
 
+  // Helper: Mengubah format JSON (Quill) menjadi Plain Text untuk preview
   String _getPlainText(String jsonContent) {
     try {
       final doc = quill.Document.fromJson(jsonDecode(jsonContent));
@@ -62,6 +64,7 @@ class _FavoritesTabState extends State<FavoritesTab> {
     }
   }
 
+  // Mengatur logika ekspansi folder kategori atau seleksi jika dalam mode edit
   void _toggleCategoryExpand(String categoryId) {
     if (widget.isCategorySelectionMode) {
       widget.onCategoryTap(categoryId);
@@ -76,11 +79,13 @@ class _FavoritesTabState extends State<FavoritesTab> {
     });
   }
 
+  // Helper responsif: Menentukan jumlah kolom grid berdasarkan lebar layar
   int _getCrossAxisCount(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
     return width < 600 ? 2 : (width < 900 ? 3 : 4);
   }
 
+  // Helper responsif: Menentukan rasio aspek kartu note
   double _getChildAspectRatio(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
     return width < 600 ? 0.85 : 1.25;
@@ -88,13 +93,13 @@ class _FavoritesTabState extends State<FavoritesTab> {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ Menggunakan CustomScrollView untuk mengatasi Overflow
+    // Menggunakan CustomScrollView dengan Slivers untuk performa scroll yang optimal pada konten campuran
     return CustomScrollView(
       physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
       slivers: [
         const SliverPadding(padding: EdgeInsets.only(top: 10)),
 
-        // === EMPTY STATE ===
+        // State Kosong: Tampilkan placeholder jika tidak ada data favorit
         if (widget.notes.isEmpty && widget.favoriteCategories.isEmpty)
           SliverFillRemaining(
             hasScrollBody: false,
@@ -111,7 +116,7 @@ class _FavoritesTabState extends State<FavoritesTab> {
             ),
           )
         else ...[
-          // === CATEGORIES SECTION ===
+          // Bagian 1: Daftar Kategori Favorit
           if (widget.favoriteCategories.isNotEmpty) ...[
             SliverToBoxAdapter(
               child: _buildSectionHeader(
@@ -168,7 +173,7 @@ class _FavoritesTabState extends State<FavoritesTab> {
             ),
           ],
 
-          // === ALL FAVORITES NOTES SECTION ===
+          // Bagian 2: Grid Semua Note Favorit
           if (widget.notes.isNotEmpty) ...[
             SliverToBoxAdapter(
               child: _buildSectionHeader(
@@ -226,13 +231,14 @@ class _FavoritesTabState extends State<FavoritesTab> {
             ),
           ],
 
-          // Extra padding for bottom navigation
+          // Padding ekstra agar konten terbawah tidak tertutup navigasi
           const SliverPadding(padding: EdgeInsets.only(bottom: 120)),
         ]
       ],
     );
   }
 
+  // Widget Header Section yang dapat diklik (Collapsible)
   Widget _buildSectionHeader({required String title, required bool isExpanded, required VoidCallback onTap}) {
     return GestureDetector(
       onTap: onTap,
@@ -262,6 +268,7 @@ class _FavoritesTabState extends State<FavoritesTab> {
   }
 }
 
+// Widget Item Kategori Individual yang berisi Grid Notes di dalamnya
 class _FavoriteCategoryItem extends StatelessWidget {
   final CategoryModel category;
   final List<NoteModel> notes;
@@ -274,7 +281,6 @@ class _FavoriteCategoryItem extends StatelessWidget {
   final VoidCallback onLongPress;
   final VoidCallback onFavoriteTap;
 
-  // Note Selection Props
   final bool isNoteSelectionMode;
   final Set<String> selectedNoteIds;
   final Function(String) onNoteTap;
@@ -308,7 +314,7 @@ class _FavoriteCategoryItem extends StatelessWidget {
 
     return Column(
       children: [
-        // Header Kategori
+        // Tampilan Baris Kategori
         GestureDetector(
           onTap: onTap,
           onLongPress: onLongPress,
@@ -334,8 +340,9 @@ class _FavoriteCategoryItem extends StatelessWidget {
                   ),
                 ),
 
-                // Visual Selection & Count Logic
+                // Logika Tampilan: Mode Seleksi vs Mode Normal
                 if (isSelected) ...[
+                  // Indikator Checklist saat dipilih
                   Container(
                     width: 24,
                     height: 24,
@@ -348,7 +355,7 @@ class _FavoriteCategoryItem extends StatelessWidget {
                     ),
                   ),
                 ] else ...[
-                  // Menampilkan Jumlah Note
+                  // Menampilkan jumlah note dalam kategori
                   if (notes.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -362,7 +369,7 @@ class _FavoriteCategoryItem extends StatelessWidget {
                     ),
                   const SizedBox(width: 8),
 
-                  // Tombol Favorite
+                  // Tombol Hati (Favorit)
                   GestureDetector(
                     onTap: onFavoriteTap,
                     child: const Icon(Icons.favorite, color: Colors.red, size: 22),
@@ -373,8 +380,8 @@ class _FavoriteCategoryItem extends StatelessWidget {
           ),
         ),
 
-        // Expanded Content (Notes Grid)
-        if (!isSelectionMode) // Sembunyikan isi jika sedang mode seleksi Kategori (opsional, agar fokus)
+        // Konten Grid Notes (Expanded)
+        if (!isSelectionMode) // Sembunyikan konten jika sedang memilih kategori
           AnimatedCrossFade(
             firstChild: const SizedBox.shrink(),
             secondChild: notes.isNotEmpty
@@ -403,12 +410,12 @@ class _FavoriteCategoryItem extends StatelessWidget {
                     isSelected: isNoteSelectionMode && isNoteSelected,
                     onTap: () => onNoteTap(note.id),
                     onLongPress: () {
-                      // Mencegah konflik gesture
+                      // Mencegah konflik gesture antar card dan container
                       if (!isSelectionMode) {
                         onNoteLongPress(note.id);
                       }
                     },
-                    // Disable favorite toggle di dalam card kategori favorit untuk menghindari kebingungan UI
+                    // Disable toggle favorit di sini untuk mencegah konflik UI
                     onFavoriteTap: () {},
                   );
                 },

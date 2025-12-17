@@ -8,19 +8,20 @@ import '../../data/services/note_service.dart';
 import 'note_card.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 
+// Widget utama Tab Kategori: Menampilkan daftar folder dan notes di dalamnya
 class CategoriesTab extends StatefulWidget {
   final NoteService noteService;
   final List<CategoryModel> categories;
   final List<NoteModel> allNotes;
   final Function(String) onNoteSelected;
 
-  // Note Selection Props
+  // State & Callback untuk Mode Seleksi Note (Multi-select notes)
   final bool isNoteSelectionMode;
   final Set<String> selectedNoteIds;
   final Function(String) onNoteTap;
   final Function(String) onNoteLongPress;
 
-  // Category Selection Props
+  // State & Callback untuk Mode Seleksi Kategori (Multi-select categories)
   final bool isCategorySelectionMode;
   final Set<String> selectedCategoryIds;
   final Function(String) onCategoryTap;
@@ -49,6 +50,7 @@ class CategoriesTab extends StatefulWidget {
 class CategoriesTabState extends State<CategoriesTab> {
   final Set<String> _expandedCategories = {};
 
+  // Helper: Konversi format JSON Quill ke Plain Text untuk preview
   String _getPlainText(String jsonContent) {
     try {
       final doc = quill.Document.fromJson(jsonDecode(jsonContent));
@@ -58,6 +60,7 @@ class CategoriesTabState extends State<CategoriesTab> {
     }
   }
 
+  // Mengatur logika: Expand folder atau Pilih folder (jika mode seleksi aktif)
   void _toggleExpand(String categoryId) {
     if (widget.isCategorySelectionMode) {
       widget.onCategoryTap(categoryId);
@@ -74,10 +77,12 @@ class CategoriesTabState extends State<CategoriesTab> {
 
   @override
   Widget build(BuildContext context) {
+    // Filter kategori sistem ('all' & 'bookmarks') agar tidak muncul di list
     final displayCategories = widget.categories
         .where((c) => c.id != 'all' && c.id != 'bookmarks')
         .toList();
 
+    // Tampilan jika tidak ada kategori
     if (displayCategories.isEmpty) {
       return Center(
         child: Column(
@@ -101,6 +106,7 @@ class CategoriesTabState extends State<CategoriesTab> {
         final isSelected = widget.selectedCategoryIds.contains(category.id);
 
         return _CategoryItem(
+          // Key unik untuk memastikan render ulang saat state berubah
           key: ValueKey('${category.id}_${category.isFavorite}_$isSelected'),
           category: category,
           noteCount: notes.length,
@@ -110,6 +116,7 @@ class CategoriesTabState extends State<CategoriesTab> {
           notes: notes,
           onTap: () => _toggleExpand(category.id),
           onLongPress: () {
+            // Long press memicu mode seleksi kategori jika tidak sedang memilih note
             if (!widget.isNoteSelectionMode) widget.onCategoryLongPress(category.id);
           },
           noteService: widget.noteService,
@@ -124,6 +131,7 @@ class CategoriesTabState extends State<CategoriesTab> {
   }
 }
 
+// Widget Item List Kategori Individual
 class _CategoryItem extends StatefulWidget {
   final CategoryModel category;
   final int noteCount;
@@ -173,6 +181,7 @@ class _CategoryItemState extends State<_CategoryItem> {
     _isFavorite = widget.category.isFavorite;
   }
 
+  // Sinkronisasi state lokal jika data dari parent berubah
   @override
   void didUpdateWidget(_CategoryItem oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -183,8 +192,8 @@ class _CategoryItemState extends State<_CategoryItem> {
     }
   }
 
+  // Logika toggle favorit dengan Optimistic UI Update
   Future<void> _toggleFavorite() async {
-    // Prevent toggle during selection mode
     if (widget.isCategorySelectionMode || _isTogglingFavorite) return;
 
     setState(() {
@@ -198,7 +207,7 @@ class _CategoryItemState extends State<_CategoryItem> {
         widget.category.isFavorite,
       );
     } catch (e) {
-      // Revert on failure
+      // Rollback jika gagal
       if (mounted) {
         setState(() {
           _isFavorite = !_isFavorite;
@@ -222,12 +231,15 @@ class _CategoryItemState extends State<_CategoryItem> {
     const Color selectedGrey = Color(0xFFBABABA);
     const Color checkCircleColor = Color(0xFF777777);
     const Color outlineGrey = Color(0xFF777777);
+
+    // Responsif Grid Layout
     final width = MediaQuery.of(context).size.width;
     final int crossAxisCount = width < 600 ? 2 : (width < 900 ? 3 : 4);
     final double childAspectRatio = width < 600 ? 0.85 : 1.25;
 
     return Column(
       children: [
+        // Header Kategori (Nama Folder & Ikon)
         GestureDetector(
           onTap: widget.onTap,
           onLongPress: widget.onLongPress,
@@ -260,6 +272,7 @@ class _CategoryItemState extends State<_CategoryItem> {
                       style: GoogleFonts.poppins(fontSize: 14),
                     ),
                   ),
+                  // Tampilan saat mode seleksi (Checklist) vs mode normal (Count & Heart)
                   if (widget.isSelected) ...[
                     Container(
                       width: 24,
@@ -283,7 +296,7 @@ class _CategoryItemState extends State<_CategoryItem> {
                         child: Text(widget.noteCount.toString()),
                       ),
                     const SizedBox(width: 8),
-                    // FIX: Wrap icon with GestureDetector/InkWell
+                    // InkWell khusus untuk tombol Favorite agar bisa diklik terpisah
                     InkWell(
                       onTap: _toggleFavorite,
                       borderRadius: BorderRadius.circular(20),
@@ -302,6 +315,8 @@ class _CategoryItemState extends State<_CategoryItem> {
             ),
           ),
         ),
+
+        // Konten Grid Notes (Hanya muncul jika tidak sedang mode seleksi kategori)
         if (!widget.isCategorySelectionMode)
           AnimatedCrossFade(
             firstChild: const SizedBox.shrink(),
@@ -346,7 +361,7 @@ class _CategoryItemState extends State<_CategoryItem> {
   }
 }
 
-// Widget Navbar khusus untuk Kategori
+// Widget Action Bar (Bottom Sheet) untuk Edit/Delete/Favorite kategori terpilih
 class CategorySelectionActionBar extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback onFavorite;
@@ -403,6 +418,7 @@ class CategorySelectionActionBar extends StatelessWidget {
   }
 }
 
+// Widget Helper untuk tombol ikon di Action Bar
 class _ActionItem extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -448,7 +464,7 @@ class _ActionItem extends StatelessWidget {
   }
 }
 
-// Dialog Rename Category
+// Dialog Rename Category dengan Auto-focus
 class _RenameCategoryDialog extends StatefulWidget {
   final String initialName;
   final Function(String) onSave;
@@ -472,6 +488,7 @@ class _RenameCategoryDialogState extends State<_RenameCategoryDialog> {
     super.initState();
     _controller = TextEditingController(text: widget.initialName);
 
+    // Auto-focus dan seleksi teks setelah frame dirender
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Future.delayed(const Duration(milliseconds: 100), () {
         if (mounted) {
@@ -492,6 +509,7 @@ class _RenameCategoryDialogState extends State<_RenameCategoryDialog> {
     super.dispose();
   }
 
+  // Validasi dan Simpan Perubahan
   Future<void> _handleSave() async {
     final name = _controller.text.trim();
     if (name.isEmpty || name == widget.initialName) {

@@ -10,6 +10,7 @@ class NoteModel {
   final bool isFavorite;
   final int color;
 
+  // Constructor dengan default value untuk isFavorite dan color
   NoteModel({
     required this.id,
     required this.title,
@@ -18,9 +19,10 @@ class NoteModel {
     required this.updatedAt,
     required this.categoryId,
     this.isFavorite = false,
-    this.color = 0xFFE6C4DE, // Default ke warna pertama
+    this.color = 0xFFE6C4DE, // Default warna pastel pink
   });
 
+  // Mengubah object menjadi Map untuk disimpan ke Firestore
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -34,6 +36,8 @@ class NoteModel {
     };
   }
 
+  // Factory untuk membuat object dari data Firestore
+  // Menangani konversi Timestamp Firestore ke DateTime Dart
   factory NoteModel.fromMap(Map<String, dynamic> map, String id) {
     return NoteModel(
       id: id,
@@ -47,6 +51,7 @@ class NoteModel {
     );
   }
 
+  // Getter untuk format tanggal yang mudah dibaca (Contoh: January 1, 2024)
   String get formattedDate {
     final months = [
       'January', 'February', 'March', 'April', 'May', 'June',
@@ -55,6 +60,7 @@ class NoteModel {
     return '${months[updatedAt.month - 1]} ${updatedAt.day}, ${updatedAt.year}';
   }
 
+  // Getter untuk menampilkan waktu relatif (Contoh: 2 hours ago)
   String get timeAgo {
     final now = DateTime.now();
     final difference = now.difference(updatedAt);
@@ -74,6 +80,7 @@ class NoteModel {
     }
   }
 
+  // Method copyWith untuk membuat salinan object dengan pembaruan data (Immutable pattern)
   NoteModel copyWith({
     String? id,
     String? title,

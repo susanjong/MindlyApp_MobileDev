@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:notesapp/core/widgets/dialog/input_category_dialog.dart';
 import '../../../../core/widgets/buttons/global_expandable_fab.dart';
@@ -26,19 +25,21 @@ class NotesMainPage extends StatefulWidget {
 }
 
 class _NotesMainPageState extends State<NotesMainPage> {
+  // Controller dan Service
   final TextEditingController _searchController = TextEditingController();
   final NoteService _noteService = NoteService();
 
+  // State UI Dasar
   bool _isNavBarVisible = true;
   int _selectedTabIndex = 0; // 0: All, 1: Categories, 2: Favorites
   String _searchQuery = '';
 
-  // === STATE SELEKSI NOTES ===
+  // State Mode Seleksi Notes (Multi-select)
   bool _isSelectionMode = false;
   final Set<String> _selectedNoteIds = {};
   List<NoteModel> _currentNotesList = [];
 
-  // === STATE SELEKSI KATEGORI ===
+  // State Mode Seleksi Kategori
   bool _isCategorySelectionMode = false;
   final Set<String> _selectedCategoryIds = {};
   List<CategoryModel> _currentCategoriesList = [];
@@ -46,6 +47,7 @@ class _NotesMainPageState extends State<NotesMainPage> {
   @override
   void initState() {
     super.initState();
+    // Listener untuk pencarian real-time
     _searchController.addListener(() {
       setState(() => _searchQuery = _searchController.text.trim());
     });
@@ -57,12 +59,15 @@ class _NotesMainPageState extends State<NotesMainPage> {
     super.dispose();
   }
 
+  // Navigasi Bottom Bar utama
   void _handleNavigation(int index) {
     final routes = [AppRoutes.home, AppRoutes.notes, AppRoutes.todo, AppRoutes.calendar];
     if (index != 1) Navigator.pushReplacementNamed(context, routes[index]);
   }
 
-  // === NOTE SELECTION LOGIC ===
+  // --- Logika Seleksi Notes ---
+
+  // Mengaktifkan mode seleksi saat long press note
   void _enterSelectionMode(String noteId) {
     if (_isCategorySelectionMode) return;
     setState(() {
@@ -72,6 +77,7 @@ class _NotesMainPageState extends State<NotesMainPage> {
     });
   }
 
+  // Menambah/menghapus item dari daftar seleksi atau membuka detail jika mode normal
   void _toggleSelection(String noteId) {
     if (_isCategorySelectionMode) return;
     if (!_isSelectionMode) {
@@ -88,6 +94,7 @@ class _NotesMainPageState extends State<NotesMainPage> {
     });
   }
 
+  // Mereset tab index dan membatalkan seleksi saat pindah tab
   void _onTabChanged(int index) {
     if (_isSelectionMode) _exitNoteSelectionMode();
     if (_isCategorySelectionMode) _exitCategorySelectionMode();
@@ -101,7 +108,8 @@ class _NotesMainPageState extends State<NotesMainPage> {
     });
   }
 
-  // === CATEGORY SELECTION LOGIC ===
+  // --- Logika Seleksi Kategori ---
+
   void _enterCategorySelectionMode(String categoryId) {
     if (_isSelectionMode) return;
     setState(() {
@@ -131,7 +139,9 @@ class _NotesMainPageState extends State<NotesMainPage> {
     });
   }
 
-  // === ACTIONS ===
+  // --- Aksi Action Bar (Select All, Delete, Move, Rename) ---
+
+  // Logika toggle select all untuk kategori atau notes
   void _selectAll() {
     if (_isCategorySelectionMode) {
       final validCats = _currentCategoriesList
@@ -155,6 +165,7 @@ class _NotesMainPageState extends State<NotesMainPage> {
     }
   }
 
+  // Hapus notes yang dipilih dengan konfirmasi
   void _deleteSelectedNotes() {
     showIOSDialog(
       context: context,
@@ -170,6 +181,7 @@ class _NotesMainPageState extends State<NotesMainPage> {
     );
   }
 
+  // Toggle status favorit untuk batch notes
   void _toggleFavoriteSelectedNotes(List<NoteModel> allNotes) async {
     final selectedNotes = allNotes.where((n) => _selectedNoteIds.contains(n.id)).toList();
     final allAreFavorites = selectedNotes.every((n) => n.isFavorite);
@@ -177,6 +189,7 @@ class _NotesMainPageState extends State<NotesMainPage> {
     _exitNoteSelectionMode();
   }
 
+  // Pindahkan notes ke folder lain
   void _moveSelectedNotes() {
     showMoveToDialog(
       context: context,
@@ -193,6 +206,7 @@ class _NotesMainPageState extends State<NotesMainPage> {
     );
   }
 
+  // Rename kategori (hanya bisa 1 item)
   void _renameSelectedCategory() {
     if (_selectedCategoryIds.length != 1) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Select exactly one category to edit')));
@@ -214,6 +228,7 @@ class _NotesMainPageState extends State<NotesMainPage> {
     );
   }
 
+  // Hapus kategori terpilih
   void _deleteSelectedCategories() {
     if (_selectedCategoryIds.isEmpty) return;
     final count = _selectedCategoryIds.length;
@@ -248,11 +263,10 @@ class _NotesMainPageState extends State<NotesMainPage> {
     showDialog(
       context: context,
       builder: (ctx) => InputCategoryDialog(
-        title: "New Note Folder", // Judul spesifik agar user tau bedanya
+        title: "New Note Folder",
         onSave: (name) async {
-          // LOGIC KHUSUS NOTES
           await _noteService.addCategory(
-            CategoryModel(id: '', name: name), // ID kosong karena auto-gen di service
+            CategoryModel(id: '', name: name),
           );
 
           if (mounted) {
@@ -268,6 +282,8 @@ class _NotesMainPageState extends State<NotesMainPage> {
   @override
   Widget build(BuildContext context) {
     final isPortrait = MediaQuery.of(context).orientation == Orientation.portrait;
+
+    // PopScope menangani tombol back Android: Batalkan seleksi dulu sebelum keluar aplikasi
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (bool didPop, dynamic result) {
@@ -287,6 +303,7 @@ class _NotesMainPageState extends State<NotesMainPage> {
         }
         Navigator.pushReplacementNamed(context, AppRoutes.home);
       },
+      // StreamBuilder bersarang untuk data realtime: Kategori -> Notes
       child: StreamBuilder<List<CategoryModel>>(
         stream: _noteService.getCategoriesStream(),
         builder: (context, snapshotCategories) {
@@ -299,7 +316,7 @@ class _NotesMainPageState extends State<NotesMainPage> {
               final allNotes = snapshotNotes.data ?? [];
               final filteredNotes = _getFilteredNotes(allNotes);
 
-              // Update List untuk Selection Mode
+              // Update List lokal untuk logika 'Select All' berdasarkan Tab aktif
               if (_selectedTabIndex == 0) {
                 _currentNotesList = filteredNotes;
               } else if (_selectedTabIndex == 2) {
@@ -308,6 +325,7 @@ class _NotesMainPageState extends State<NotesMainPage> {
                 _currentNotesList = [];
               }
 
+              // Validasi status favorit untuk UI Action Bar
               final isCategoryFavorite = _currentCategoriesList
                   .where((c) => _selectedCategoryIds.contains(c.id))
                   .every((c) => c.isFavorite);
@@ -315,7 +333,7 @@ class _NotesMainPageState extends State<NotesMainPage> {
               final selectedNoteModels = allNotes.where((n) => _selectedNoteIds.contains(n.id)).toList();
               final isAllNotesFavorite = selectedNoteModels.isNotEmpty && selectedNoteModels.every((n) => n.isFavorite);
 
-              // CONTENT WIDGETS (Tab Views)
+              // Daftar Tampilan Tab (All, Categories, Favorites)
               final List<Widget> tabViews = [
                 AllNotesTab(
                   notes: filteredNotes,
@@ -381,7 +399,7 @@ class _NotesMainPageState extends State<NotesMainPage> {
                   child: SafeArea(
                     bottom: false,
                     child: isPortrait
-                    // MODE PORTRAIT: Header Fixed (Column biasa)
+                    // Layout Portrait: Header statis, konten Expanded
                         ? Column(
                       children: [
                         NoteSearchBar(
@@ -400,7 +418,7 @@ class _NotesMainPageState extends State<NotesMainPage> {
                         ),
                       ],
                     )
-                    // MODE LANDSCAPE: Header Scrollable (NestedScrollView)
+                    // Layout Landscape: Header ikut scroll (NestedScrollView)
                         : NestedScrollView(
                       headerSliverBuilder: (context, innerBoxIsScrolled) {
                         return [
@@ -428,6 +446,7 @@ class _NotesMainPageState extends State<NotesMainPage> {
                     ),
                   ),
                 ),
+                // FAB disembunyikan saat mode seleksi aktif
                 floatingActionButton: (_isSelectionMode || _isCategorySelectionMode)
                     ? null
                     : GlobalExpandableFab(
@@ -446,6 +465,7 @@ class _NotesMainPageState extends State<NotesMainPage> {
     );
   }
 
+  // Builder Bottom Nav: Menentukan apakah menampilkan navigasi utama atau menu aksi (move, delete, dll)
   Widget _buildBottomNavBar(bool isAllNotesFavorite, List<NoteModel> allNotes, bool isCategoryFavorite) {
     final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
     if (isKeyboardOpen) return const SizedBox.shrink();
@@ -479,6 +499,7 @@ class _NotesMainPageState extends State<NotesMainPage> {
     );
   }
 
+  // Filter notes berdasarkan search query (judul atau isi)
   List<NoteModel> _getFilteredNotes(List<NoteModel> notes) {
     if (_searchQuery.isEmpty) return notes;
     final query = _searchQuery.toLowerCase();
@@ -486,6 +507,7 @@ class _NotesMainPageState extends State<NotesMainPage> {
   }
 }
 
+// Widget Dialog untuk Rename Kategori (Internal)
 class _RenameCategoryDialog extends StatefulWidget {
   final String initialName;
   final Function(String) onSave;
@@ -503,6 +525,7 @@ class _RenameCategoryDialogState extends State<_RenameCategoryDialog> {
   void initState() {
     super.initState();
     _controller = TextEditingController(text: widget.initialName);
+    // Auto-focus field saat dialog muncul
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if(mounted) _focusNode.requestFocus();
     });

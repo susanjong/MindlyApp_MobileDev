@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+// Widget TabBar custom untuk navigasi filter notes (All, Categories, Favorites)
 class NoteTabBar extends StatelessWidget {
   final int selectedIndex;
   final Function(int) onTabSelected;
@@ -10,6 +11,7 @@ class NoteTabBar extends StatelessWidget {
     super.key,
     required this.selectedIndex,
     required this.onTabSelected,
+    // Default tabs jika tidak ada parameter yang diberikan
     this.tabs = const ['All Notes', 'Categories', 'Favorites'],
   });
 
@@ -18,9 +20,11 @@ class NoteTabBar extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       child: Row(
+        // Generate widget tab secara dinamis berdasarkan list string 'tabs'
         children: List.generate(tabs.length, (index) {
           return Expanded(
             child: Padding(
+              // Logika spasi: beri jarak antar item, tapi 0 di ujung kiri/kanan agar rata
               padding: EdgeInsets.only(
                 left: index == 0 ? 0 : 6,
                 right: index == tabs.length - 1 ? 0 : 6,
@@ -38,11 +42,13 @@ class NoteTabBar extends StatelessWidget {
   }
 }
 
+// Komponen private untuk item tab individual
 class _TabItem extends StatelessWidget {
   final String label;
   final bool isSelected;
   final VoidCallback onTap;
 
+  // Warna biru utama untuk state aktif
   static const Color _selectedColor = Color(0xFF5784EB);
 
   const _TabItem({
@@ -58,13 +64,16 @@ class _TabItem extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(20),
+        // AnimatedContainer memberikan transisi halus pada perubahan warna/border
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeInOut,
           height: 32,
           decoration: BoxDecoration(
+            // Ganti warna background: Biru jika aktif, Putih jika tidak
             color: isSelected ? _selectedColor : Colors.white,
             border: Border.all(
+              // Ganti warna border: Biru jika aktif, Abu-abu jika tidak
               color: isSelected
                   ? _selectedColor
                   : const Color(0xFFD9D9D9),
@@ -76,6 +85,7 @@ class _TabItem extends StatelessWidget {
             child: Text(
               label,
               style: GoogleFonts.poppins(
+                // Ganti warna teks: Putih jika aktif, Abu-abu gelap jika tidak
                 color: isSelected
                     ? Colors.white
                     : const Color(0xFF9E9E9E),

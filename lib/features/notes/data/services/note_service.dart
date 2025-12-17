@@ -8,20 +8,24 @@ class NoteService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
+  // Daftar warna statis untuk background note
   static const List<int> noteColors = [
     0xFFE6C4DE, 0xFFCFE6AF, 0xFFB5D8F9, 0xFFE4BA9B,
     0xFFFFBEBE, 0xFFF4FFBE, 0xFFBEFFE2,
   ];
 
+  // Menentukan warna note berdasarkan hash ID agar konsisten
   int getColorForNote(String noteId) {
     final hash = noteId.hashCode.abs();
     return noteColors[hash % noteColors.length];
   }
 
+  // Getter untuk mengambil UID user yang sedang login
   String? get _uid => _auth.currentUser?.uid;
 
   // === REAL-TIME STREAMS ===
 
+  // Stream daftar note, diurutkan berdasarkan update terakhir
   Stream<List<NoteModel>> getNotesStream() {
     if (_uid == null) return Stream.value([]);
     return _firestore
@@ -37,12 +41,13 @@ class NoteService {
     });
   }
 
+  // Stream daftar kategori note
   Stream<List<CategoryModel>> getCategoriesStream() {
     if (_uid == null) return Stream.value([]);
     return _firestore
         .collection('users')
         .doc(_uid)
-        .collection('note_categories') // Beda path dengan calendar
+        .collection('note_categories')
         .orderBy('name', descending: false)
         .snapshots()
         .map((snapshot) {
@@ -54,11 +59,12 @@ class NoteService {
 
   // === NOTE OPERATIONS ===
 
+  // Menambah note baru dengan warna otomatis dan sanitasi kategori
   Future<void> addNote(NoteModel note) async {
     if (_uid == null) return;
     final docRef = _firestore.collection('users').doc(_uid).collection('notes').doc();
 
-    // Pastikan categoryId tidak null/kosong, default ke string kosong jika tidak ada kategori
+    // Normalisasi: ubah filter sistem ('all'/'bookmarks') menjadi kategori kosong
     final safeCategoryId = (note.categoryId == 'all' || note.categoryId == 'bookmarks')
         ? ''
         : note.categoryId;
@@ -71,10 +77,11 @@ class NoteService {
     await docRef.set(noteWithIdAndColor.toMap());
   }
 
+  // Memperbarui note yang ada
   Future<void> updateNote(NoteModel note) async {
     if (_uid == null) return;
 
-    // Ambil warna lama agar tidak berubah
+    // Ambil data lama untuk mempertahankan warna background
     final existingDoc = await _firestore
         .collection('users')
         .doc(_uid)
@@ -84,7 +91,7 @@ class NoteService {
 
     final existingColor = existingDoc.data()?['color'] ?? note.color;
 
-    // Bersihkan categoryId jika masih ada sisa 'bookmarks' atau 'all' dari data lama
+    // Normalisasi kategori agar tidak menyimpan ID filter sistem
     String cleanCategoryId = note.categoryId;
     if (cleanCategoryId == 'all' || cleanCategoryId == 'bookmarks') {
       cleanCategoryId = '';
@@ -102,6 +109,7 @@ class NoteService {
         .update(noteMap);
   }
 
+  // Menghapus satu note berdasarkan ID
   Future<void> deleteNote(String noteId) async {
     if (_uid == null) return;
     await _firestore
@@ -112,7 +120,7 @@ class NoteService {
         .delete();
   }
 
-  // Logic Favorite Sederhana - Langsung update boolean
+  // Mengubah status favorit (toggle true/false)
   Future<void> toggleFavorite(String noteId, bool currentStatus) async {
     if (_uid == null) return;
     await _firestore
@@ -123,6 +131,7 @@ class NoteService {
         .update({'isFavorite': !currentStatus});
   }
 
+  // Menghapus banyak note sekaligus (Batch Operation)
   Future<void> deleteNotesBatch(List<String> noteIds) async {
     if (_uid == null) return;
     final batch = _firestore.batch();
@@ -133,6 +142,7 @@ class NoteService {
     await batch.commit();
   }
 
+  // Mengubah status favorit banyak note sekaligus
   Future<void> setFavoriteBatch(List<String> noteIds, bool isFavorite) async {
     if (_uid == null) return;
     final batch = _firestore.batch();
@@ -143,10 +153,10 @@ class NoteService {
     await batch.commit();
   }
 
+  // Memindahkan banyak note ke kategori tertentu
   Future<void> moveNotesBatch(List<String> noteIds, String categoryId) async {
     if (_uid == null) return;
 
-    // Pastikan tidak memindahkan ke 'all' atau 'bookmarks' secara tidak sengaja
     final safeCategory = (categoryId == 'all' || categoryId == 'bookmarks') ? '' : categoryId;
 
     final batch = _firestore.batch();
@@ -159,12 +169,14 @@ class NoteService {
 
   // === CATEGORY OPERATIONS ===
 
+  // Menambah kategori baru
   Future<void> addCategory(CategoryModel category) async {
     if (_uid == null) return;
     final docRef = _firestore.collection('users').doc(_uid).collection('note_categories').doc();
     await docRef.set(category.copyWith(id: docRef.id).toMap());
   }
 
+  // Memperbarui nama atau data kategori
   Future<void> updateCategory(CategoryModel category) async {
     if (_uid == null) return;
     await _firestore
@@ -175,9 +187,11 @@ class NoteService {
         .update(category.toMap());
   }
 
+  // Menghapus kategori dan mereset notes di dalamnya menjadi tanpa kategori
   Future<void> deleteCategory(String categoryId) async {
     if (_uid == null) return;
 
+    // 1. Hapus dokumen kategori
     await _firestore
         .collection('users')
         .doc(_uid)
@@ -185,7 +199,7 @@ class NoteService {
         .doc(categoryId)
         .delete();
 
-    // Reset notes yang ada di kategori ini menjadi uncategorized ('')
+    // 2. Cari semua note yang ada di kategori ini
     final notesSnapshot = await _firestore
         .collection('users')
         .doc(_uid)
@@ -193,6 +207,7 @@ class NoteService {
         .where('categoryId', isEqualTo: categoryId)
         .get();
 
+    // 3. Update note tersebut agar tidak memiliki kategori (uncategorized)
     final batch = _firestore.batch();
     for (var doc in notesSnapshot.docs) {
       batch.update(doc.reference, {'categoryId': ''});
@@ -200,6 +215,7 @@ class NoteService {
     await batch.commit();
   }
 
+  // Toggle status favorit kategori
   Future<void> toggleCategoryFavorite(String categoryId, bool currentStatus) async {
     if (_uid == null) return;
     await _firestore
@@ -210,6 +226,7 @@ class NoteService {
         .update({'isFavorite': !currentStatus});
   }
 
+  // Mengambil satu note spesifik (untuk keperluan edit)
   Future<NoteModel?> getNoteById(String noteId) async {
     if (_uid == null) return null;
     try {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+// Widget kartu untuk menampilkan item jadwal dalam kalender
 class ScheduleCardWidget extends StatelessWidget {
   final String title;
   final String startTime;
@@ -14,7 +15,7 @@ class ScheduleCardWidget extends StatelessWidget {
     required this.startTime,
     required this.endTime,
     required this.color,
-    this.height = 64,
+    this.height = 64, // Tinggi default kartu
   });
 
   @override
@@ -23,6 +24,7 @@ class ScheduleCardWidget extends StatelessWidget {
       height: height,
       width: double.infinity,
       padding: const EdgeInsets.all(12),
+      // Styling container dengan warna dinamis dan sudut membulat
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(14),
@@ -31,6 +33,7 @@ class ScheduleCardWidget extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          // Menampilkan judul event
           Text(
             title,
             style: GoogleFonts.poppins(
@@ -40,7 +43,7 @@ class ScheduleCardWidget extends StatelessWidget {
               height: 1.33,
               letterSpacing: 0.30,
             ),
-            maxLines: 3,
+            maxLines: 3, // Mencegah teks terlalu panjang
             overflow: TextOverflow.ellipsis,
           ),
         ],

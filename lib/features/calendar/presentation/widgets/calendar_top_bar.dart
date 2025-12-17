@@ -25,7 +25,6 @@ class CalendarTopBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     return Container(
       color: Colors.white,
-      // Padding disamakan persis dengan CustomTopAppBar (Home/Notes)
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       child: SafeArea(
         bottom: false,
@@ -33,7 +32,7 @@ class CalendarTopBar extends StatelessWidget implements PreferredSizeWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // --- BAGIAN KIRI: Logo & Brand ---
+            // --- Brand Identity Section (Logo & Name) ---
             Row(
               children: [
                 SizedBox(
@@ -53,7 +52,6 @@ class CalendarTopBar extends StatelessWidget implements PreferredSizeWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
-                // Teks 'Mindly' disamakan style-nya
                 Text(
                   'Mindly',
                   style: GoogleFonts.poppins(
@@ -66,35 +64,34 @@ class CalendarTopBar extends StatelessWidget implements PreferredSizeWidget {
               ],
             ),
 
-            // --- BAGIAN KANAN: Icons ---
+            // --- Action Buttons Section (Search & Toggle View) ---
             Row(
               children: [
-                // Search Icon
+                // Search Button
                 IconButton(
                   icon: const Icon(
                     Icons.search,
                     color: Color(0xFF1A1A1A),
-                    size: 26, // Ukuran disamakan (sebelumnya 28)
+                    size: 26,
                   ),
                   onPressed: onSearchTap,
                   tooltip: 'Search Events',
-                  // Menghapus padding tambahan agar posisi pas
+                  // Menghilangkan padding default agar layout presisi
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                 ),
 
-                const SizedBox(width: 20), // Jarak antar icon (disesuaikan agar tidak terlalu rapat/jauh)
+                const SizedBox(width: 20),
 
-                // Toggle View Icon
+                // View Toggle Button (Monthly/Yearly)
                 IconButton(
                   onPressed: onToggleView,
                   icon: Icon(
                     isYearView ? Icons.calendar_view_month : Icons.calendar_today_outlined,
                     color: const Color(0xFF1A1A1A),
-                    size: 26, // Ukuran disamakan (sebelumnya 28)
+                    size: 26,
                   ),
                   tooltip: isYearView ? 'Show Monthly View' : 'Show Yearly View',
-                  // Menghapus padding tambahan
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                 ),

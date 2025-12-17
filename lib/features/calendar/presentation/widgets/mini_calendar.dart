@@ -13,11 +13,12 @@ class MiniCalendarWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Deteksi Landscape
+    // Deteksi orientasi layar untuk penyesuaian layout
     final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
 
     return LayoutBuilder(
       builder: (context, constraints) {
+        // Batasi lebar maksimum agar tampilan tetap rapi di tablet/desktop
         double width = constraints.maxWidth;
         if (width > 600) width = 600;
 
@@ -25,10 +26,10 @@ class MiniCalendarWidget extends StatelessWidget {
           child: SizedBox(
             width: width,
             child: Padding(
-              // Padding luar diperkecil saat landscape agar hemat tempat
+              // Hilangkan padding vertikal saat landscape untuk menghemat ruang
               padding: EdgeInsets.symmetric(
                   horizontal: 22,
-                  vertical: isLandscape ? 0 : 16 // 0 padding vertical saat landscape
+                  vertical: isLandscape ? 0 : 16
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -41,17 +42,21 @@ class MiniCalendarWidget extends StatelessWidget {
     );
   }
 
+  // Membangun daftar widget hari selama seminggu
   List<Widget> _buildWeekDays(bool isCompact) {
+    // Menentukan awal minggu (Senin) berdasarkan tanggal yang dipilih
     final startOfWeek = selectedDate.subtract(Duration(days: selectedDate.weekday - 1));
     final now = DateTime.now();
 
     return List.generate(7, (index) {
       final date = startOfWeek.add(Duration(days: index));
 
+      // Cek apakah tanggal ini dipilih
       final isSelected = date.day == selectedDate.day &&
           date.month == selectedDate.month &&
           date.year == selectedDate.year;
 
+      // Cek apakah tanggal ini adalah hari ini
       final isToday = date.day == now.day &&
           date.month == now.month &&
           date.year == now.year;
@@ -65,7 +70,7 @@ class MiniCalendarWidget extends StatelessWidget {
             isSelected: isSelected,
             isToday: isToday,
             onTap: () => onDateSelected(date),
-            isCompact: isCompact, // 3. Kirim status compact ke item
+            isCompact: isCompact, // Teruskan status mode tampilan
           ),
         ),
       );
@@ -84,7 +89,7 @@ class _CalendarDayItem extends StatelessWidget {
   final bool isSelected;
   final bool isToday;
   final VoidCallback onTap;
-  final bool isCompact; // Parameter baru
+  final bool isCompact;
 
   const _CalendarDayItem({
     required this.day,
@@ -92,12 +97,12 @@ class _CalendarDayItem extends StatelessWidget {
     required this.isSelected,
     required this.isToday,
     required this.onTap,
-    this.isCompact = false, // Default false (Portrait)
+    this.isCompact = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    // Ukuran font yang disesuaikan
+    // Tentukan ukuran font dinamis berdasarkan mode (compact/normal) dan status seleksi
     final double dayFontSize = isCompact
         ? (isSelected ? 14 : 13)
         : (isSelected ? 20 : 18);
@@ -109,7 +114,7 @@ class _CalendarDayItem extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        // Padding internal sangat tipis saat compact
+        // Padding lebih tipis saat mode compact
         padding: EdgeInsets.symmetric(vertical: isCompact ? 2 : 8),
         decoration: BoxDecoration(
           color: isSelected ? const Color(0x265784EB) : Colors.transparent,
@@ -119,7 +124,7 @@ class _CalendarDayItem extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // 1. Angka Tanggal
+            // Menampilkan angka tanggal
             Flexible(
               child: FittedBox(
                 fit: BoxFit.scaleDown,
@@ -129,16 +134,16 @@ class _CalendarDayItem extends StatelessWidget {
                     fontSize: dayFontSize,
                     fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
                     color: isSelected ? const Color(0xFF5784EB) : const Color(0xFF1E293B),
-                    height: 1.0, // Rapatkan line height
+                    height: 1.0,
                   ),
                 ),
               ),
             ),
 
-            // Spacing (HILANGKAN total saat compact)
+            // Jarak antar teks (hanya di mode normal)
             if (!isCompact) const SizedBox(height: 2),
 
-            // 2. Nama Hari
+            // Menampilkan nama hari (Sen, Sel, dst)
             Flexible(
               child: FittedBox(
                 fit: BoxFit.scaleDown,
@@ -147,17 +152,17 @@ class _CalendarDayItem extends StatelessWidget {
                   style: GoogleFonts.poppins(
                     fontSize: weekdayFontSize,
                     color: isSelected ? const Color(0xFF5784EB) : const Color(0xFF94A3B8),
-                    height: 1.0, // Rapatkan line height
+                    height: 1.0,
                   ),
                 ),
               ),
             ),
 
-            // 3. Dot Indikator Hari Ini
+            // Indikator titik biru untuk hari ini
             if (isToday) ...[
-              SizedBox(height: isCompact ? 1 : 4), // Jarak tipis saat compact
+              SizedBox(height: isCompact ? 1 : 4),
               Container(
-                width: isCompact ? 3 : 6, // Dot lebih kecil
+                width: isCompact ? 3 : 6,
                 height: isCompact ? 3 : 6,
                 decoration: const BoxDecoration(
                   color: Color(0xFF5784EB),
@@ -165,7 +170,7 @@ class _CalendarDayItem extends StatelessWidget {
                 ),
               ),
             ] else if (!isCompact) ...[
-              // Spacer bawah hanya untuk mode portrait
+              // Spacer bawah tambahan hanya untuk mode portrait
               const SizedBox(height: 10),
             ],
           ],

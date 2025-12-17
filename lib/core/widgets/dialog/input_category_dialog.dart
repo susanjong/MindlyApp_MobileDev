@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/widgets/dialog/alert_dialog.dart';
 
+// Dialog reusable untuk input nama kategori baru
 class InputCategoryDialog extends StatefulWidget {
-  // Callback ini yang akan membedakan logicnya nanti
+  // Callback async untuk menangani logika penyimpanan data (bisa untuk Notes atau Calendar)
   final Future<void> Function(String name) onSave;
   final String title;
   final String hintText;
@@ -27,6 +28,7 @@ class _InputCategoryDialogState extends State<InputCategoryDialog> {
   @override
   void initState() {
     super.initState();
+    // Auto-focus pada text field setelah frame dirender
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _focusNode.requestFocus();
     });
@@ -39,24 +41,27 @@ class _InputCategoryDialogState extends State<InputCategoryDialog> {
     super.dispose();
   }
 
+  // Menangani logika submit form
   Future<void> _handleSubmit() async {
     final name = _controller.text.trim();
+
+    // Validasi input tidak boleh kosong
     if (name.isEmpty) return;
 
     _focusNode.unfocus();
     setState(() => _isLoading = true);
 
     try {
-      // Panggil fungsi yang dilempar dari parent (Calendar atau Notes)
+      // Eksekusi fungsi onSave yang dikirim dari parent widget
       await widget.onSave(name);
 
       if (mounted) {
-        Navigator.pop(context); // Tutup dialog setelah sukses
+        Navigator.pop(context); // Tutup dialog jika sukses
       }
     } catch (e) {
+      // Reset loading jika terjadi error
       if (mounted) {
         setState(() => _isLoading = false);
-        // Bisa tambah snackbar error disini
       }
     }
   }
@@ -70,7 +75,7 @@ class _InputCategoryDialogState extends State<InputCategoryDialog> {
       cancelText: 'Cancel',
       confirmTextColor: const Color(0xFF5784EB),
       isLoading: _isLoading,
-      autoDismiss: false, // Kita handle dismiss manual saat sukses
+      autoDismiss: false, // Dialog ditutup manual di _handleSubmit
       onConfirm: _handleSubmit,
       onCancel: () => _focusNode.unfocus(),
       content: Container(

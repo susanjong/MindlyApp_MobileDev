@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+// Widget bottom sheet untuk aksi pada item yang dipilih (Move, Favorite, Delete)
 class SelectionActionBar extends StatelessWidget {
   final VoidCallback onMove;
   final VoidCallback onFavorite;
@@ -19,6 +20,7 @@ class SelectionActionBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10),
+      // Dekorasi container dengan warna putih dan bayangan halus di bagian atas
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
@@ -29,10 +31,11 @@ class SelectionActionBar extends StatelessWidget {
           ),
         ],
       ),
+      // SafeArea memastikan tombol tidak tertutup oleh sistem navigasi gesture (home indicator)
       child: SafeArea(
         top: false,
         child: SizedBox(
-          height: 60, // Tinggi konten fixed, tapi diluar SafeArea
+          height: 60, // Menetapkan tinggi tetap untuk area konten tombol
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
@@ -42,6 +45,7 @@ class SelectionActionBar extends StatelessWidget {
                 onTap: onMove,
               ),
               _ActionItem(
+                // Logika ikon berubah dinamis berdasarkan status favorit
                 icon: isAllSelectedFavorite ? Icons.favorite : Icons.favorite_border,
                 iconColor: isAllSelectedFavorite ? Colors.red : Colors.black,
                 label: 'Favorite',
@@ -62,6 +66,7 @@ class SelectionActionBar extends StatelessWidget {
   }
 }
 
+// Komponen privat yang dapat digunakan kembali untuk setiap tombol aksi
 class _ActionItem extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -83,9 +88,8 @@ class _ActionItem extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
       child: Padding(
-        // Kurangi padding vertikal dari 4 jadi 2
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-        // Bungkus dengan FittedBox agar auto-resize jika ruang sempit
+        // FittedBox mencegah overflow jika teks label terlalu panjang
         child: FittedBox(
           fit: BoxFit.scaleDown,
           child: Column(

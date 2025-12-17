@@ -10,7 +10,7 @@ import '../../../../core/widgets/others/snackbar.dart';
 import '../../../../features/calendar/data/services/category_service.dart';
 import '../../../../features/calendar/data/services/event_service.dart';
 
-
+// Bottom Sheet untuk Menambah atau Mengedit Event Kalender
 class AddEventBottomSheet extends StatefulWidget {
   final Event? eventToEdit;
   const AddEventBottomSheet({super.key, this.eventToEdit});
@@ -20,33 +20,34 @@ class AddEventBottomSheet extends StatefulWidget {
 }
 
 class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
+  // Service Instances
   final EventService _eventService = EventService();
   final EventCategoryService _categoryService = EventCategoryService();
   final String _userId = FirebaseAuth.instance.currentUser!.uid;
 
-  // Controllers
+  // Controllers untuk input teks
   final TextEditingController _eventNameController = TextEditingController();
   final TextEditingController _noteController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
   final TextEditingController _categoryController = TextEditingController();
 
-  // State Variables
+  // State Management
   bool _isLoading = false;
   bool _isEditMode = false;
-  bool _isDataPopulated = false;
+  bool _isDataPopulated = false; // Mencegah overwrite data saat rebuild
 
-  // Date & Time
+  // State Tanggal & Waktu
   DateTime? _selectedDateObj;
   TimeOfDay? _startTimeObj;
   TimeOfDay? _endTimeObj;
 
-  // Options
+  // State Pilihan Dropdown & Kategori
   String _reminder = '15 minutes before';
   String _repeat = 'Does not repeat';
   String? _selectedCategoryId;
   List<Category> _categories = [];
 
-  // Constants
+  // Data Statis untuk Dropdown
   final List<String> _reminderOptions = [
     'None', '5 minutes before', '10 minutes before', '15 minutes before',
     '30 minutes before', '1 hour before', '1 day before'
@@ -62,6 +63,7 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
     _loadCategories();
   }
 
+  // Mengisi data form jika sedang dalam mode edit
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -95,11 +97,13 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
     super.dispose();
   }
 
+  // Mengambil daftar kategori dari Firebase
   void _loadCategories() {
     _categoryService.getCategories(_userId).listen((categoryList) {
       if (mounted) {
         setState(() {
           _categories = categoryList;
+          // Set kategori default jika membuat event baru
           if (!_isEditMode && _categories.isNotEmpty && _selectedCategoryId == null) {
             _selectedCategoryId = _categories.first.id;
           }
@@ -108,7 +112,8 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
     });
   }
 
-  // --- LOGIC FUNCTIONS ---
+  // --- LOGIC: Date & Time Picker ---
+
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -138,13 +143,17 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
     }
   }
 
+  // --- LOGIC: Validasi & Simpan ---
+
   Future<void> _validateAndSave() async {
+    // Validasi input wajib
     if (_eventNameController.text.isEmpty || _selectedDateObj == null ||
         _startTimeObj == null || _endTimeObj == null || _selectedCategoryId == null) {
       _showErrorDialog('Incomplete Fields', 'Please fill in all required fields.');
       return;
     }
 
+    // Gabungkan Tanggal & Waktu
     final startDateTime = DateTime(
       _selectedDateObj!.year, _selectedDateObj!.month, _selectedDateObj!.day,
       _startTimeObj!.hour, _startTimeObj!.minute,
@@ -154,10 +163,12 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
       _endTimeObj!.hour, _endTimeObj!.minute,
     );
 
+    // Validasi Logika Waktu
     if (endDateTime.isBefore(startDateTime)) {
       _showErrorDialog('Invalid Time', 'End time must be after start time.');
       return;
     }
+
     final newEventData = Event(
       id: _isEditMode ? widget.eventToEdit!.id : null,
       title: _eventNameController.text,
@@ -180,6 +191,7 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
         final originalEvent = widget.eventToEdit!;
         final isRecurring = originalEvent.repeat != 'Does not repeat' || originalEvent.parentEventId != null;
 
+        // Penanganan khusus untuk Event Berulang (Recurring)
         if (isRecurring) {
           FocusScope.of(context).unfocus();
           setState(() => _isLoading = false);
@@ -187,7 +199,6 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
           showUpdateRepeatDialog(
             context: context,
             onConfirm: (UpdateMode mode) async {
-              // Mulai loading lagi
               setState(() => _isLoading = true);
               try {
                 await _eventService.updateRecurringEvent(
@@ -197,7 +208,7 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
                   mode: mode,
                 );
                 if (mounted) {
-                  Navigator.pop(context); // Tutup BottomSheet
+                  Navigator.pop(context);
                   Snackbar.success(context, 'Recurring event updated');
                 }
               } catch (e) {
@@ -210,16 +221,17 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
           );
           return;
         } else {
+          // Update Event Biasa (Single)
           await _eventService.updateEvent(_userId, newEventData);
           if (mounted) Snackbar.success(context, 'Event updated');
         }
       } else {
-        // Create New Event
+        // Buat Event Baru
         await _eventService.addEvent(newEventData);
         if (mounted) Snackbar.success(context, 'Event created');
       }
 
-      if (mounted && _isLoading) { // Cek _isLoading agar tidak double pop jika masuk if recurring
+      if (mounted && _isLoading) {
         Navigator.pop(context);
       }
     } catch (e) {
@@ -235,13 +247,13 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
+    // Pengaturan Layout Responsif
     final double keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
     final double screenWidth = MediaQuery.of(context).size.width;
     final double screenHeight = MediaQuery.of(context).size.height;
     final bool isTablet = screenWidth > 600;
 
-    // Hitung tinggi maksimal yang aman
-    // 90% dari tinggi layar dikurangi keyboard dan safe area
+    // Membatasi tinggi sheet agar tidak tertutup keyboard
     final double maxHeight = (screenHeight * 0.9) - keyboardHeight;
 
     return Padding(
@@ -250,11 +262,9 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
         child: ConstrainedBox(
           constraints: BoxConstraints(
             maxWidth: isTablet ? 600 : double.infinity,
-            // Gunakan max height yang sudah dihitung
             maxHeight: maxHeight,
           ),
           child: Container(
-            // Hilangkan margin vertikal untuk menghemat space
             margin: EdgeInsets.only(
               top: keyboardHeight > 0 ? 8 : 24,
               bottom: keyboardHeight > 0 ? 8 : 24,
@@ -273,9 +283,10 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // Header Sheet (Judul & Tombol Tutup)
                 _EventHeader(isEditMode: _isEditMode),
 
-                // Gunakan Expanded dengan Flexible di dalam ScrollView
+                // Konten Form Scrollable
                 Expanded(
                   child: SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
@@ -314,6 +325,7 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
                         ),
                         const SizedBox(height: 17),
 
+                        // Selektor Kategori (Add & Delete)
                         _EventCategory(
                           categories: _categories,
                           selectedId: _selectedCategoryId,
@@ -324,9 +336,9 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
                               context: context,
                               barrierDismissible: false,
                               builder: (context) => InputCategoryDialog(
-                                title: "New Event Category", // Judul Spesifik Calendar
-                                hintText: "Meeting, Birthday, etc.", // Hint optional
-                                onSave: (name) async { // Gunakan onSave
+                                title: "New Event Category",
+                                hintText: "Meeting, Birthday, etc.",
+                                onSave: (name) async {
                                   try {
                                     final newId = await _categoryService.addCategory(
                                       name: name,
@@ -336,41 +348,34 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
                                       setState(() => _selectedCategoryId = newId);
                                     }
                                   } catch (e) {
-                                    // Handle error
+                                    // Handle error diam-diam atau log
                                   }
                                 },
                               ),
                             );
                           },
 
-                          // ✅ LOGIKA DELETE BARU
+                          // Fitur Hapus Kategori dengan Long Press
                           onDeleteCategory: (id, name) {
                             showIOSDialog(
                               context: context,
                               title: "Delete Category",
                               message: "Are you sure you want to delete '$name'?\nExisting events will keep their color.",
                               confirmText: "Delete",
-                              confirmTextColor: const Color(0xFFFF453A), // Merah untuk bahaya
+                              confirmTextColor: const Color(0xFFFF453A),
                               onConfirm: () async {
                                 try {
-                                  // 1. Panggil service delete
                                   await _categoryService.deleteCategory(_userId, id);
 
-                                  // 2. Jika kategori yang dihapus sedang dipilih, reset pilihan
+                                  // Reset seleksi jika kategori yang dihapus sedang dipilih
                                   if (_selectedCategoryId == id) {
                                     setState(() {
                                       _selectedCategoryId = null;
-                                      // Jika ada kategori lain, pilih yang pertama, jika tidak biarkan null
-                                      if (_categories.isNotEmpty) {
-                                        // _categories belum terupdate realtime di frame ini,
-                                        // tapi StreamBuilder akan me-refresh UI otomatis.
-                                        // Kita set null dulu agar aman.
-                                      }
                                     });
                                   }
 
                                   if (mounted) {
-                                    Navigator.pop(context); // Tutup dialog konfirmasi
+                                    Navigator.pop(context);
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(content: Text('Category deleted')),
                                     );
@@ -408,6 +413,7 @@ class _AddEventBottomSheetState extends State<AddEventBottomSheet> {
   }
 }
 
+// Widget untuk Header Sheet
 class _EventHeader extends StatelessWidget {
   final bool isEditMode;
   const _EventHeader({required this.isEditMode});
@@ -437,6 +443,7 @@ class _EventHeader extends StatelessWidget {
   }
 }
 
+// Widget untuk Input Field (Nama, Lokasi, Catatan)
 class _EventInputFields extends StatelessWidget {
   final TextEditingController nameController;
   final TextEditingController locationController;
@@ -497,6 +504,7 @@ class _EventInputFields extends StatelessWidget {
   }
 }
 
+// Widget untuk Picker Tanggal & Waktu
 class _EventDateTime extends StatelessWidget {
   final String dateStr;
   final String startTimeStr;
@@ -541,6 +549,7 @@ class _EventDateTime extends StatelessWidget {
   }
 }
 
+// Widget untuk Opsi Reminder & Repeat
 class _EventOptions extends StatelessWidget {
   final String reminder;
   final String repeat;
@@ -600,12 +609,12 @@ class _EventOptions extends StatelessWidget {
   }
 }
 
+// Widget untuk Pilihan Kategori
 class _EventCategory extends StatelessWidget {
   final List<Category> categories;
   final String? selectedId;
   final ValueChanged<String> onCategorySelected;
   final VoidCallback onAddCategory;
-  // ✅ Callback baru untuk delete
   final Function(String id, String name) onDeleteCategory;
 
   const _EventCategory({
@@ -613,7 +622,7 @@ class _EventCategory extends StatelessWidget {
     required this.selectedId,
     required this.onCategorySelected,
     required this.onAddCategory,
-    required this.onDeleteCategory, // ✅ Required
+    required this.onDeleteCategory,
   });
 
   Color _getColor(String hex) {
@@ -640,8 +649,7 @@ class _EventCategory extends StatelessWidget {
                   padding: const EdgeInsets.only(right: 10),
                   child: GestureDetector(
                     onTap: () => onCategorySelected(cat.id!),
-                    // ✅ DETEKSI LONG PRESS UNTUK HAPUS
-                    onLongPress: () => onDeleteCategory(cat.id!, cat.name),
+                    onLongPress: () => onDeleteCategory(cat.id!, cat.name), // Fitur hapus kategori
                     child: Container(
                       height: 32, padding: const EdgeInsets.symmetric(horizontal: 16),
                       decoration: BoxDecoration(border: Border.all(color: color, width: 1.5), borderRadius: BorderRadius.circular(16), color: isSelected ? color.withValues(alpha: 0.15) : Colors.transparent),
@@ -660,6 +668,7 @@ class _EventCategory extends StatelessWidget {
   }
 }
 
+// Tombol Simpan/Update
 class _EventSaveButton extends StatelessWidget {
   final bool isLoading;
   final bool isEditMode;

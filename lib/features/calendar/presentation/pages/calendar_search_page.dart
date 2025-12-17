@@ -26,6 +26,7 @@ class _CalendarSearchPageState extends State<CalendarSearchPage> {
   @override
   void initState() {
     super.initState();
+    // Menambahkan listener untuk mendeteksi perubahan input pencarian secara real-time
     _searchController.addListener(_onSearchChanged);
   }
 
@@ -35,6 +36,7 @@ class _CalendarSearchPageState extends State<CalendarSearchPage> {
     super.dispose();
   }
 
+  // Logika filter pencarian berdasarkan judul atau deskripsi event
   void _onSearchChanged() {
     setState(() {
       _query = _searchController.text.trim().toLowerCase();
@@ -46,12 +48,13 @@ class _CalendarSearchPageState extends State<CalendarSearchPage> {
               event.description.toLowerCase().contains(_query);
         }).toList();
 
-        // Sort berdasarkan waktu terdekat
+        // Urutkan hasil pencarian berdasarkan waktu mulai terdekat
         _searchResults.sort((a, b) => a.startTime.compareTo(b.startTime));
       }
     });
   }
 
+  // Helper untuk mengonversi kode warna Hex menjadi objek Color Flutter
   Color _getColorFromHex(String hexColor) {
     hexColor = hexColor.replaceAll('#', '');
     if (hexColor.length == 6) {
@@ -64,7 +67,7 @@ class _CalendarSearchPageState extends State<CalendarSearchPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      // resizeToAvoidBottomInset: true memastikan layout menyesuaikan saat keyboard muncul
+      // Memastikan layout menyesuaikan tinggi saat keyboard muncul
       resizeToAvoidBottomInset: true,
       body: SafeArea(
         child: Column(
@@ -74,13 +77,13 @@ class _CalendarSearchPageState extends State<CalendarSearchPage> {
               padding: const EdgeInsets.fromLTRB(5, 10, 21.5, 10),
               child: Row(
                 children: [
-                  // 1. Back Button
+                  // Tombol Kembali
                   IconButton(
                     icon: const Icon(Icons.chevron_left, size: 32, color: Colors.black),
                     onPressed: () => Navigator.pop(context),
                   ),
 
-                  // 2. Search Bar
+                  // Area Input Pencarian
                   Expanded(
                     child: Container(
                       height: 40,
@@ -91,7 +94,7 @@ class _CalendarSearchPageState extends State<CalendarSearchPage> {
                         borderRadius: BorderRadius.circular(50),
                       ),
                       child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center, // Pastikan icon & text center vertikal
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           const Icon(
                             Icons.search,
@@ -102,13 +105,10 @@ class _CalendarSearchPageState extends State<CalendarSearchPage> {
                           Expanded(
                             child: TextField(
                               controller: _searchController,
-                              // PERBAIKAN 1: Keyboard tidak langsung aktif
+                              // Menonaktifkan autofocus agar keyboard tidak langsung muncul saat halaman dibuka
                               autofocus: false,
-
-                              // PERBAIKAN 2: Mencegah overflow teks vertikal
                               textAlignVertical: TextAlignVertical.center,
                               textInputAction: TextInputAction.search,
-
                               style: GoogleFonts.poppins(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w400,
@@ -123,11 +123,11 @@ class _CalendarSearchPageState extends State<CalendarSearchPage> {
                                 ),
                                 border: InputBorder.none,
                                 isDense: true,
-                                // Padding diatur agar teks pas di tengah container 40px
                                 contentPadding: const EdgeInsets.symmetric(vertical: 0),
                               ),
                             ),
                           ),
+                          // Tombol Clear (X) hanya muncul jika ada teks
                           if (_query.isNotEmpty)
                             GestureDetector(
                               onTap: () {
@@ -149,11 +149,12 @@ class _CalendarSearchPageState extends State<CalendarSearchPage> {
 
             const SizedBox(height: 10),
 
-            // --- SEARCH RESULTS LIST ---
+            // --- DAFTAR HASIL PENCARIAN ---
             Expanded(
               child: _query.isEmpty
+              // State Awal (Belum mencari)
                   ? Center(
-                child: SingleChildScrollView( // Agar aman saat keyboard muncul
+                child: SingleChildScrollView(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -164,6 +165,7 @@ class _CalendarSearchPageState extends State<CalendarSearchPage> {
                   ),
                 ),
               )
+              // State Hasil Kosong vs Ada Hasil
                   : _searchResults.isEmpty
                   ? Center(
                 child: Text('No events found', style: GoogleFonts.poppins(color: Colors.grey)),
@@ -176,6 +178,7 @@ class _CalendarSearchPageState extends State<CalendarSearchPage> {
                   final event = _searchResults[index];
                   final category = widget.categories[event.categoryId];
 
+                  // Tentukan warna kartu berdasarkan kategori
                   Color cardColor = const Color(0xFFFBAE38);
                   if (category != null) {
                     try {
@@ -188,7 +191,7 @@ class _CalendarSearchPageState extends State<CalendarSearchPage> {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        // KIRI: TANGGAL
+                        // Kolom Tanggal (Kiri)
                         SizedBox(
                           width: 50,
                           child: Column(
@@ -218,7 +221,7 @@ class _CalendarSearchPageState extends State<CalendarSearchPage> {
 
                         const SizedBox(width: 16),
 
-                        // KANAN: CARD
+                        // Kartu Event (Kanan)
                         Expanded(
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),

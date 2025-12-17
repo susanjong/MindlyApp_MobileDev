@@ -6,6 +6,7 @@ import '../../data/services/note_service.dart';
 import '../../../../core/widgets/dialog/alert_dialog.dart';
 import 'note_search_bar.dart';
 
+// Helper function untuk menampilkan Modal Bottom Sheet pemindahan kategori
 void showMoveToDialog({
   required BuildContext context,
   required NoteService noteService,
@@ -18,7 +19,7 @@ void showMoveToDialog({
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     builder: (context) => MoveToCategoriesDialog(
-      noteService: noteService, // Pass service
+      noteService: noteService,
       selectedNoteIds: selectedNoteIds,
       onMoveConfirmed: onMoveConfirmed,
       onAddCategory: onAddCategory,
@@ -52,6 +53,7 @@ class _MoveToCategoriesDialogState extends State<MoveToCategoriesDialog> {
   @override
   void initState() {
     super.initState();
+    // Listener untuk mendeteksi input pencarian secara real-time
     _searchController.addListener(() {
       setState(() => _searchQuery = _searchController.text.trim().toLowerCase());
     });
@@ -63,9 +65,8 @@ class _MoveToCategoriesDialogState extends State<MoveToCategoriesDialog> {
     super.dispose();
   }
 
-  // Helper untuk filter list
+  // Filter kategori: Hapus folder sistem ('all', 'bookmarks') dan filter berdasarkan search query
   List<CategoryModel> _filterCategories(List<CategoryModel> categories) {
-    // Filter 'all' dan 'bookmarks' agar tidak muncul di opsi move
     final validCategories = categories.where((c) => c.id != 'all' && c.id != 'bookmarks').toList();
 
     if (_searchQuery.isEmpty) return validCategories;
@@ -74,6 +75,7 @@ class _MoveToCategoriesDialogState extends State<MoveToCategoriesDialog> {
         .toList();
   }
 
+  // Menampilkan dialog untuk membuat kategori baru langsung dari bottom sheet ini
   void _showAddCategoryDialog() {
     showDialog(
       context: context,
@@ -90,6 +92,7 @@ class _MoveToCategoriesDialogState extends State<MoveToCategoriesDialog> {
     );
   }
 
+  // Validasi pilihan dan menampilkan konfirmasi sebelum memindahkan notes
   void _confirmMove(List<CategoryModel> currentCategories) {
     if (_selectedCategoryId == null) return;
 
@@ -106,7 +109,7 @@ class _MoveToCategoriesDialogState extends State<MoveToCategoriesDialog> {
       confirmTextColor: const Color(0xFF5784EB),
       onConfirm: () {
         widget.onMoveConfirmed(_selectedCategoryId!);
-        Navigator.pop(context);
+        Navigator.pop(context); // Tutup dialog konfirmasi
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Notes moved to "${selectedCategory.name}"')),
         );
@@ -122,7 +125,7 @@ class _MoveToCategoriesDialogState extends State<MoveToCategoriesDialog> {
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      // Wrap dengan StreamBuilder agar real-time update
+      // StreamBuilder memastikan daftar kategori selalu up-to-date dari database
       child: StreamBuilder<List<CategoryModel>>(
         stream: widget.noteService.getCategoriesStream(),
         builder: (context, snapshot) {
@@ -131,7 +134,7 @@ class _MoveToCategoriesDialogState extends State<MoveToCategoriesDialog> {
 
           return Column(
             children: [
-              // Header
+              // Header UI: Judul, Tombol Tambah Folder, dan Tombol Konfirmasi (Checklist)
               Container(
                 padding: const EdgeInsets.fromLTRB(25, 20, 20, 0),
                 child: Row(
@@ -167,6 +170,7 @@ class _MoveToCategoriesDialogState extends State<MoveToCategoriesDialog> {
                 ),
               ),
 
+              // Widget pencarian kategori
               NoteSearchBar(
                 controller: _searchController,
                 hintText: 'Search categories...',
@@ -177,7 +181,7 @@ class _MoveToCategoriesDialogState extends State<MoveToCategoriesDialog> {
 
               const SizedBox(height: 4),
 
-              // Categories List
+              // List Kategori
               Expanded(
                 child: displayCategories.isEmpty
                     ? Center(
@@ -211,6 +215,7 @@ class _MoveToCategoriesDialogState extends State<MoveToCategoriesDialog> {
                         category: category,
                         isSelected: isSelected,
                         onTap: () {
+                          // Toggle seleksi kategori
                           setState(() {
                             _selectedCategoryId = isSelected ? null : category.id;
                           });
@@ -230,6 +235,7 @@ class _MoveToCategoriesDialogState extends State<MoveToCategoriesDialog> {
   }
 }
 
+// Widget item list kategori dengan animasi border dan indikator seleksi
 class _CategoryItem extends StatelessWidget {
   final CategoryModel category;
   final bool isSelected;
@@ -251,6 +257,7 @@ class _CategoryItem extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(10),
+          // Border biru jika dipilih, pink jika tidak
           border: Border.all(
             color: isSelected ? const Color(0xFF5784EB) : const Color(0xFFD732A8),
             width: isSelected ? 2 : 1,
@@ -276,6 +283,7 @@ class _CategoryItem extends StatelessWidget {
                 ),
               ),
             ),
+            // Tampilkan ikon hati kecil jika kategori ini favorit
             if (category.isFavorite)
               Padding(
                 padding: const EdgeInsets.only(right: 8),
@@ -285,6 +293,7 @@ class _CategoryItem extends StatelessWidget {
                   size: 18,
                 ),
               ),
+            // Radio button custom (lingkaran checklist)
             AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               width: 24,
@@ -307,4 +316,3 @@ class _CategoryItem extends StatelessWidget {
     );
   }
 }
-
