@@ -7,7 +7,7 @@ class PermissionHelper {
     final status = await Permission.camera.request();
 
     if (status.isGranted) {
-      debugPrint('✅ Camera permission granted');
+      debugPrint('Camera permission granted');
       return true;
     } else if (status.isDenied) {
       if (context.mounted) {
@@ -36,7 +36,7 @@ class PermissionHelper {
 
     // Check if already granted
     if (await Permission.photos.isGranted) {
-      debugPrint('✅ Gallery permission already granted');
+      debugPrint(' Gallery permission already granted');
       return true;
     }
 
@@ -50,7 +50,7 @@ class PermissionHelper {
     }
 
     if (status.isGranted) {
-      debugPrint('✅ Gallery permission granted');
+      debugPrint(' Gallery permission granted');
       return true;
     } else if (status.isDenied) {
       if (context.mounted) {
@@ -78,7 +78,7 @@ class PermissionHelper {
     final status = await Permission.notification.request();
 
     if (status.isGranted) {
-      debugPrint('✅ Notification permission granted');
+      debugPrint('Notification permission granted');
       return true;
     } else if (status.isDenied) {
       if (context.mounted) {

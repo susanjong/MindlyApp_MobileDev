@@ -1,4 +1,3 @@
-// features/home/data/services/notification_helper.dart
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter/material.dart';
@@ -37,7 +36,7 @@ class NotificationHelper {
     // Request permissions
     await _requestPermissions();
 
-    debugPrint('✅ NotificationHelper initialized');
+    debugPrint('NotificationHelper initialized');
   }
 
   // Handle notification tap
@@ -68,7 +67,7 @@ class NotificationHelper {
       sound: true,
     );
 
-    debugPrint('✅ Notification permissions requested');
+    debugPrint('Notification permissions requested');
   }
 
   // Schedule notification - COMPLETELY FIXED!
@@ -123,9 +122,9 @@ class NotificationHelper {
         payload: payload,
       );
 
-      debugPrint('✅ Notification scheduled: ID=$id, Time=$scheduledDate');
+      debugPrint(' Notification scheduled: ID=$id, Time=$scheduledDate');
     } catch (e) {
-      debugPrint('❌ Error scheduling notification: $e');
+      debugPrint('Error scheduling notification: $e');
       rethrow;
     }
   }
@@ -166,7 +165,7 @@ class NotificationHelper {
       payload: payload,
     );
 
-    debugPrint('✅ Instant notification shown: $title');
+    debugPrint('Instant notification shown: $title');
   }
 
   // Cancel single notification

@@ -244,7 +244,7 @@ class _LogoSplashState extends State<LogoSplash>
                         ),
                       ),
 
-                      // ✅ "Mindly" text with Google Fonts Poppins
+                      // "Mindly" text with Google Fonts Poppins
                       AnimatedOpacity(
                         opacity: _textOpacity.value,
                         duration: const Duration(milliseconds: 300),

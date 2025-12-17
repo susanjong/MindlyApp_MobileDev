@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-// Models
 class UserProfile {
   final String name;
   final String email;
