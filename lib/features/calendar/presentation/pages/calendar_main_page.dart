@@ -18,6 +18,7 @@ import 'package:notesapp/features/calendar/data/models/event_model.dart';
 import '../../data/services/category_service.dart';
 import '../../data/services/event_service.dart';
 
+// Enum untuk menentukan mode tampilan kalender
 enum CalendarViewMode { daily, monthly, yearly }
 
 class CalendarMainPage extends StatefulWidget {
@@ -28,14 +29,17 @@ class CalendarMainPage extends StatefulWidget {
 }
 
 class _CalendarMainPageState extends State<CalendarMainPage> {
+  // Service Instances
   final EventService _eventService = EventService();
   final EventCategoryService _categoryService = EventCategoryService();
   final String userId = FirebaseAuth.instance.currentUser!.uid;
 
+  // State Tampilan Kalender
   CalendarViewMode _currentView = CalendarViewMode.daily;
   DateTime _selectedDate = DateTime.now();
   DateTime _focusedMonth = DateTime.now();
 
+  // State Data
   Map<String, Category> _categories = {};
   StreamSubscription? _categorySubscription;
   final ScrollController _scrollController = ScrollController();
@@ -44,8 +48,7 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
   void initState() {
     super.initState();
     _loadCategories();
-    // ✅ Optional: Check pending notifications on init
-    _checkPendingNotifications();
+    _checkPendingNotifications(); // Debugging notifikasi
   }
 
   @override
@@ -55,12 +58,16 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
     super.dispose();
   }
 
+  // --- DATA LOADING & HELPERS ---
+
+  // Memuat kategori event dari Firebase secara realtime
   void _loadCategories() {
     _categorySubscription =
         _categoryService.getCategories(userId).listen((categories) {
           if (!mounted) return;
 
           setState(() {
+            // Mapping list kategori ke Map agar akses lebih cepat by ID
             _categories = {
               for (final cat in categories) cat.id!: cat,
             };
@@ -68,7 +75,7 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
         });
   }
 
-  // ✅ NEW: Check pending notifications untuk debugging
+  // Debugging: Memeriksa antrian notifikasi lokal yang tertunda
   Future<void> _checkPendingNotifications() async {
     try {
       final pending = await _eventService.getPendingNotifications();
@@ -82,6 +89,7 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
     }
   }
 
+  // Helper konversi Hex String ke Color
   Color _getColorFromHex(String hexColor) {
     hexColor = hexColor.replaceAll('#', '');
     if (hexColor.length == 6) {
@@ -90,6 +98,9 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
     return Color(int.parse(hexColor, radix: 16));
   }
 
+  // --- LOGIC: UI INTERACTION ---
+
+  // Mengganti mode tampilan (Harian -> Bulanan -> Tahunan -> Harian)
   void _toggleViewMode() {
     setState(() {
       switch (_currentView) {
@@ -106,17 +117,19 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
     });
   }
 
+  // Handler saat tanggal dipilih
   void _onDateSelected(DateTime date) {
     setState(() {
       _selectedDate = date;
       _focusedMonth = date;
-
+      // Otomatis kembali ke tampilan harian saat tanggal dipilih
       if (_currentView != CalendarViewMode.daily) {
         _currentView = CalendarViewMode.daily;
       }
     });
   }
 
+  // Navigasi Bottom Bar
   void _handleNavigation(int index) {
     final routes = [
       AppRoutes.home,
@@ -130,6 +143,7 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
     }
   }
 
+  // Menampilkan Bottom Sheet untuk tambah event
   void _showAddEventDialog() {
     showModalBottomSheet(
       context: context,
@@ -137,13 +151,15 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
       backgroundColor: Colors.transparent,
       builder: (_) => const AddEventBottomSheet(),
     ).then((_) {
-      // ✅ Refresh pending notifications after adding event
+      // Refresh debug log notifikasi setelah event baru dibuat
       _checkPendingNotifications();
     });
   }
 
+  // Menangani pencarian event
   Future<void> _handleSearch() async {
     try {
+      // Ambil snapshot data sekali saja untuk pencarian
       final allEvents = await _eventService.getAllEvents(userId).first;
       if (!mounted) return;
 
@@ -167,8 +183,12 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
     }
   }
 
+  // --- UI BUILDER ---
+
   @override
   Widget build(BuildContext context) {
+    // Menangani tombol kembali fisik (Back Button Android)
+    // Urutan prioritas: View Tahunan -> Bulanan -> Harian -> Home Page
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) async {
@@ -216,6 +236,7 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
     );
   }
 
+  // Switcher konten utama berdasarkan mode tampilan
   Widget _buildBodyContent() {
     switch (_currentView) {
       case CalendarViewMode.daily:
@@ -275,6 +296,7 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
     }
   }
 
+  // Widget Tampilan Harian (Mini Calendar + Schedule List)
   Widget _buildDailyView() {
     return Center(
       child: ConstrainedBox(
@@ -282,11 +304,14 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Kalender Mini Horizontal
             MiniCalendarWidget(
               selectedDate: _selectedDate,
               onDateSelected: _onDateSelected,
             ),
             const SizedBox(height: 10),
+
+            // Header Daftar Jadwal
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Row(
@@ -311,6 +336,8 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
               ),
             ),
             const SizedBox(height: 16),
+
+            // Daftar Event (Schedule List)
             Expanded(
               child: StreamBuilder<List<Event>>(
                 stream: _eventService.getEventsForDate(userId, _selectedDate),
@@ -321,6 +348,7 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
 
                   final events = snapshot.data ?? [];
 
+                  // Tampilan jika tidak ada event
                   if (events.isEmpty) {
                     return Center(
                       child: Padding(
@@ -347,6 +375,7 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
                     );
                   }
 
+                  // Render Daftar Event
                   return ListView.builder(
                     controller: _scrollController,
                     physics: const BouncingScrollPhysics(),
@@ -376,6 +405,7 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              // Kolom Waktu
                               SizedBox(
                                 width: 50,
                                 child: Text(
@@ -387,6 +417,7 @@ class _CalendarMainPageState extends State<CalendarMainPage> {
                                   ),
                                 ),
                               ),
+                              // Kartu Jadwal
                               Expanded(
                                 child: ScheduleCardWidget(
                                   title: event.title,

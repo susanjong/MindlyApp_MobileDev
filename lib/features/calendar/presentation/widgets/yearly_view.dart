@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:notesapp/features/calendar/data/models/event_model.dart';
 
+// Widget untuk menampilkan kalender dalam tampilan tahunan
 class YearlyViewWidget extends StatefulWidget {
   final int currentYear;
   final List<Event> events;
@@ -11,7 +12,7 @@ class YearlyViewWidget extends StatefulWidget {
   const YearlyViewWidget({
     super.key,
     required this.currentYear,
-    required this.events, // Masih diterima tapi tidak digunakan untuk visual di sini
+    required this.events, // Data event diterima untuk konsistensi, meski tidak dirender di view ini
     required this.onMonthTap,
   });
 
@@ -21,6 +22,7 @@ class YearlyViewWidget extends StatefulWidget {
 
 class _YearlyViewWidgetState extends State<YearlyViewWidget> {
   late PageController _pageController;
+  // Menggunakan index awal besar agar user bisa scroll ke tahun sebelumnya (infinite scroll effect)
   final int _initialPage = 1000;
 
   @override
@@ -35,12 +37,14 @@ class _YearlyViewWidgetState extends State<YearlyViewWidget> {
     super.dispose();
   }
 
+  // Helper untuk membandingkan apakah tanggal sama persis (hari, bulan, tahun)
   bool _isSameDay(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
   @override
   Widget build(BuildContext context) {
+    // PageView memungkinkan geser kanan/kiri untuk ganti tahun
     return PageView.builder(
       controller: _pageController,
       scrollDirection: Axis.horizontal,
@@ -52,12 +56,12 @@ class _YearlyViewWidgetState extends State<YearlyViewWidget> {
   }
 
   Widget _buildYearPage(int year) {
-    // CATATAN: Filter event dihapus karena tidak lagi ditampilkan di view tahunan ini
-
+    // LayoutBuilder digunakan untuk responsivitas (Portrait vs Landscape)
     return LayoutBuilder(
       builder: (context, constraints) {
         final bool isLandscape = constraints.maxWidth > constraints.maxHeight;
 
+        // Penyesuaian jumlah kolom dan rasio aspek berdasarkan orientasi layar
         int crossAxisCount;
         double childAspectRatio;
 
@@ -76,7 +80,7 @@ class _YearlyViewWidgetState extends State<YearlyViewWidget> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Header Tahun
+              // Header Tahun (Contoh: 2024)
               Padding(
                 padding: const EdgeInsets.only(bottom: 16.0),
                 child: Text(
@@ -89,7 +93,7 @@ class _YearlyViewWidgetState extends State<YearlyViewWidget> {
                 ),
               ),
 
-              // Grid Bulan
+              // Grid yang menampilkan 12 bulan
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
                 child: GridView.builder(
@@ -133,7 +137,7 @@ class _YearlyViewWidgetState extends State<YearlyViewWidget> {
         ),
         child: Column(
           children: [
-            // Nama Bulan
+            // Nama Bulan (Contoh: January)
             Text(
               DateFormat('MMMM').format(monthDate),
               style: GoogleFonts.poppins(
@@ -144,7 +148,7 @@ class _YearlyViewWidgetState extends State<YearlyViewWidget> {
             ),
             const SizedBox(height: 4),
 
-            // Grid Tanggal Mini
+            // Grid tanggal kecil untuk preview bulan
             Expanded(
               child: _buildMiniMonthGrid(monthDate),
             ),
@@ -155,15 +159,16 @@ class _YearlyViewWidgetState extends State<YearlyViewWidget> {
   }
 
   Widget _buildMiniMonthGrid(DateTime monthDate) {
+    // Hitung jumlah hari dan hari pertama dalam bulan tersebut
     final daysInMonth = DateUtils.getDaysInMonth(monthDate.year, monthDate.month);
     final firstWeekday = DateTime(monthDate.year, monthDate.month, 1).weekday;
     final DateTime now = DateTime.now();
 
     return LayoutBuilder(
         builder: (context, constraints) {
+          // Kalkulasi ukuran font dinamis berdasarkan tinggi container
           double cellHeight = constraints.maxHeight / 6;
-
-          double fontSize = cellHeight * 0.5; // Font sedikit diperbesar karena tidak ada dot
+          double fontSize = cellHeight * 0.5;
           if (fontSize > 11) fontSize = 11;
           if (fontSize < 8) fontSize = 8;
 
@@ -171,24 +176,24 @@ class _YearlyViewWidgetState extends State<YearlyViewWidget> {
             physics: const NeverScrollableScrollPhysics(),
             padding: EdgeInsets.zero,
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 7,
+              crossAxisCount: 7, // 7 hari dalam seminggu
               mainAxisSpacing: 0,
               crossAxisSpacing: 0,
             ),
+            // Total item = hari kosong di awal bulan + jumlah hari
             itemCount: daysInMonth + (firstWeekday - 1),
             itemBuilder: (context, index) {
+              // Render spasi kosong jika belum tanggal 1
               if (index < firstWeekday - 1) return const SizedBox.shrink();
 
               final day = index - (firstWeekday - 1) + 1;
               final dateToCheck = DateTime(monthDate.year, monthDate.month, day);
-
               final bool isToday = _isSameDay(dateToCheck, now);
 
-              // Stack tetap digunakan untuk background lingkaran hari ini
               return Stack(
                 alignment: Alignment.center,
                 children: [
-                  // 1. Lingkaran Background Hari Ini (Hanya jika Today)
+                  // Indikator lingkaran oranye khusus hari ini
                   if (isToday)
                     Container(
                       width: cellHeight * 0.9,
@@ -199,14 +204,12 @@ class _YearlyViewWidgetState extends State<YearlyViewWidget> {
                       ),
                     ),
 
-                  // 2. Angka Tanggal
+                  // Angka tanggal
                   Text(
                     '$day',
                     style: TextStyle(
                       fontSize: fontSize,
-                      // Warna: Putih jika hari ini, Hitam pudar (biasa) jika bukan
                       color: isToday ? Colors.white : const Color(0xFF475569),
-                      // Bold: Hanya jika hari ini
                       fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
                     ),
                   ),

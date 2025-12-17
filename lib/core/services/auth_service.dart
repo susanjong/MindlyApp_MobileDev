@@ -26,7 +26,7 @@ class AuthService {
     return user.providerData.first.providerId;
   }
 
-  // ===== CEK APAKAH EMAIL SUDAH TERVERIFIKASI =====
+  // cek email sudah diverif atau blm
   static Future<bool> checkEmailVerified() async {
     try {
       await _auth.currentUser?.reload();
@@ -152,7 +152,7 @@ class AuthService {
         password: password,
       );
 
-      // ✅ CEK EMAIL VERIFICATION SETELAH LOGIN
+      // CEK EMAIL VERIFICATION SETELAH LOGIN
       if (credential.user != null && !credential.user!.emailVerified) {
         // Jika email belum diverifikasi, sign out dan throw exception
         await _auth.signOut();
@@ -198,7 +198,7 @@ class AuthService {
         await credential.user?.reload();
       }
 
-      // ✅ KIRIM EMAIL VERIFICATION (WAJIB)
+      // KIRIM EMAIL VERIFICATION (WAJIB)
       if (credential.user != null && !credential.user!.emailVerified) {
         await credential.user!.sendEmailVerification();
         debugPrint('✓ Verification email sent to ${credential.user!.email}');

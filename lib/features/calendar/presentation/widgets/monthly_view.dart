@@ -25,33 +25,30 @@ class MonthlyViewWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Deteksi orientasi layar
+    // Determine screen orientation for responsive layout
     final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final double horizontalPadding = constraints.maxWidth > 600 ? 32 : 16;
 
-        // Bungkus dengan SingleChildScrollView agar bisa di-scroll saat landscape
-        // dan menghindari overflow
+        // Use SingleChildScrollView to prevent overflow in landscape mode
         return SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
           child: Container(
             padding: EdgeInsets.symmetric(
                 horizontal: horizontalPadding,
-                // Padding vertikal lebih kecil saat landscape
-                vertical: isLandscape ? 4 : 12
+                vertical: isLandscape ? 4 : 12 // Reduce padding in landscape
             ),
             child: Column(
-              mainAxisSize: MainAxisSize.min, // Penting agar tidak mengambil tinggi max
+              mainAxisSize: MainAxisSize.min, // Prevents infinite height error inside ScrollView
               children: [
                 _buildHeader(isLandscape),
-                SizedBox(height: isLandscape ? 8 : 20), // Jarak dikurangi saat landscape
+                SizedBox(height: isLandscape ? 8 : 20),
                 _buildWeekDays(constraints.maxWidth, isLandscape),
                 SizedBox(height: isLandscape ? 8 : 16),
                 _buildCalendarGrid(constraints.maxWidth, isLandscape),
-                // Tambahan padding bawah agar scroll tidak mentok
-                const SizedBox(height: 20),
+                const SizedBox(height: 20), // Bottom padding for scrolling space
               ],
             ),
           ),
@@ -60,27 +57,20 @@ class MonthlyViewWidget extends StatelessWidget {
     );
   }
 
+  // Renders the month navigation and title
   Widget _buildHeader(bool isLandscape) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         InkWell(
           onTap: onPreviousMonth,
-          child: Container(
-            padding: EdgeInsets.all(isLandscape ? 4 : 8), // Padding icon lebih kecil
-            decoration: BoxDecoration(
-              border: Border.all(color: const Color(0xFFF4F5F7)),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(Icons.chevron_left, size: isLandscape ? 18 : 20),
-          ),
+          child: _buildNavIcon(Icons.chevron_left, isLandscape),
         ),
         Column(
           children: [
             Text(
               DateFormat('MMMM').format(currentMonth),
               style: TextStyle(
-                // Font lebih kecil saat landscape
                 fontSize: isLandscape ? 16 : 20,
                 fontFamily: 'Poppins',
                 fontWeight: FontWeight.w500,
@@ -100,23 +90,28 @@ class MonthlyViewWidget extends StatelessWidget {
         ),
         InkWell(
           onTap: onNextMonth,
-          child: Container(
-            padding: EdgeInsets.all(isLandscape ? 4 : 8),
-            decoration: BoxDecoration(
-              border: Border.all(color: const Color(0xFFF4F5F7)),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(Icons.chevron_right, size: isLandscape ? 18 : 20),
-          ),
+          child: _buildNavIcon(Icons.chevron_right, isLandscape),
         ),
       ],
     );
   }
 
+  Widget _buildNavIcon(IconData icon, bool isLandscape) {
+    return Container(
+      padding: EdgeInsets.all(isLandscape ? 4 : 8),
+      decoration: BoxDecoration(
+        border: Border.all(color: const Color(0xFFF4F5F7)),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Icon(icon, size: isLandscape ? 18 : 20),
+    );
+  }
+
+  // Renders the row of weekday names (Mon, Tue, etc.)
   Widget _buildWeekDays(double maxWidth, bool isLandscape) {
     final weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-    // Logika font size responsif
+    // Dynamic font size based on available width
     double fontSize;
     if (isLandscape) {
       fontSize = 11.0;
@@ -143,15 +138,13 @@ class MonthlyViewWidget extends StatelessWidget {
     );
   }
 
+  // Renders the main grid of days
   Widget _buildCalendarGrid(double containerWidth, bool isLandscape) {
     final daysInMonth = _getDaysInMonth();
     final firstDayOfMonth = DateTime(currentMonth.year, currentMonth.month, 1);
     final startingWeekday = firstDayOfMonth.weekday;
 
-    // Kalkulasi Aspect Ratio
-    // Saat Landscape, kita ingin kotak lebih "pendek" (lebar > tinggi) agar hemat tempat vertikal
-    // Portrait: mendekati 0.8 - 1.0
-    // Landscape: mendekati 1.3 - 1.5 (lebih lebar)
+    // Adjust Aspect Ratio: Wider in landscape to save vertical space
     double childAspectRatio;
     if (isLandscape) {
       childAspectRatio = 1.4;
@@ -161,14 +154,14 @@ class MonthlyViewWidget extends StatelessWidget {
 
     return GridView.builder(
       shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(), // Scroll di-handle parent
+      physics: const NeverScrollableScrollPhysics(),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 7,
-        mainAxisSpacing: isLandscape ? 4 : 8, // Spasi lebih rapat saat landscape
+        mainAxisSpacing: isLandscape ? 4 : 8,
         crossAxisSpacing: 8,
         childAspectRatio: childAspectRatio,
       ),
-      itemCount: 42,
+      itemCount: 42, // Fixed 6 rows (7 * 6) to maintain consistent height
       itemBuilder: (context, index) {
         final dayOffset = index - (startingWeekday - 1);
 
@@ -178,10 +171,12 @@ class MonthlyViewWidget extends StatelessWidget {
 
         final day = dayOffset + 1;
         final date = DateTime(currentMonth.year, currentMonth.month, day);
+
         final isSelected = selectedDate != null &&
             date.year == selectedDate!.year &&
             date.month == selectedDate!.month &&
             date.day == selectedDate!.day;
+
         final isToday = _isToday(date);
         final dayEvents = _getEventsForDate(date);
 
@@ -190,24 +185,33 @@ class MonthlyViewWidget extends StatelessWidget {
     );
   }
 
+  // Renders placeholder dates for previous/next month
   Widget _buildEmptyDay(int dayOffset, int startingWeekday, int daysInMonth, bool isLandscape) {
     double fontSize = isLandscape ? 12 : 15;
+    int displayDay;
 
     if (dayOffset < 0) {
       final previousMonth = DateTime(currentMonth.year, currentMonth.month - 1);
       final previousMonthDays = DateTime(previousMonth.year, previousMonth.month + 1, 0).day;
-      final day = previousMonthDays + dayOffset + 1;
-      return Center(
-        child: Text('$day', style: TextStyle(fontSize: fontSize, fontFamily: 'Poppins', fontWeight: FontWeight.w500, color: const Color(0xFF8F9BB3))),
-      );
+      displayDay = previousMonthDays + dayOffset + 1;
     } else {
-      final day = dayOffset - daysInMonth + 1;
-      return Center(
-        child: Text('$day', style: TextStyle(fontSize: fontSize, fontFamily: 'Poppins', fontWeight: FontWeight.w500, color: const Color(0xFF8F9BB3))),
-      );
+      displayDay = dayOffset - daysInMonth + 1;
     }
+
+    return Center(
+      child: Text(
+        '$displayDay',
+        style: TextStyle(
+          fontSize: fontSize,
+          fontFamily: 'Poppins',
+          fontWeight: FontWeight.w500,
+          color: const Color(0xFF8F9BB3),
+        ),
+      ),
+    );
   }
 
+  // Renders the active date cell
   Widget _buildDayCell(int day, DateTime date, bool isSelected, bool isToday, List<Event> dayEvents, bool isLandscape) {
     double fontSize = isLandscape ? 12 : 15;
 
@@ -217,7 +221,7 @@ class MonthlyViewWidget extends StatelessWidget {
         decoration: BoxDecoration(
           color: isToday ? const Color(0xFFFBAE38) : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
-          border: isSelected ? Border.all(color: const Color(0xFFFBAE38), width: 1.5) : null, // Indikator seleksi opsional
+          border: isSelected ? Border.all(color: const Color(0xFFFBAE38), width: 1.5) : null,
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -239,10 +243,13 @@ class MonthlyViewWidget extends StatelessWidget {
     );
   }
 
-  // _buildEventDots, _getDaysInMonth, dll sama persis
+  // Renders small colored dots for events on that day
   Widget _buildEventDots(List<Event> dayEvents) {
     if (dayEvents.isEmpty) return const SizedBox(height: 8);
+
     final categoryColors = <Color>[];
+
+    // Extract unique colors for the first 3 categories
     for (var event in dayEvents) {
       final category = categories[event.categoryId];
       if (category != null) {
@@ -253,20 +260,43 @@ class MonthlyViewWidget extends StatelessWidget {
         }
       }
     }
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: categoryColors.map((color) {
         return Container(
-          width: 5, height: 5,
+          width: 5,
+          height: 5,
           margin: const EdgeInsets.symmetric(horizontal: 1.5),
-          decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: color, width: 1.2)),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: color, width: 1.2),
+          ),
         );
       }).toList(),
     );
   }
 
+  // === Helper Functions ===
+
   int _getDaysInMonth() => DateTime(currentMonth.year, currentMonth.month + 1, 0).day;
-  bool _isToday(DateTime date) { final now = DateTime.now(); return date.year == now.year && date.month == now.month && date.day == now.day; }
-  List<Event> _getEventsForDate(DateTime date) => events.where((event) => event.startTime.year == date.year && event.startTime.month == date.month && event.startTime.day == date.day).toList();
-  Color _getColorFromHex(String hexColor) { hexColor = hexColor.replaceAll('#', ''); if (hexColor.length == 6) hexColor = 'FF$hexColor'; return Color(int.parse(hexColor, radix: 16)); }
+
+  bool _isToday(DateTime date) {
+    final now = DateTime.now();
+    return date.year == now.year && date.month == now.month && date.day == now.day;
+  }
+
+  List<Event> _getEventsForDate(DateTime date) {
+    return events.where((event) =>
+    event.startTime.year == date.year &&
+        event.startTime.month == date.month &&
+        event.startTime.day == date.day
+    ).toList();
+  }
+
+  Color _getColorFromHex(String hexColor) {
+    hexColor = hexColor.replaceAll('#', '');
+    if (hexColor.length == 6) hexColor = 'FF$hexColor';
+    return Color(int.parse(hexColor, radix: 16));
+  }
 }
