@@ -89,15 +89,15 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
             final email = userData['email'] ?? AuthService.getCurrentUserEmail() ?? 'user@example.com';
             final bio = userData['bio'] ?? 'Update your bio here.';
 
-            // ✅ Priority photoURL dari Firestore (support Base64 and removal)
+            // Priority photoURL dari Firestore (support Base64 and removal)
             String imageUrl;
             final photoURL = userData['photoURL'];
             if (photoURL != null && photoURL.toString().isNotEmpty) {
               imageUrl = photoURL;
-              debugPrint('✅ Photo loaded from Firestore: ${photoURL.toString().substring(0, 50)}...');
+              debugPrint('Photo loaded from Firestore: ${photoURL.toString().substring(0, 50)}...');
             } else {
               imageUrl = 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(displayName)}&size=150&background=4CAF50&color=fff';
-              debugPrint('⚠️ No photo in Firestore, using default avatar');
+              debugPrint('No photo in Firestore, using default avatar');
             }
 
             _userProfile = UserProfile(
@@ -323,7 +323,7 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
     );
   }
 
-  // ✅ Navigate to edit profile and refresh data when back
+  //  Navigate to edit profile and refresh data when back
   void _navigateToEditProfile() async {
     final navigator = Navigator.of(context);
 
@@ -333,9 +333,9 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
       ),
     );
 
-    // ✅ Refresh data after back from edit
+    //  Refresh data after back from edit
     if (result == true && mounted) {
-      debugPrint('🔄 Refreshing profile data after edit...');
+      debugPrint('Refreshing profile data after edit...');
       await _loadUserDataFromFirestore();
     }
   }
@@ -544,7 +544,7 @@ class _AccountProfilePageState extends State<AccountProfilePage> {
   }
 }
 
-// ✅ ProfileCard dengan Real-time Sync
+//  ProfileCard dengan Real-time Sync
 class _ProfileCard extends StatelessWidget {
   final UserProfile profile;
   final bool isLoading;
@@ -656,7 +656,7 @@ class _ProfileCard extends StatelessWidget {
                 ),
               );
 
-              // ✅ Refresh after edit
+              //  Refresh after edit
               if (result == true && context.mounted) {
                 debugPrint('🔄 Refreshing profile after edit from card...');
                 onRefresh();
@@ -668,7 +668,7 @@ class _ProfileCard extends StatelessWidget {
     );
   }
 
-  // ✅ Build profile image with Base64 support
+  //  Build profile image with Base64 support
   Widget _buildProfileImage() {
     // Check if it's Base64 data
     if (profile.imageUrl.startsWith('data:image')) {

@@ -31,13 +31,13 @@ class AuthWrapper extends StatelessWidget {
 
         final user = snapshot.data!;
 
-        // ✅ GOOGLE SIGN-IN -> Langsung ke Home (sudah verified)
+        // google sign in-> Langsung ke Home (sudah verified)
         final provider = AuthService.getAuthProvider();
         if (provider == 'google.com') {
           return const HomePage();
         }
 
-        // ✅ EMAIL/PASSWORD SIGN-IN -> Cek verification
+        // email/pass sign in-> Cek verification
         if (user.emailVerified) {
           // Email sudah diverifikasi -> ke Home
           return const HomePage();

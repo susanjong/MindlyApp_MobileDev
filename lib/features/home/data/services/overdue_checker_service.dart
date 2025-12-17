@@ -15,7 +15,7 @@ class OverdueCheckerService {
       _checkAll();
     });
 
-    debugPrint('✅ Reminder & Overdue checker service started');
+    debugPrint('Reminder & Overdue checker service started');
   }
 
   static void stopPeriodicCheck() {

@@ -1,5 +1,3 @@
-
-// Enhanced Error Handler Widget
 import 'package:flutter/material.dart';
 
 class ErrorScreen extends StatelessWidget {

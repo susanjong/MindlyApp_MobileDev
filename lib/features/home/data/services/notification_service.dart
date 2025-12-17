@@ -23,7 +23,7 @@ class NotificationService {
         .collection('notifications');
   }
 
-  // ✅ Check if notifications are enabled for current user
+  // Check if notifications are enabled for current user
   Future<bool> areNotificationsEnabled() async {
     try {
       final user = _auth.currentUser;
@@ -44,7 +44,7 @@ class NotificationService {
     }
   }
 
-  // ✅ Stream untuk notification setting
+  //  Stream untuk notification setting
   Stream<bool> getNotificationSettingStream() {
     final user = _auth.currentUser;
     if (user == null) return Stream.value(false);
@@ -125,7 +125,7 @@ class NotificationService {
     );
   }
 
-  // ✅ Create notification dengan check setting
+  // Create notification dengan check setting
   Future<void> createNotification({
     required String title,
     required String description,
@@ -159,7 +159,7 @@ class NotificationService {
         type: type,
       );
 
-      debugPrint('✅ Notification created: $title');
+      debugPrint('Notification created: $title');
     } catch (e) {
       debugPrint('Error creating notification: $e');
     }
@@ -206,14 +206,14 @@ class NotificationService {
 
       if (hasUpdates) {
         await batch.commit();
-        debugPrint('✅ Processed ${remindersSnapshot.docs.length} event reminders into in-app notifications.');
+        debugPrint('Processed ${remindersSnapshot.docs.length} event reminders into in-app notifications.');
       }
     } catch (e) {
       debugPrint('Error checking event reminders: $e');
     }
   }
 
-  // ✅ NEW: Check for overdue tasks and create notifications
+  //  Check for overdue tasks and create notifications
   Future<void> checkAndNotifyOverdueTasks() async {
     try {
       final user = _auth.currentUser;
@@ -325,7 +325,7 @@ class NotificationService {
     await _notificationsCollection.doc(notificationId).delete();
   }
 
-  // ✅ NEW: Delete all notifications
+  //Delete all notifications
   Future<void> deleteAllNotifications() async {
     try {
       final batch = _firestore.batch();
@@ -336,7 +336,7 @@ class NotificationService {
       }
 
       await batch.commit();
-      debugPrint('✅ All notifications deleted');
+      debugPrint('All notifications deleted');
     } catch (e) {
       debugPrint('Error deleting all notifications: $e');
       rethrow;

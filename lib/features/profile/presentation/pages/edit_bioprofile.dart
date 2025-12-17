@@ -109,7 +109,7 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
           _photoChanged = true;
         });
 
-        debugPrint('✅ Image selected: ${pickedFile.path}');
+        debugPrint('Image selected: ${pickedFile.path}');
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -278,7 +278,7 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
     );
   }
 
-  /// ✅ Convert image to Base64 string with compression
+  // Convert image to Base64 string with compression
   Future<String?> _convertImageToBase64() async {
     if (_imageFile == null) return null;
 
@@ -295,15 +295,15 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
         throw Exception('Image too large (${sizeInKB.toStringAsFixed(0)} KB). Please choose a smaller image.');
       }
 
-      debugPrint('✅ Image converted successfully');
+      debugPrint(' Image converted successfully');
       return fullBase64;
     } catch (e) {
-      debugPrint('❌ Error converting image to base64: $e');
+      debugPrint('Error converting image to base64: $e');
       rethrow;
     }
   }
 
-  /// ✅ Save profile with proper Firebase sync
+  /// save profile with proper Firebase sync
   Future<void> _saveProfile() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -334,11 +334,11 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
 
       String? photoData;
 
-      // ✅ Handle photo changes
+      // Handle photo changes
       if (_photoChanged) {
         if (_imageFile != null) {
           // User selected a new image
-          debugPrint('🖼️ Processing new image...');
+          debugPrint(' Processing new image...');
 
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -370,7 +370,7 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
           if (photoData == null) {
             throw Exception('Failed to process image');
           }
-          debugPrint('✅ New image processed');
+          debugPrint(' New image processed');
         } else {
           // User removed photo - set to empty string untuk dihapus
           photoData = '';
@@ -382,15 +382,15 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
         debugPrint('📌 Photo not changed, keeping existing');
       }
 
-      // ✅ Update profile in Firebase
-      debugPrint('📤 Updating Firebase...');
+      //  Update profile in Firebase
+      debugPrint(' Updating Firebase...');
       await AuthService.updateUserProfile(
         displayName: _fullNameController.text.trim(),
         bio: _bioController.text.trim(),
         photoURL: photoData?.isEmpty == true ? '' : photoData,
       );
 
-      debugPrint('✅ Firebase updated successfully');
+      debugPrint(' Firebase updated successfully');
 
       if (mounted) {
         setState(() {
@@ -414,12 +414,12 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
 
         if (!mounted) return;
 
-        // ✅ Return true to trigger refresh in profile page
+        //  Return true to trigger refresh in profile page
         Navigator.pop(context, true);
-        debugPrint('🔙 Returned to profile page with refresh trigger');
+        debugPrint(' Returned to profile page with refresh trigger');
       }
     } catch (e) {
-      debugPrint('❌ Error saving profile: $e');
+      debugPrint(' Error saving profile: $e');
 
       if (mounted) {
         setState(() {
@@ -680,11 +680,11 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
     );
   }
 
-  /// ✅ Build profile image with proper preview
+  ///  Build profile image with proper preview
   Widget _buildProfileImage() {
     // Priority: Local file > Current Base64/URL > Default avatar
     if (_imageFile != null) {
-      debugPrint('🖼️ Displaying local file');
+      debugPrint('Displaying local file');
       return Image.file(
         _imageFile!,
         fit: BoxFit.cover,
@@ -693,7 +693,7 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
 
     if (_currentImageUrl != null && _currentImageUrl!.isNotEmpty) {
       if (_currentImageUrl!.startsWith('data:image')) {
-        debugPrint('🖼️ Displaying Base64 image');
+        debugPrint(' Displaying Base64 image');
         try {
           final base64String = _currentImageUrl!.split(',')[1];
           final bytes = base64Decode(base64String);
@@ -711,7 +711,7 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
         }
       }
 
-      debugPrint('🖼️ Displaying network image');
+      debugPrint('Displaying network image');
       return Image.network(
         _currentImageUrl!,
         fit: BoxFit.cover,
@@ -733,7 +733,7 @@ class _EditAccountInformationScreenState extends State<EditAccountInformationScr
       );
     }
 
-    debugPrint('🖼️ Displaying default avatar');
+    debugPrint(' Displaying default avatar');
     return _buildDefaultAvatar();
   }
 
