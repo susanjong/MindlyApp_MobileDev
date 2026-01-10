@@ -8,9 +8,9 @@ This habit of switching applications often leads to **loss of focus**, **duplica
 ## 👤 Owner Information
 - **Project Name**: MindlyApp
 - **Owner / Maintainer**:
-    1. Susan Jong (231401014) Lab 3 move to lab 1
-    2. Parulian Dwi Reslia Simbolon (231401032) Lab 3
-    3. Charissa Haya Qanita (231401113) Lab 3
+1. Susan Jong (231401014) Lab 3 move to lab 1
+2. Parulian Dwi Reslia Simbolon (231401032) Lab 3
+3. Charissa Haya Qanita (231401113) Lab 4
 - **Group Name**: Soyu Team
 - **Class** : B (2023)
 - Mobile Programming 
@@ -28,35 +28,8 @@ To get a local copy up and running, follow these simple steps.
 
 Make sure you have Flutter installed on your machine. If not, follow the official [Flutter installation guide](https://flutter.dev/docs/get-started/install).
 
-### Installation
 
-1.  **Clone the repository**
-    Clone the `main` branch of the project to your local machine.
-    ```bash
-    git clone https://github.com/susanjong/MindlyApp_MobileDev.git -b main
-    ```
-
-2.  **Navigate to the project directory**
-    ```bash
-    cd MindlyApp_MobileDev
-    ```
-
-3.  **Install Dependencies**
-    Fetch all the required packages for the project.
-    ```bash
-    flutter pub get
-    ```
-
-4.  **Run the Application**
-    Launch the app on your connected device or emulator.
-    ```bash
-    flutter run
-    ```
-
-That's it! You should now have MindlyApp running on your device.
-
-
-## 📦 Download MindlyApp (APK)
+## 📦 Download MindlyApp (APK) for Android Only!
 
 Ready to boost your productivity? Experience MindlyApp firsthand by installing the official APK. Get all your notes, tasks, and schedules in one powerful, intuitive app.
 
@@ -105,6 +78,34 @@ Ready to boost your productivity? Experience MindlyApp firsthand by installing t
 - **Framework**: Flutter
 - **Language**: Dart
 - **Backend & Auth**: Firebase
+
+
+### Installation
+
+1.  **Clone the repository**
+    Clone the `main` branch of the project to your local machine.
+    ```bash
+    git clone https://github.com/susanjong/MindlyApp_MobileDev.git -b main
+    ```
+
+2.  **Navigate to the project directory**
+    ```bash
+    cd MindlyApp_MobileDev
+    ```
+
+3.  **Install Dependencies**
+    Fetch all the required packages for the project.
+    ```bash
+    flutter pub get
+    ```
+
+4.  **Run the Application**
+    Launch the app on your connected device or emulator.
+    ```bash
+    flutter run
+    ```
+
+That's it! You should now have MindlyApp running on your device.
 
 
 ## 🛠️ Firebase Configuration Fix
