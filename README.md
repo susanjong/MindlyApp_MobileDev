@@ -16,9 +16,13 @@ This habit of switching applications often leads to **loss of focus**, **duplica
 - Mobile Programming 
 
 
-## 📚 Documentation
-- **Software Requirement Specification (SRS)**: [**View SRS Document**](https://docs.google.com/document/d/1gceSWC0wfhcvUrp6caHxGd70OgIt0XDV/edit?usp=sharing&ouid=113965595944164190356&rtpof=true&sd=true)
+## 📘 Project Documentation & Design
 
+- **UI/UX Design (Figma Prototype)**:  
+  [View MindlyApp Design](https://www.figma.com/design/DLATao6TnnNb8MQQ8jYRNK/Mindly-Apps-Design?node-id=0-1&p=f&t=21ugex1vYAcvT3O6-0)
+
+- **Software Requirements Specification (SRS)**:  
+  [View SRS Document](https://docs.google.com/document/d/1gceSWC0wfhcvUrp6caHxGd70OgIt0XDV/edit?usp=sharing&ouid=113965595944164190356&rtpof=true&sd=true)
 
 ## 🚀 Getting Started
 
