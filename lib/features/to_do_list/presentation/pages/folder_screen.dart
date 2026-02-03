@@ -7,7 +7,6 @@ import '../../../../core/widgets/dialog/alert_dialog.dart';
 import '../widgets/task_item.dart';
 import '../widgets/add_task_bottom_sheet.dart';
 
-
 class FolderScreen extends StatefulWidget {
   final String folderName;
   final int gradientIndex;
@@ -16,13 +15,11 @@ class FolderScreen extends StatefulWidget {
 
   const FolderScreen({
     super.key,
-
     required this.folderName,
     required this.gradientIndex,
     required this.gradients,
     required this.folderTasks,
   });
-
 
   @override
   State<FolderScreen> createState() => _FolderScreenState();
@@ -35,7 +32,7 @@ class _FolderScreenState extends State<FolderScreen> {
   bool _isSelectMode = false;
   final Set<String> _selectedTaskIds = {};
 
-  // -- Event Handlers --
+  // Event Handler
 
   void _toggleTaskStatus(TodoModel task) {
     _todoService.toggleTodoStatus(task.id, task.isCompleted);
@@ -89,23 +86,20 @@ class _FolderScreenState extends State<FolderScreen> {
     return {
       'id': todo.id,
       'title': todo.title,
+      'description': todo.description, // Pastikan deskripsi ikut terbawa
       'time': DateFormat('h:mm a').format(todo.deadline),
       'date': DateFormat('dd MMM').format(todo.deadline),
       'deadline': todo.deadline,
       'completed': todo.isCompleted,
       'category': todo.category,
-      'description': todo.description,
     };
   }
 
   void _showAddTaskDialog() {
     AddTaskBottomSheet.show(
       context,
-      //  1. Set initial category to current folder
       initialCategory: widget.folderName,
-      //  2. UNLOCK category so user can select "Add New Category"
       isCategoryLocked: false,
-
       onSave: (taskData) async {
         // Show Loading
         showDialog(
@@ -116,12 +110,12 @@ class _FolderScreenState extends State<FolderScreen> {
 
         try {
           DateTime deadline = taskData['deadline'] ?? DateTime.now();
-
           String category = taskData['category'] ?? widget.folderName;
+          String title = taskData['title'] ?? '';
           String description = taskData['description'] ?? '';
 
           await _todoService.addTodo(
-            taskData['title'],
+            title,
             category,
             deadline,
             description,
@@ -129,26 +123,19 @@ class _FolderScreenState extends State<FolderScreen> {
 
           if (mounted) Navigator.pop(context);
 
-          // 3. TAMPILKAN SNACKBAR SUKSES
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('Task added successfully!'),
                 backgroundColor: Colors.green,
-                behavior: SnackBarBehavior.floating, // Agar melayang cantik
+                behavior: SnackBarBehavior.floating,
               ),
             );
-            if (taskData['category'] != widget.folderName) {
-              // Navigator.pop(context); // Optional: Go back to see new category
-            }
           }
         } catch (e) {
-          // Tutup Loading Indicator jika error
           if (mounted) Navigator.pop(context);
-
-          // 4. TAMPILKAN SNACKBAR ERROR (Supaya kita tahu salahnya dimana)
           if (mounted) {
-            print("Error saving task: $e"); // Cek console debug
+            print("Error saving task: $e");
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('Failed to add task: $e'),
@@ -164,10 +151,6 @@ class _FolderScreenState extends State<FolderScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Get safe area padding for FAB positioning
-    final mediaQuery = MediaQuery.of(context);
-    final bottomPadding = mediaQuery.padding.bottom;
-
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -178,162 +161,156 @@ class _FolderScreenState extends State<FolderScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
-          _buildPopupMenu(),
-        ],
-      ),
-      // Gunakan StreamBuilder agar realtime
-      body: SafeArea(
-        bottom: false, // Handle bottom padding manually for FAB
-        child: StreamBuilder<List<TodoModel>>(
+          StreamBuilder<List<TodoModel>>(
             stream: _todoService.getTodosStream(),
             builder: (context, snapshot) {
               final allTodos = snapshot.data ?? [];
+              final folderTasks = allTodos.where((t) => t.category == widget.folderName).toList();
+              return _buildPopupMenu(folderTasks);
+            },
+          ),
+        ],
+      ),
+      body: StreamBuilder<List<TodoModel>>(
+          stream: _todoService.getTodosStream(),
+          builder: (context, snapshot) {
+            final allTodos = snapshot.data ?? [];
 
-              // Hanya ambil task yang sesuai dengan kategori folder ini
-              final folderTasks = allTodos
-                  .where((t) => t.category == widget.folderName)
-                  .toList();
+            // Filter tasks untuk folder ini
+            final folderTasks = allTodos
+                .where((t) => t.category == widget.folderName)
+                .toList();
 
-              // Hitung Progress
-              final total = folderTasks.length;
-              final completed = folderTasks.where((t) => t.isCompleted).length;
-              final progress = total > 0 ? (completed / total) : 0.0;
-              final percentage = (progress * 100).toInt();
+            // Hitung Progress
+            final total = folderTasks.length;
+            final completed = folderTasks.where((t) => t.isCompleted).length;
+            final progress = total > 0 ? (completed / total) : 0.0;
+            final percentage = (progress * 100).toInt();
 
-              return SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Title
-                    Text(
-                      widget.folderName,
-                      style: GoogleFonts.poppins(
-                        fontSize: 25,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black,
-                      ),
+            return SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Title
+                  Text(
+                    widget.folderName,
+                    style: GoogleFonts.poppins(
+                      fontSize: 25,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black,
                     ),
-                    const SizedBox(height: 28),
+                  ),
+                  const SizedBox(height: 28),
 
-                    // Progress Section
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Progress',
-                              style: GoogleFonts.poppins(
-                                fontSize: 14,
-                                color: Colors.grey,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            Text(
-                              '$percentage%',
-                              style: GoogleFonts.poppins(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: LinearProgressIndicator(
-                            value: progress,
-                            minHeight: 10,
-                            backgroundColor: const Color(0xFFE8E8E8),
-                            valueColor: AlwaysStoppedAnimation<Color>(_progressColor),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 36),
-
-                    // Task List (REALTIME FIREBASE)
-                    if (folderTasks.isNotEmpty)
-                      ListView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: folderTasks.length,
-                        itemBuilder: (context, index) {
-                          final task = folderTasks[index];
-                          final isSelected = _selectedTaskIds.contains(task.id);
-
-                          return _isSelectMode
-                              ? _buildSelectableTaskItem(task, isSelected)
-                              : TaskItem(
-                            task: _mapModelToTaskItem(task),
-                            onToggle: () => _toggleTaskStatus(task),
-                            onDelete: () => _todoService.deleteTodo(task.id),
-                          );
-                        },
-                      )
-                    else
-                      Center(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 40),
-                          child: Text(
-                            'No tasks yet',
+                  // Progress Section
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Progress',
                             style: GoogleFonts.poppins(
-                              fontSize: 16,
+                              fontSize: 14,
                               color: Colors.grey,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
+                          Text(
+                            '$percentage%',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: LinearProgressIndicator(
+                          value: progress,
+                          minHeight: 10,
+                          backgroundColor: const Color(0xFFE8E8E8),
+                          valueColor: AlwaysStoppedAnimation<Color>(_progressColor),
                         ),
                       ),
+                    ],
+                  ),
+                  const SizedBox(height: 36),
 
-                    // Bottom spacing considering FAB and safe area
-                    SizedBox(height: 100 + bottomPadding),
-                  ],
-                ),
-              );
-            }
-        ),
+                  // Task List
+                  if (folderTasks.isNotEmpty)
+                    ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: folderTasks.length,
+                      itemBuilder: (context, index) {
+                        final task = folderTasks[index];
+                        final isSelected = _selectedTaskIds.contains(task.id);
+
+                        return _isSelectMode
+                            ? _buildSelectableTaskItem(task, isSelected)
+                            : TaskItem(
+                          task: _mapModelToTaskItem(task),
+                          onToggle: () => _toggleTaskStatus(task),
+                          onDelete: () => _todoService.deleteTodo(task.id),
+                        );
+                      },
+                    )
+                  else
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 40),
+                        child: Text(
+                          'No tasks yet',
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            color: Colors.grey,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 50),
+                ],
+              ),
+            );
+          }
       ),
 
-      // FAB Logic (Delete / Add) with safe area consideration
-      floatingActionButton: Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom),
-        child: _isSelectMode
-            ? GestureDetector(
-          onTap: _deleteSelectedTasks,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.delete_outline, color: Colors.red, size: 28),
-              const SizedBox(height: 4),
-              Text(
-                "Delete",
-                style: GoogleFonts.poppins(
-                  color: const Color(0xFFB90000),
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12,
-                ),
-              )
-            ],
-          ),
-        )
-            : FloatingActionButton(
-          backgroundColor: const Color(0xFFD732A8),
-          shape: const CircleBorder(),
-          child: const Icon(Icons.add, color: Colors.white, size: 28),
-          onPressed: _showAddTaskDialog,
+      floatingActionButton: _isSelectMode
+          ? GestureDetector(
+        onTap: _deleteSelectedTasks,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.delete_outline, color: Colors.red, size: 28),
+            const SizedBox(height: 4),
+            Text(
+              "Delete",
+              style: GoogleFonts.poppins(
+                color: const Color(0xFFB90000),
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
+              ),
+            )
+          ],
         ),
+      )
+          : FloatingActionButton(
+        backgroundColor: const Color(0xFFD732A8),
+        shape: const CircleBorder(),
+        child: const Icon(Icons.add, color: Colors.white, size: 28),
+        onPressed: _showAddTaskDialog,
       ),
     );
   }
 
-  // --- Widget Helpers ---
-
-  Widget _buildPopupMenu() {
+  Widget _buildPopupMenu(List<TodoModel> folderTasks) {
     return PopupMenuButton<String>(
       icon: const Icon(Icons.more_horiz, color: Colors.black),
       offset: const Offset(0, 40),
@@ -344,9 +321,34 @@ class _FolderScreenState extends State<FolderScreen> {
         if (value == 'select') {
           setState(() => _isSelectMode = true);
         } else if (value == 'complete') {
-          // Complete all tasks in this folder
-          // Note: Anda perlu akses ke list tasks saat ini, bisa diambil dari stream jika logicnya di sini
-          // Untuk simpelnya, fitur "Complete All" di sini opsional
+          // Filter task yang belum selesai saja
+          final incompleteTasks = folderTasks.where((t) => !t.isCompleted).toList();
+
+          if (incompleteTasks.isEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("All tasks are already completed!")),
+            );
+            return;
+          }
+
+          showIOSDialog(
+            context: context,
+            title: 'Complete All Tasks?',
+            message: 'Are you sure you want to mark all ${incompleteTasks.length} pending tasks as completed?',
+            confirmText: 'Complete All',
+            confirmTextColor: Colors.blue,
+            onConfirm: () async {
+              // Loop update status
+              for (var task in incompleteTasks) {
+                await _todoService.toggleTodoStatus(task.id, false); // false di sini artinya currentStatus=false -> jadi true
+              }
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("All tasks marked as completed")),
+                );
+              }
+            },
+          );
         }
       },
       itemBuilder: (context) => [
