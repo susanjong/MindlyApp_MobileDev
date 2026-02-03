@@ -65,156 +65,140 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Get safe area padding
-    final mediaQuery = MediaQuery.of(context);
-    //final screenHeight = mediaQuery.size.height;
-    final bottomPadding = mediaQuery.padding.bottom;
-
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: CustomTopAppBar(
         onProfileTap: () => Navigator.pushNamed(context, AppRoutes.profile),
-        onNotificationTap: () {
-          Navigator.pushNamed(context, AppRoutes.notification);
-        },
+        onNotificationTap: () {},
       ),
-      body: SafeArea(
-        bottom: false, // We'll handle bottom safe area manually
-        child: StreamBuilder<List<TodoModel>>(
-          stream: _todoService.getTodosStream(),
-          builder: (context, snapshot) {
-            // Loading State
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
+      body: StreamBuilder<List<TodoModel>>(
+        stream: _todoService.getTodosStream(),
+        builder: (context, snapshot) {
+          // 1. Loading State
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-            final allTodos = snapshot.data ?? [];
+          final allTodos = snapshot.data ?? [];
 
-            final now = DateTime.now();
-            final incompleteTodos = allTodos.where((t) => !t.isCompleted).toList();
+          final now = DateTime.now();
+          final incompleteTodos = allTodos.where((t) => !t.isCompleted).toList();
 
-            // Hitung Overdue
-            final overdueCount = incompleteTodos.where((t) => t.deadline.isBefore(now)).length;
+          // Hitung Overdue
+          final overdueCount = incompleteTodos.where((t) => t.deadline.isBefore(now)).length;
 
-            // Hitung Urgent (<= 12 jam)
-            final urgentCount = incompleteTodos.where((t) {
-              final diff = t.deadline.difference(now);
-              return diff.inHours <= 12 && !diff.isNegative;
-            }).length;
+          // Hitung Urgent (<= 12 jam)
+          final urgentCount = incompleteTodos.where((t) {
+            final diff = t.deadline.difference(now);
+            return diff.inHours <= 12 && !diff.isNegative;
+          }).length;
 
-            final allCount = incompleteTodos.length;
-            final displayList = allTodos.where((todo) {
-              return _isSameDate(todo.deadline, _selectedDate);
-            }).toList();
+          final allCount = incompleteTodos.length;
+          final displayList = allTodos.where((todo) {
+            return _isSameDate(todo.deadline, _selectedDate);
+          }).toList();
 
-            return SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: Column(
-                children: [
-                  Padding(
-                    padding: EdgeInsets.fromLTRB(
-                        20.0,
-                        20.0,
-                        20.0,
-                        0.0
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildGreetingStream(),
-                        const SizedBox(height: 12),
-                        RichText(
-                          text: TextSpan(
-                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
-                            children: [
-                              const TextSpan(text: 'You have '),
-                              TextSpan(
-                                text: '$allCount things to do',
-                                style: const TextStyle(color: Color(0xFFFFB74D)),
+          return SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildGreetingStream(),
+                      const SizedBox(height: 12),
+                      RichText(
+                        text: TextSpan(
+                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
+                          children: [
+                            const TextSpan(text: 'You have '),
+                            TextSpan(
+                              text: '$allCount things to do', // ✅ Data Realtime
+                              style: const TextStyle(color: Color(0xFFFFB74D)),
+                            ),
+                            const TextSpan(text: ' for today'),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Status Cards (Data Realtime)
+                      SizedBox(
+                        height: 130,
+                        child: Row(
+                          children: [
+                            Expanded(child: _buildStatusCard('$allCount', 'All', const Color(0xFF318F61), const Color(0xFFFEF4FC))),
+                            const SizedBox(width: 12),
+                            Expanded(child: _buildStatusCard('$urgentCount', 'Urgent', const Color(0xFFF4BF2A), const Color(0xFFF6FAFD))),
+                            const SizedBox(width: 12),
+                            Expanded(child: _buildStatusCard('$overdueCount', 'Overdue', const Color(0xFFE5526E), const Color(0xFFF8F4FF))),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Add Task Button
+                      _buildAddTaskButton(),
+                      const SizedBox(height: 20),
+
+                      // Week Days
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: List.generate(7, (index) {
+                            final now = DateTime.now();
+                            final firstDayOfWeek = now.subtract(Duration(days: now.weekday - 1));
+                            final date = firstDayOfWeek.add(Duration(days: index));
+                            final isSelected = _isSameDate(date, _selectedDate);
+
+                            return GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _selectedDate = date;
+                                });
+                              },
+                              child: _buildDayItem(
+                                  DateFormat('E').format(date),
+                                  date.day,
+                                  isSelected
                               ),
-                              const TextSpan(text: ' for today'),
-                            ],
-                          ),
+                            );
+                          }),
                         ),
-                        const SizedBox(height: 20),
-
-                        // Status Cards (Data Realtime)
-                        SizedBox(
-                          height: 130,
-                          child: Row(
-                            children: [
-                              Expanded(child: _buildStatusCard('$allCount', 'All', const Color(0xFF318F61), const Color(0xFFFEF4FC))),
-                              const SizedBox(width: 12),
-                              Expanded(child: _buildStatusCard('$urgentCount', 'Urgent', const Color(0xFFF4BF2A), const Color(0xFFF6FAFD))),
-                              const SizedBox(width: 12),
-                              Expanded(child: _buildStatusCard('$overdueCount', 'Overdue', const Color(0xFFE5526E), const Color(0xFFF8F4FF))),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Add Task Button
-                        _buildAddTaskButton(),
-                        const SizedBox(height: 20),
-
-                        // Week Days
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8.0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: List.generate(7, (index) {
-                              final now = DateTime.now();
-                              final firstDayOfWeek = now.subtract(Duration(days: now.weekday - 1));
-                              final date = firstDayOfWeek.add(Duration(days: index));
-                              final isSelected = _isSameDate(date, _selectedDate);
-
-                              return GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    _selectedDate = date;
-                                  });
-                                },
-                                child: _buildDayItem(
-                                    DateFormat('E').format(date),
-                                    date.day,
-                                    isSelected
-                                ),
-                              );
-                            }),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(height: 20),
+                    ],
                   ),
+                ),
 
-                  displayList.isEmpty
-                      ? const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 40),
-                    child: Center(child: Text("No tasks yet!")),
-                  )
-                      : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                    physics: const NeverScrollableScrollPhysics(),
-                    shrinkWrap: true,
-                    itemCount: displayList.length,
-                    itemBuilder: (context, index) {
-                      final todo = displayList[index];
-                      return TaskItem(
-                        task: _mapModelToTaskItem(todo),
-                        onToggle: () => _todoService.toggleTodoStatus(todo.id, todo.isCompleted),
-                        onDelete: () => _todoService.deleteTodo(todo.id),
-                      );
-                    },
-                  ),
+                displayList.isEmpty
+                    ? const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 40),
+                  child: Center(child: Text("No tasks yet!")),
+                )
+                    : ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  physics: const NeverScrollableScrollPhysics(), // Scroll dikendalikan oleh parent
+                  shrinkWrap: true, // Agar tidak error unbounded height
+                  itemCount: displayList.length,
+                  itemBuilder: (context, index) {
+                    final todo = displayList[index];
+                    return TaskItem(
+                      task: _mapModelToTaskItem(todo),
+                      onToggle: () => _todoService.toggleTodoStatus(todo.id, todo.isCompleted),
+                      onDelete: () => _todoService.deleteTodo(todo.id),
+                    );
+                  },
+                ),
 
-                  // Bottom spacing considering navigation bar and safe area
-                  SizedBox(height: 100 + bottomPadding),
-                ],
-              ),
-            );
-          },
-        ),
+                const SizedBox(height: 80),
+              ],
+            ),
+          );
+        },
       ),
       bottomNavigationBar: SafeArea(
         child: CustomNavBar(selectedIndex: 2, onItemTapped: _handleNavigation),
@@ -243,11 +227,7 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
 
   Widget _buildAddTaskButton() {
     return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFD8E4),
-        borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: Colors.black, width: 1.5),
-      ),
+      decoration: BoxDecoration(color: const Color(0xFFFFD8E4), borderRadius: BorderRadius.circular(30), border: Border.all(color: Colors.black, width: 1.5)),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
@@ -272,43 +252,27 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
     );
   }
 
+  // Logic Simpan ke Firebase saat Add Task
   void _showAddTaskDialog() {
     AddTaskBottomSheet.show(
       context,
       onSave: (taskData) async {
-        try {
-          String title = taskData['title'] ?? '';
-          String category = taskData['category'] ?? 'Uncategorized';
-          DateTime deadline = taskData['deadline'] ?? DateTime.now();
-          String description = taskData['description'] ?? '';
+        DateTime deadline = taskData['deadline'] ?? DateTime.now();
+        String category = taskData['category'] ?? 'Uncategorized';
+        String title = taskData['title'] ?? '';
+        //String description = taskData['description'] ?? '';
 
-          await _todoService.addTodo(
+        await _todoService.addTodo(
             title,
             category,
             deadline,
-            description,
-          );
+          taskData['description'] ?? '',
+        );
 
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Task added successfully!'),
-                backgroundColor: Colors.green,
-                duration: Duration(seconds: 2),
-              ),
-            );
-          }
-        } catch (e) {
-          debugPrint('Error adding task: $e');
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Failed to add task: ${e.toString()}'),
-                backgroundColor: Colors.red,
-                duration: const Duration(seconds: 3),
-              ),
-            );
-          }
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Task added successfully!'), backgroundColor: Colors.green),
+          );
         }
       },
     );
@@ -317,56 +281,26 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
   Widget _buildStatusCard(String count, String label, Color topColor, Color bottomColor) {
     return GestureDetector(
       onTap: () {
-        if (label == 'All') {
-          Navigator.push(context, MaterialPageRoute(builder: (context) => const AllCategoryScreen()));
-        } else if (label == 'Urgent') {
-          Navigator.push(context, MaterialPageRoute(builder: (context) => const UrgentTaskScreen()));
-        } else if (label == 'Overdue') {
-          Navigator.push(context, MaterialPageRoute(builder: (context) => const OverdueTaskScreen()));
-        }
+        if (label == 'All') Navigator.push(context, MaterialPageRoute(builder: (context) => const AllCategoryScreen()));
+        else if (label == 'Urgent') Navigator.push(context, MaterialPageRoute(builder: (context) => const UrgentTaskScreen()));
+        else if (label == 'Overdue') Navigator.push(context, MaterialPageRoute(builder: (context) => const OverdueTaskScreen()));
       },
       child: Container(
         height: 120,
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [topColor, bottomColor],
-          ),
+          gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [topColor, bottomColor]),
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.4),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 12, offset: const Offset(0, 4))],
         ),
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Align(
-                alignment: Alignment.topRight,
-                child: Icon(Icons.arrow_forward_ios, size: 12, color: Colors.black54),
-              ),
+              const Align(alignment: Alignment.topRight, child: Icon(Icons.arrow_forward_ios, size: 12, color: Colors.black54)),
               const Spacer(),
-              Text(
-                count,
-                style: const TextStyle(
-                  fontSize: 36,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                ),
-              ),
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              Text(count, style: const TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: Colors.black)),
+              Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
             ],
           ),
         ),
@@ -375,22 +309,6 @@ class _MainTodoScreenState extends State<MainTodoScreen> {
   }
 
   Widget _buildDayItem(String day, int date, bool isSelected) {
-    return Column(
-      children: [
-        Text(
-          day,
-          style: TextStyle(
-            color: isSelected ? Colors.blue : Colors.grey,
-          ),
-        ),
-        Text(
-          "$date",
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: isSelected ? Colors.blue : Colors.grey,
-          ),
-        ),
-      ],
-    );
+    return Column(children: [Text(day, style: TextStyle(color: isSelected ? Colors.blue : Colors.grey)), Text("$date", style: TextStyle(fontWeight: FontWeight.bold, color: isSelected ? Colors.blue : Colors.grey))]);
   }
 }

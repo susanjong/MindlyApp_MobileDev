@@ -17,7 +17,7 @@ class TodoService {
     return _firestore.collection('users').doc(user.uid).collection('todos');
   }
 
-  // ✅ CREATE: Tambah Task Baru dengan notifikasi
+  //  Tambah task baru dengan notifikasi
   Future<void> addTodo(String title, String category, DateTime deadline, String description) async {
     final docRef = await _todosCollection.add({
       'title': title,
@@ -28,7 +28,7 @@ class TodoService {
       'createdAt': FieldValue.serverTimestamp(),
     });
 
-    // ✅ Create notification untuk task baru
+    // Create notification untuk task baru
     await _notificationService.createNotification(
       title: '✅ New Task Created',
       description: 'Task "$title" has been added to your list',
@@ -37,7 +37,7 @@ class TodoService {
       relatedTaskId: docRef.id,
     );
 
-    // ✅ Check apakah deadline dalam 24 jam
+    // Check apakah deadline dalam 24 jam
     final now = DateTime.now();
     final difference = deadline.difference(now);
 
@@ -52,7 +52,7 @@ class TodoService {
     }
   }
 
-  // ✅ READ: Mengambil Data secara Realtime (Stream)
+  // Mengambil Data secara Realtime (Stream)
   Stream<List<TodoModel>> getTodosStream() {
     return _todosCollection
         .orderBy('deadline', descending: false)
@@ -64,13 +64,13 @@ class TodoService {
     });
   }
 
-  // ✅ UPDATE: Mengubah Status Selesai/Belum dengan notifikasi
+  // Mengubah Status Selesai/Belum dengan notifikasi
   Future<void> toggleTodoStatus(String id, bool currentStatus) async {
     await _todosCollection.doc(id).update({
       'isCompleted': !currentStatus,
     });
 
-    // ✅ Jika task selesai, buat notifikasi achievement
+    // Jika task selesai, buat notifikasi achievement
     if (currentStatus == false) {
       final taskDoc = await _todosCollection.doc(id).get();
       if (taskDoc.exists) {
@@ -113,12 +113,12 @@ class TodoService {
     });
   }
 
-  // ✅ DELETE: Menghapus Task
+  // Menghapus Task
   Future<void> deleteTodo(String id) async {
     await _todosCollection.doc(id).delete();
   }
 
-  // ✅ NEW: Check overdue tasks dan buat notifikasi
+  // Check overdue tasks dan buat notifikasi
   Future<void> checkOverdueTasks() async {
     await _notificationService.checkAndNotifyOverdueTasks();
   }
