@@ -5,22 +5,26 @@ MindlyApp is a productivity application designed to help users manage **daily ac
 
 This habit of switching applications often leads to **loss of focus**, **duplicated information**, **unsynchronized data**, and **low efficiency** in managing time and tasks. MindlyApp provides a solution by integrating **To-Do List, Calendar, and Notes** into one intuitive, adaptive, and contextual interface to **optimize time management** and **improve consistency**.
 
+---
+
 ## 👤 Owner Information
-- **Project Name**: MindlyApp
 - **Owner / Maintainer**:
-1. Susan Jong (231401014) Lab 3 move to lab 1
-2. Parulian Dwi Reslia Simbolon (231401032) Lab 3
-3. Charissa Haya Qanita (231401113) Lab 4
+1. Susan Jong (231401014) 
+2. Parulian Dwi Reslia Simbolon (231401032)
+3. Charissa Haya Qanita (231401113) 
 - **Group Name**: Soyu Team
 - **Class** : B (2023)
 - Mobile Programming 
 
+---
 
 ## 📘 Project Documentation & Design
 
 - **UI/UX Design (Figma Prototype)**:[View MindlyApp Design](https://www.figma.com/design/DLATao6TnnNb8MQQ8jYRNK/Mindly-Apps-Design?node-id=0-1&p=f&t=21ugex1vYAcvT3O6-0)
 
 - **Software Requirements Specification (SRS)**:[View SRS Document](https://docs.google.com/document/d/1gceSWC0wfhcvUrp6caHxGd70OgIt0XDV/edit?usp=sharing&ouid=113965595944164190356&rtpof=true&sd=true)
+
+---
 
 ## 🚀 Getting Started
 
@@ -43,8 +47,9 @@ Ready to boost your productivity? Experience MindlyApp firsthand by installing t
 
 *Just click, download, and install to get started!* 
 
+---
 
-## ✨ Features
+## ✨ Application Features
 
 ### 🔐 Authentication & Onboarding
 - Intro / Splash Pages
@@ -56,30 +61,63 @@ Ready to boost your productivity? Experience MindlyApp firsthand by installing t
 ### 🏠 Home
 - Daily Progress Tracker
 - Summary of To-Do Lists, Events, and Notes
-- Integrated Notifications
+- Real-time Notifications Page Overview 
+
+### 🔔 Notifications System
+* Automatic Notifications for:
+- Newly Created To-Do Lists 
+- Task Deadlines & Overdue Tasks 
+- Calendar Event Reminders
+* Custom Reminder Time Settings 
+* Push Notifications with Sound Alerts (Background & Foreground)
 
 ### 📝 Notes & To-Do List
-- Full CRUD (Create, Read, Update, Delete)
-- Custom Categories, Deadlines, and Descriptions
-- Favorite/Like Notes
-- Urgent and Overdue Task Status
+* Full CRUD (Create, Read, Update, Delete)
+* Custom Categories, Deadlines, and Descriptions
+* Favorite/Like Notes
+* Task Status Indicators:
+  - Urgent 
+  - Overdue
 
-### 📅 Calendar & Events
-- Monthly, Yearly, and Mini Calendar Views
-- Full CRUD for Events
-- Event Reminders with Sound Alerts
+### 📅 Calendar & Events Management 
+* Monthly, Yearly, and Mini Calendar Views
+* Full CRUD for Events
+* Event Reminders with Sound Alerts
 
 ### 👤 Account Settings
-- Manage Profile Photo (CRUD)
-- Reset Password & Delete Account
-- Secure Logout
+* Profile Picture Management:
+    - Select Photo from Gallery 
+    - Take Photo Using Camera 
+    - Delete Profile Picture
+* Update Personal Information
+* Reset Password 
+* Permanent Delete Account
+* Secure Logout
 
+### 🔒 Security & Reliability
+* Firebase Authentication & Cloud Firestore
+* Secure Data Storage and Real-Time Sync
+* User-Private Data Isolation
+
+---
 
 ## ⚙️ Tech Stack
 - **IDE**: Android Studio
 - **Framework**: Flutter
 - **Language**: Dart
-- **Backend & Auth**: Firebase
+- **Backend & Authentication**: Firebase
+    - Firebase Authentication (Email Verification & Google Sign-In)
+    - Cloud Firestore (Real-Time Database)
+    - Firebase Cloud Messaging (Push Notifications)
+    - Firebase Storage (Profile Image Management)
+- **State Management**: Provider
+- **Notifications**: Flutter Local Notifications
+- **UI & UX**:
+    - Google Fonts
+    - Flutter SVG
+- **Image Handling**:
+    - Image Picker (Gallery & Camera)
+- **Routing**: GoRouter
 
 
 ### Installation
@@ -109,6 +147,7 @@ Ready to boost your productivity? Experience MindlyApp firsthand by installing t
 
 That's it! You should now have MindlyApp running on your device.
 
+---
 
 ## 🛠️ Firebase Configuration Fix
 
